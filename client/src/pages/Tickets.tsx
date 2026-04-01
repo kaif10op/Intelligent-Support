@@ -10,6 +10,8 @@ const Tickets = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTicket, setNewTicket] = useState({ title: '', description: '', priority: 'MEDIUM' });
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPriority, setFilterPriority] = useState('ALL');
 
   useEffect(() => {
     fetchTickets();
@@ -48,7 +50,15 @@ const Tickets = () => {
     }
   };
 
-  const filteredTickets = tickets.filter(t => filterStatus === 'ALL' || t.status === filterStatus);
+  const filteredTickets = tickets.filter(t => {
+    const statusMatch = filterStatus === 'ALL' || t.status === filterStatus;
+    const priorityMatch = filterPriority === 'ALL' || t.priority === filterPriority;
+    const searchMatch = searchTerm === '' ||
+      t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.id.includes(searchTerm);
+    return statusMatch && priorityMatch && searchMatch;
+  });
 
   if (loading) return (
     <div className="loading-state">
@@ -78,7 +88,12 @@ const Tickets = () => {
       <div className="tickets-controls glass">
         <div className="search-wrap">
           <Search size={18} />
-          <input type="text" placeholder="Search tickets..." />
+          <input
+            type="text"
+            placeholder="Search tickets by title, description or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         <div className="filter-wrap">
           <Filter size={18} />
@@ -88,6 +103,16 @@ const Tickets = () => {
             <option value="IN_PROGRESS">In Progress</option>
             <option value="RESOLVED">Resolved</option>
             <option value="CLOSED">Closed</option>
+          </select>
+        </div>
+        <div className="filter-wrap">
+          <Filter size={18} />
+          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+            <option value="ALL">All Priorities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="URGENT">Urgent</option>
           </select>
         </div>
       </div>

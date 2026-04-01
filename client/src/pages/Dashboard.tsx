@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Database, Plus, MessageSquare, Files, ArrowRight, Trash2 } from 'lucide-react';
+import { Database, Plus, MessageSquare, Files, ArrowRight, Trash2, Search, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -8,6 +8,9 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [ticketStats, setTicketStats] = useState({ open: 0, inProgress: 0, resolved: 0 });
 
   const fetchKBs = async () => {
     try {
@@ -21,8 +24,27 @@ const Dashboard = () => {
     }
   };
 
+  const fetchTickets = async () => {
+    try {
+      const res = await axios.get('http://localhost:8000/api/tickets/my', { withCredentials: true });
+      if (res.data) {
+        setTickets(res.data);
+        // Calculate stats
+        const stats = {
+          open: res.data.filter((t: any) => t.status === 'OPEN').length,
+          inProgress: res.data.filter((t: any) => t.status === 'IN_PROGRESS').length,
+          resolved: res.data.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED').length
+        };
+        setTicketStats(stats);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tickets:', err);
+    }
+  };
+
   useEffect(() => {
     fetchKBs();
+    fetchTickets();
   }, []);
 
   const handleCreate = async () => {
@@ -60,13 +82,64 @@ const Dashboard = () => {
         </button>
       </header>
 
+      {/* Ticket Summary Section */}
+      {tickets.length > 0 && (
+        <div className="ticket-summary-section">
+          <h3>Your Tickets</h3>
+          <div className="ticket-stats-grid">
+            <Link to="/tickets" className="ticket-stat-card glass open">
+              <div className="stat-icon">
+                <AlertCircle size={24} />
+              </div>
+              <div className="stat-content">
+                <div className="stat-number">{ticketStats.open}</div>
+                <div className="stat-label">Open</div>
+              </div>
+            </Link>
+            <Link to="/tickets" className="ticket-stat-card glass in-progress">
+              <div className="stat-icon">
+                <Clock size={24} />
+              </div>
+              <div className="stat-content">
+                <div className="stat-number">{ticketStats.inProgress}</div>
+                <div className="stat-label">In Progress</div>
+              </div>
+            </Link>
+            <Link to="/tickets" className="ticket-stat-card glass resolved">
+              <div className="stat-icon">
+                <CheckCircle size={24} />
+              </div>
+              <div className="stat-content">
+                <div className="stat-number">{ticketStats.resolved}</div>
+                <div className="stat-label">Resolved</div>
+              </div>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Search Bar */}
+      <div className="search-section">
+        <div className="search-input-wrap glass">
+          <Search size={18} color="var(--text-muted)" />
+          <input
+            type="text"
+            placeholder="Search knowledge bases..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
       {loading ? (
         <div className="loading-grid">
           {[1,2,3].map(i => <div key={i} className="skeleton glass" style={{height: '200px'}}></div>)}
         </div>
       ) : (
         <div className="grid-main">
-          {kbs.map((kb) => (
+          {kbs
+            .filter(kb => kb.title.toLowerCase().includes(searchTerm.toLowerCase()) || kb.description?.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map((kb) => (
             <div key={kb.id} className="kb-card glass">
               <div className="card-header">
                 <div className="icon-wrap">
@@ -76,7 +149,7 @@ const Dashboard = () => {
                   <Trash2 size={18} />
                 </button>
               </div>
-              
+
               <h3>{kb.title}</h3>
               <p>{kb.description || 'No description provided.'}</p>
 
@@ -100,6 +173,12 @@ const Dashboard = () => {
               </div>
             </div>
           ))}
+          {kbs.filter(kb => kb.title.toLowerCase().includes(searchTerm.toLowerCase()) || kb.description?.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+            <div className="empty-state">
+              <Database size={32} opacity={0.5} />
+              <p>No knowledge bases found.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -125,6 +204,28 @@ const Dashboard = () => {
 
       <style>{`
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 48px; border-bottom: 1px solid var(--glass-border); padding-bottom: 24px; }
+
+        .ticket-summary-section { margin-bottom: 40px; }
+        .ticket-summary-section h3 { color: #fff; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600; }
+        .ticket-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .ticket-stat-card { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 16px; cursor: pointer; transition: 0.3s; text-decoration: none; border: 1px solid var(--glass-border); }
+        .ticket-stat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+        .ticket-stat-card.open { border-left: 3px solid #ff6464; }
+        .ticket-stat-card.in-progress { border-left: 3px solid #ffa500; }
+        .ticket-stat-card.resolved { border-left: 3px solid #4ade80; }
+        .stat-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; }
+        .ticket-stat-card.open .stat-icon { color: #ff6464; }
+        .ticket-stat-card.in-progress .stat-icon { color: #ffa500; }
+        .ticket-stat-card.resolved .stat-icon { color: #4ade80; }
+        .stat-content { display: flex; flex-direction: column; gap: 4px; }
+        .stat-number { font-size: 1.8rem; font-weight: 700; color: #fff; }
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); }
+
+        .search-section { margin-bottom: 32px; }
+        .search-input-wrap { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 28px; border: 1px solid var(--glass-border); width: 100%; max-width: 400px; }
+        .search-input-wrap input { flex: 1; background: none; border: none; color: #fff; font-size: 1rem; outline: none; }
+        .search-input-wrap input::placeholder { color: var(--text-muted); }
+
         .kb-card { padding: 24px; display: flex; flex-direction: column; gap: 16px; min-height: 240px; }
         .card-header { display: flex; justify-content: space-between; align-items: center; }
         .icon-wrap { width: 44px; height: 44px; background: rgba(138, 43, 226, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
@@ -136,6 +237,9 @@ const Dashboard = () => {
         .primary-link { display: flex; align-items: center; gap: 8px; color: var(--accent-primary); text-decoration: none; font-weight: 600; }
         .secondary-btn { font-size: 0.9rem; color: var(--text-muted); text-decoration: none; }
         .secondary-btn:hover { color: #fff; }
+
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 60px 20px; color: var(--text-muted); text-align: center; }
+
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { max-width: 450px; width: 100%; padding: 32px; display: flex; flex-direction: column; gap: 16px; }
         .modal-buttons { display: flex; justify-content: flex-end; gap: 16px; margin-top: 24px; }

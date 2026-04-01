@@ -19,7 +19,9 @@ model User {
   chats          Chat[]
   tickets        Ticket[]        @relation("UserTickets")
   assignedTickets Ticket[]       @relation("AdminTickets")
+  ticketMessages TicketNote[]    // Messages sent by this user in tickets
 }
+
 
 enum Role {
   USER
@@ -103,7 +105,10 @@ model Ticket {
 model TicketNote {
   id        String   @id @default(uuid())
   content   String
-  adminId   String
+  role      String   @default("admin") // "admin" or "user" - who sent the message
+  adminId   String?  // NULL if user-created
+  userId    String?  // NULL if admin-created
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())

@@ -1,8 +1,41 @@
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { User, Lock, Moon } from 'lucide-react';
 
 const Settings = () => {
   const { user } = useAuthStore();
+  const [darkMode, setDarkMode] = useState(true);
+
+  useEffect(() => {
+    // Load theme preference from localStorage
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setDarkMode(savedTheme === 'dark');
+    applyTheme(savedTheme);
+  }, []);
+
+  const applyTheme = (theme: string) => {
+    const root = document.documentElement;
+    if (theme === 'light') {
+      root.style.setProperty('--bg-primary', '#f5f5f5');
+      root.style.setProperty('--bg-card', '#ffffff');
+      root.style.setProperty('--text-primary', '#1a1a1a');
+      root.style.setProperty('--text-muted', '#666666');
+      root.style.setProperty('--glass-border', 'rgba(0, 0, 0, 0.1)');
+    } else {
+      root.style.setProperty('--bg-primary', '#0a0a0a');
+      root.style.setProperty('--bg-card', '#1a1a1a');
+      root.style.setProperty('--text-primary', '#ffffff');
+      root.style.setProperty('--text-muted', '#999999');
+      root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.1)');
+    }
+  };
+
+  const toggleDarkMode = () => {
+    const newTheme = darkMode ? 'light' : 'dark';
+    setDarkMode(!darkMode);
+    localStorage.setItem('theme', newTheme);
+    applyTheme(newTheme);
+  };
 
   return (
     <div className="settings-page fade-in">
@@ -62,14 +95,14 @@ const Settings = () => {
                    <h3>Dark Mode</h3>
                    <p>Toggle between light and dark theme.</p>
                 </div>
-                <div className="toggle active"></div>
+                <div className={`toggle ${darkMode ? 'active' : ''}`} onClick={toggleDarkMode}></div>
              </div>
              <div className="pref-item">
                 <div className="pref-info">
                    <h3>Notifications</h3>
                    <p>Get email alerts about KB activities.</p>
                 </div>
-                <div className="toggle"></div>
+                <div className="toggle" title="Coming soon"></div>
              </div>
           </div>
         </section>

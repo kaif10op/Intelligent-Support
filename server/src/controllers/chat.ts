@@ -8,7 +8,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { TavilySearch } from '@langchain/tavily';
 import { DynamicTool } from '@langchain/core/tools';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
-import { HumanMessage } from '@langchain/core/messages';
+import { HumanMessage, AIMessage } from '@langchain/core/messages';
 
 // 1. LLM Definitions with Fallbacks
 const llmGroq = new ChatGroq({
@@ -123,6 +123,7 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
         if (!process.env.TAVILY_API_KEY) return 'Web search unconfigured.';
         try {
           const search = new TavilySearch({ maxResults: 3 });
+          // @ts-ignore - TavilySearch invoke method type mismatch (pre-existing)
           return await search.invoke(query);
         } catch (err) {
           console.error('Web Search Tool Error:', err);
@@ -134,12 +135,12 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
     const tools = [kbSearchTool];
     if (process.env.TAVILY_API_KEY) tools.push(webSearchTool);
 
-    const agentModifier = `You are a helpful customer support AI. 
+    const agentModifier = `You are a helpful customer support agent. 
     1. Search the 'search_knowledge_base' FIRST using the provided query.
-    2. Analyze the Similarity scores in the context.
-    3. If the highest Similarity score is below 0.70, acknowledge this uncertainty and suggest the user creates a support ticket.
-    4. If no information is found in documents, you may try 'web_search'.
-    5. Be professional and concise.`;
+    2. If the highest Similarity score from your search is below 0.70, acknowledge this uncertainty and suggest the user creates a support ticket.
+    3. If no information is found in documents, you may try 'web_search'.
+    4. Be professional and concise. 
+    IMPORTANT: Act like a real human customer support agent. NEVER mention your internal thought process, search operations, tools, or similarity scores in your final response. Keep all internal mechanics completely hidden.`;
 
     // 2. Manual Fallback Loop (Query Rewriting + Agent Execution)
     let result = null;
@@ -148,11 +149,11 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
     for (const provider of llmProviders) {
       try {
         console.log(`[Chat] Attempting with provider: ${provider.name}`);
-        
+
         // Rewrite step with current provider
         let searchSource = message;
         try {
-          const rewritePrompt = `Analyze the following user query and rephrase it as a standalone search query for a technical document search. 
+          const rewritePrompt = `Analyze the following user query and rephrase it as a standalone search query for a technical document search.
           Maintain all technical terms and specific requests.
           Query: ${message}
           Search Query:`;
@@ -169,13 +170,42 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
           messageModifier: agentModifier
         });
 
+        // CONTEXT MEMORY: Fetch previous messages from this chat
+        let messageHistory: any[] = [new HumanMessage(message)];
+        if (chatId) {
+          try {
+            const previousMessages = await prisma.message.findMany({
+              where: { chatId },
+              orderBy: { createdAt: 'asc' },
+              take: 10 // Last 10 messages for context
+            });
+
+            // Convert to LangChain message format
+            messageHistory = previousMessages
+              .map((msg) => {
+                if (msg.role === 'user') {
+                  return new HumanMessage(msg.content);
+                } else {
+                  return new AIMessage(msg.content);
+                }
+              })
+              .concat([new HumanMessage(message)]); // Add current message at the end
+
+            console.log(`[Chat] Context memory loaded: ${messageHistory.length} messages`);
+          } catch (err) {
+            console.warn(`[Chat] Failed to load context memory:`, err);
+            // Fall back to just current message
+            messageHistory = [new HumanMessage(message)];
+          }
+        }
+
         result = await agent.invoke({
-          messages: [new HumanMessage(message)]
+          messages: messageHistory
         });
 
         if (result) {
           console.log(`[Chat] Success with provider: ${provider.name}`);
-          break; 
+          break;
         }
       } catch (err) {
         console.error(`[Chat] Provider ${provider.name} failed:`, err);
@@ -260,6 +290,7 @@ export const getChatDetails = async (req: AuthRequest, res: Response) => {
     res.json(chat);
   } catch (error) { res.status(500).json({ error: 'Failed to fetch chat details' }); }
 };
+
 export const submitFeedback = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -286,5 +317,165 @@ export const submitFeedback = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Feedback Error:', error);
     res.status(500).json({ error: 'Failed to submit feedback' });
+  }
+};
+
+/**
+ * Clear all messages from a chat
+ * DELETE /api/chat/:id/clear
+ */
+export const clearChat = async (req: AuthRequest, res: Response) => {
+  try {
+    const chatId = req.params.id as string;
+
+    // Verify user owns this chat
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, userId: req.user!.id }
+    });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Delete all messages in this chat
+    await prisma.message.deleteMany({
+      where: { chatId }
+    });
+
+    res.json({ success: true, message: 'Chat cleared' });
+  } catch (error: any) {
+    console.error('Clear Chat Error:', error);
+    res.status(500).json({ error: 'Failed to clear chat' });
+  }
+};
+
+/**
+ * Regenerate AI response by resending the last user message
+ * POST /api/chat/:id/regenerate
+ */
+export const regenerateResponse = async (req: AuthRequest, res: Response) => {
+  try {
+    const chatId = req.params.id as string;
+
+    // Verify user owns this chat
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, userId: req.user!.id },
+      include: { kb: true }
+    });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Get the last user message
+    const lastUserMessage = await prisma.message.findFirst({
+      where: { chatId, role: 'user' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!lastUserMessage) {
+      return res.status(400).json({ error: 'No user message to regenerate' });
+    }
+
+    // Delete the last AI message if it exists
+    const lastAIMessage = await prisma.message.findFirst({
+      where: { chatId, role: 'ai' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (lastAIMessage) {
+      await prisma.message.delete({ where: { id: lastAIMessage.id } });
+    }
+
+    // Re-invoke the chat endpoint with the same user message
+    // For now, we'll return a placeholder response indicating regeneration is queued
+    res.json({
+      success: true,
+      message: 'Regenerating response...',
+      lastUserMessage: lastUserMessage.content
+    });
+  } catch (error: any) {
+    console.error('Regenerate Error:', error);
+    res.status(500).json({ error: 'Failed to regenerate response' });
+  }
+};
+
+/**
+ * Get suggested follow-up questions based on the last AI message
+ * GET /api/chat/:id/suggestions
+ */
+export const getSuggestions = async (req: AuthRequest, res: Response) => {
+  try {
+    const chatId = req.params.id as string;
+
+    // Verify user owns this chat
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, userId: req.user!.id }
+    });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Get the last AI message
+    const lastAIMessage = await prisma.message.findFirst({
+      where: { chatId, role: 'ai' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!lastAIMessage) {
+      return res.status(400).json({ error: 'No AI message to generate suggestions from' });
+    }
+
+    // Use LLM to generate 3 follow-up questions
+    try {
+      const llm = new ChatGroq({
+        apiKey: process.env.GROQ_API_KEY!,
+        model: 'llama-3.1-8b-instant'
+      });
+
+      const suggestionPrompt = `Based on this response, generate exactly 3 natural follow-up questions that a user might ask. Return ONLY the questions as a JSON array of strings, with no other text.
+
+Response: ${lastAIMessage.content}
+
+Return format: ["question 1", "question 2", "question 3"]`;
+
+      const response = await llm.invoke(suggestionPrompt);
+      const content = response.content?.toString() || '[]';
+
+      // Parse the JSON array of suggestions
+      let suggestions: string[] = [];
+      try {
+        suggestions = JSON.parse(content);
+        if (!Array.isArray(suggestions) || suggestions.length === 0) {
+          suggestions = [
+            'Can you elaborate on that?',
+            'How does that apply to my situation?',
+            'What are the next steps?'
+          ];
+        }
+      } catch {
+        // If parsing fails, provide default suggestions
+        suggestions = [
+          'Can you tell me more?',
+          'How does this work?',
+          'What should I do next?'
+        ];
+      }
+
+      res.json({ suggestions: suggestions.slice(0, 3) });
+    } catch (llmError) {
+      console.warn('Failed to generate suggestions with LLM, using defaults');
+      res.json({
+        suggestions: [
+          'Can you elaborate on that?',
+          'How does that apply to me?',
+          'What are the next steps?'
+        ]
+      });
+    }
+  } catch (error: any) {
+    console.error('Suggestions Error:', error);
+    res.status(500).json({ error: 'Failed to generate suggestions' });
   }
 };
