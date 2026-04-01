@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requireAuth } from '../middlewares/auth.js';
-import { createKB, getMyKBs, getKBDetails, deleteKB, deleteDocument } from '../controllers/kb.js';
+import { createKB, getMyKBs, getKBDetails, deleteKB, deleteDocument, reindexDocuments } from '../controllers/kb.js';
 import { uploadDocument } from '../controllers/upload.js';
 
 const router = Router();
@@ -14,6 +14,7 @@ router.get('/', getMyKBs as any);
 router.get('/:id', getKBDetails as any);
 router.delete('/:id', deleteKB as any);
 router.delete('/doc/:id', deleteDocument as any);
+router.put('/:id/reindex', reindexDocuments as any);
 
 router.post('/upload', upload.single('file'), uploadDocument as any);
 

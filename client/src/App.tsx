@@ -6,12 +6,12 @@ import { ToastProvider } from './contexts/ToastContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
 
-// Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import KBDetails from './pages/KBDetails';
 import Chat from './pages/Chat';
 import Admin from './pages/Admin';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import RecentChats from './pages/RecentChats';
 import KnowledgeBases from './pages/KnowledgeBases';
 import Settings from './pages/Settings';
@@ -102,6 +102,12 @@ function App() {
 
               <ProtectedRoute adminOnly>
                 <Layout><Admin /></Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/analytics" element={
+              <ProtectedRoute adminOnly>
+                <Layout><AnalyticsDashboard /></Layout>
               </ProtectedRoute>
             } />
 

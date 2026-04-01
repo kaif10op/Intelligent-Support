@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { JinaEmbeddings } from '@langchain/community/embeddings/jina';
 
 export const createKB = async (req: AuthRequest, res: Response) => {
   try {
@@ -90,5 +91,72 @@ export const deleteDocument = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Delete Document Error:', error);
     res.status(500).json({ error: 'Failed to delete document' });
+  }
+};
+
+/**
+ * Reindex all documents in a knowledge base
+ * Regenerates embeddings for better search performance
+ * PUT /api/kb/:id/reindex (admin or owner only)
+ */
+export const reindexDocuments = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Get KB and verify ownership
+    const kb = await prisma.knowledgeBase.findFirst({
+      where: { id: id as string, userId: req.user!.id },
+      include: { documents: { include: { chunks: true } } }
+    });
+
+    if (!kb) return res.status(404).json({ error: 'Knowledge base not found' });
+
+    const embeddings = new JinaEmbeddings({
+      apiKey: process.env.JINA_API_KEY!,
+      model: 'jina-embeddings-v2-base-en'
+    });
+
+    let reindexedCount = 0;
+
+    // Reindex all documents and their chunks
+    for (const doc of kb.documents) {
+      try {
+        // Get all chunks for this document
+        const chunks = await prisma.documentChunk.findMany({
+          where: { docId: doc.id }
+        });
+
+        // Regenerate embeddings for each chunk
+        for (const chunk of chunks) {
+          try {
+            const embedding = await embeddings.embedQuery(chunk.content);
+
+            await prisma.documentChunk.update({
+              where: { id: chunk.id },
+              data: { embedding: embedding }
+            });
+
+            reindexedCount++;
+          } catch (chunkError) {
+            console.error(`Failed to reindex chunk ${chunk.id}:`, chunkError);
+            // Continue with next chunk
+          }
+        }
+      } catch (docError) {
+        console.error(`Failed to reindex document ${doc.id}:`, docError);
+        // Continue with next document
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Reindexed ${reindexedCount} chunks`,
+      kbId: id,
+      reindexedChunks: reindexedCount,
+      totalChunks: kb.documents.reduce((sum, d) => sum + d.chunks.length, 0)
+    });
+  } catch (error) {
+    console.error('Reindex error:', error);
+    res.status(500).json({ error: 'Failed to reindex documents' });
   }
 };

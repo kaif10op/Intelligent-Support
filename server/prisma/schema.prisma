@@ -20,6 +20,7 @@ model User {
   tickets        Ticket[]        @relation("UserTickets")
   assignedTickets Ticket[]       @relation("AdminTickets")
   ticketMessages TicketNote[]    // Messages sent by this user in tickets
+  auditLogs      AuditLog[] @relation("AdminLogs") // Admin actions performed by this user
 }
 
 
@@ -114,6 +115,18 @@ model TicketNote {
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  adminId     String
+  admin       User     @relation("AdminLogs", fields: [adminId], references: [id], onDelete: Cascade)
+  action      String   // "ticket_status_updated", "ticket_assigned", "user_role_changed", etc.
+  resourceId  String?  // ID of the affected resource (ticket, user, etc.)
+  resourceType String? // "ticket", "user", "kb", etc.
+  changes     Json?    // What changed: { field: "oldValue" -> "newValue" }
+  description String?  // Human-readable description
+  createdAt   DateTime @default(now())
 }
 
 enum TicketStatus {

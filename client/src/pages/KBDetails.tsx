@@ -2,13 +2,19 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useDropzone } from 'react-dropzone';
-import { FileText, Upload, Trash2, ChevronLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileText, Upload, Trash2, ChevronLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
+import ProgressBar from '../components/ProgressBar';
 
 const KBDetails = () => {
   const { id } = useParams();
+  const { addToast } = useToast();
   const [kb, setKb] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<'uploading' | 'processing' | 'success' | 'error'>('uploading');
+  const [uploadFileName, setUploadFileName] = useState('');
   const [error, setError] = useState('');
 
   const fetchDetails = async () => {
@@ -39,8 +45,11 @@ const KBDetails = () => {
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
-    
+
     setUploading(true);
+    setUploadProgress(0);
+    setUploadStatus('uploading');
+    setUploadFileName(acceptedFiles[0].name);
     setError('');
 
     const formData = new FormData();
@@ -49,15 +58,41 @@ const KBDetails = () => {
 
     try {
       await axios.post('http://localhost:8000/api/kb/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentComplete = Math.round((progressEvent.loaded / progressEvent.total) * 90); // 0-90%
+            setUploadProgress(percentComplete);
+          }
+        }
       });
-      fetchDetails();
+
+      // Processing stage (90-100%)
+      setUploadStatus('processing');
+      setUploadProgress(90);
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing
+
+      setUploadProgress(100);
+      setUploadStatus('success');
+      addToast('Document uploaded and processed successfully!', 'success');
+
+      // Refresh KB details
+      setTimeout(() => {
+        setUploading(false);
+        setUploadProgress(0);
+        setUploadFileName('');
+        fetchDetails();
+      }, 1500);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Upload failed');
-    } finally {
+      const errorMsg = err.response?.data?.error || 'Upload failed';
+      setError(errorMsg);
+      setUploadStatus('error');
+      addToast(errorMsg, 'error');
       setUploading(false);
+      setUploadProgress(0);
+      setUploadFileName('');
     }
-  }, [id]);
+  }, [id, addToast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop, 
@@ -93,8 +128,15 @@ const KBDetails = () => {
              <input {...getInputProps()} />
              {uploading ? (
                <div className="upload-state">
-                  <Loader2 className="spinner" size={48} color="#8a2be2" />
-                  <p>Processing document and generating embeddings...</p>
+                  <ProgressBar
+                    progress={uploadProgress}
+                    status={uploadStatus}
+                    label={uploadFileName}
+                    showPercentage={true}
+                  />
+                  <p style={{ marginTop: '16px', opacity: 0.7 }}>
+                    {uploadStatus === 'processing' ? 'Processing document and generating embeddings...' : 'Uploading...'}
+                  </p>
                </div>
              ) : (
                <div className="upload-state">
