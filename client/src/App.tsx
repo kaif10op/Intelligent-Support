@@ -7,6 +7,7 @@ import { SocketProvider } from './contexts/SocketContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
 import ConnectionStatus from './components/ConnectionStatus';
+import './i18n/i18n'; // Initialize i18n
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
