@@ -4,6 +4,8 @@ import { logger } from './utils/logger.js';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { createServer as createHTTPServer } from 'http';
+import { initializeSocket } from './socket.js';
 import authRoutes from './routes/auth.js';
 import kbRoutes from './routes/kb.js';
 import chatRoutes from './routes/chat.js';
@@ -16,6 +18,13 @@ async function startServer() {
   try {
     console.log('🚀 Starting server initialization...');
 
+    // Create HTTP server to attach Socket.io
+    const httpServer = createHTTPServer(app);
+
+    // Initialize Socket.io
+    const io = initializeSocket(httpServer);
+    console.log('✅ Socket.io initialized');
+
     // Middleware
     app.use(cors({
       origin: config.CORS_ORIGIN,
@@ -24,6 +33,9 @@ async function startServer() {
 
     app.use(express.json());
     app.use(cookieParser());
+
+    // Store io instance in app for use in controllers
+    app.set('io', io);
 
     console.log('✅ Core middleware initialized');
 
@@ -55,11 +67,12 @@ async function startServer() {
       });
     });
 
-    app.listen(config.PORT, () => {
+    httpServer.listen(config.PORT, () => {
       logger.info(`✅ Server started successfully`, {
         port: config.PORT,
         environment: config.NODE_ENV,
         corsOrigin: config.CORS_ORIGIN,
+        websocket: 'enabled'
       });
     });
   } catch (err: any) {

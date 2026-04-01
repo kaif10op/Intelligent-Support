@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore.js';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ToastProvider } from './contexts/ToastContext';
+import { SocketProvider } from './contexts/SocketContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import ToastContainer from './components/ToastContainer';
+import ConnectionStatus from './components/ConnectionStatus';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -44,9 +46,11 @@ function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-          <BrowserRouter>
-            <ToastContainer />
+        <SocketProvider>
+          <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+            <BrowserRouter>
+              <ConnectionStatus />
+              <ToastContainer />
             <Routes>
             <Route path="/login" element={<Login />} />
 
@@ -112,8 +116,9 @@ function App() {
             } />
 
           </Routes>
-        </BrowserRouter>
-      </GoogleOAuthProvider>
+            </BrowserRouter>
+          </GoogleOAuthProvider>
+        </SocketProvider>
       </ToastProvider>
     </ErrorBoundary>
   );

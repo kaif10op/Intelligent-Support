@@ -4,6 +4,7 @@ import { Send, Bot, ChevronLeft, Loader2, Info, ChevronDown, ChevronUp, ThumbsUp
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { useToast } from '../contexts/ToastContext';
+import { useSocket } from '../contexts/SocketContext';
 
 interface Message {
   id?: string;
@@ -19,6 +20,7 @@ const Chat = () => {
   const kbId = searchParams.get('kbId');
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { subscribeTo, unsubscribeFrom, onChatMessage } = useSocket();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -52,19 +54,38 @@ const Chat = () => {
             sources: m.sources
           }));
           setMessages(formatted);
-          
+
           const fb: Record<string, number> = {};
           data.messages.forEach((m: any) => {
             if (m.rating) fb[m.id] = m.rating;
           });
           setFeedbackGiven(fb);
         }
+
+        // Subscribe to real-time updates for this chat
+        subscribeTo('chat', id);
+        onChatMessage(id, (data: any) => {
+          if (data.type === 'ai-typing') {
+            // Show typing indicator
+          } else if (data.message) {
+            // Add new message
+            setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+          }
+        });
       } catch (err) {
         console.error('Failed to load chat history:', err);
       }
+
+      return () => {
+        if (id && id !== 'new') {
+          unsubscribeFrom('chat', id);
+        }
+      };
     };
-    fetchHistory();
-  }, [id, kbId]);
+
+    const cleanup = fetchHistory();
+    return cleanup as any;
+  }, [id, kbId, subscribeTo, unsubscribeFrom, onChatMessage]);
 
   useEffect(() => {
     if (scrollRef.current) {
