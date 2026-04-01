@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { config } from './config.js';
 import { logger } from './utils/logger.js';
+import { initRedis } from './utils/cache.js';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -17,6 +18,10 @@ const app = express();
 async function startServer() {
   try {
     console.log('🚀 Starting server initialization...');
+
+    // Initialize Redis cache
+    await initRedis();
+    console.log('✅ Redis cache initialized (or disabled)');
 
     // Create HTTP server to attach Socket.io
     const httpServer = createHTTPServer(app);
