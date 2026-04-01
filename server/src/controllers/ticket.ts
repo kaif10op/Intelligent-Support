@@ -3,6 +3,7 @@ import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
 import { ChatGroq } from '@langchain/groq';
 import { formatPaginatedResponse, parsePaginationParams, calculateSkipTake } from '../utils/pagination.js';
+import { exportTicketsToCSV, getExportFilename } from '../utils/export.js';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
@@ -275,5 +276,62 @@ Reply:`;
   } catch (error) {
     console.error('Suggest reply error:', error);
     res.status(500).json({ error: 'Failed to generate reply suggestion' });
+  }
+};
+
+/**
+ * Export user's tickets to CSV
+ * GET /api/tickets/export/csv
+ */
+export const exportMyTicketsAsCSV = async (req: AuthRequest, res: Response) => {
+  try {
+    const tickets = await prisma.ticket.findMany({
+      where: { userId: req.user!.id },
+      include: {
+        user: { select: { name: true } },
+        assignedTo: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const csv = exportTicketsToCSV(tickets);
+    const filename = getExportFilename('my-tickets');
+
+    res.setHeader('Content-Type', 'text/csv;charset=utf-8;');
+    res.setHeader('Content-Disposition', `attachment;filename="${filename}"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Export tickets error:', error);
+    res.status(500).json({ error: 'Failed to export tickets' });
+  }
+};
+
+/**
+ * Export all tickets to CSV (admin only)
+ * GET /api/tickets/export/all/csv
+ */
+export const exportAllTicketsAsCSV = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const tickets = await prisma.ticket.findMany({
+      include: {
+        user: { select: { name: true } },
+        assignedTo: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const csv = exportTicketsToCSV(tickets);
+    const filename = getExportFilename('all-tickets');
+
+    res.setHeader('Content-Type', 'text/csv;charset=utf-8;');
+    res.setHeader('Content-Disposition', `attachment;filename="${filename}"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Export all tickets error:', error);
+    res.status(500).json({ error: 'Failed to export tickets' });
   }
 };

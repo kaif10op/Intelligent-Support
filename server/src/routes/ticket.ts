@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../middlewares/auth.js';
-import { createTicket, getMyTickets, getAllTickets, updateTicket, addTicketNote, getTicketMessages, deleteTicketMessage, suggestReply } from '../controllers/ticket.js';
+import { createTicket, getMyTickets, getAllTickets, updateTicket, addTicketNote, getTicketMessages, deleteTicketMessage, suggestReply, exportMyTicketsAsCSV, exportAllTicketsAsCSV } from '../controllers/ticket.js';
 
 const router = Router();
 
 // User Routes
 router.post('/', requireAuth, createTicket);
 router.get('/my', requireAuth, getMyTickets);
+router.get('/export/csv', requireAuth, exportMyTicketsAsCSV); // Export user's tickets
 
 // Ticket Message Routes (bidirectional - both users and admins can add messages)
 router.get('/:id/messages', requireAuth, getTicketMessages);
@@ -15,6 +16,7 @@ router.delete('/:id/messages/:noteId', requireAuth, deleteTicketMessage); // Use
 
 // Admin Routes
 router.get('/all', requireAuth, requireAdmin, getAllTickets);
+router.get('/export/all/csv', requireAuth, requireAdmin, exportAllTicketsAsCSV); // Export all tickets
 router.put('/:id', requireAuth, requireAdmin, updateTicket);
 router.post('/:id/suggest-reply', requireAuth, requireAdmin, suggestReply); // AI suggestion for admin replies
 

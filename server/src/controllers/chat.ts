@@ -3,6 +3,7 @@ import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
 import { generateEmbeddings } from '../utils/jina.js';
 import { formatPaginatedResponse, parsePaginationParams, calculateSkipTake } from '../utils/pagination.js';
+import { exportChatsToCSV, getExportFilename } from '../utils/export.js';
 import { ChatGroq } from '@langchain/groq';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ChatOpenAI } from '@langchain/openai';
@@ -487,5 +488,32 @@ Return format: ["question 1", "question 2", "question 3"]`;
   } catch (error: any) {
     console.error('Suggestions Error:', error);
     res.status(500).json({ error: 'Failed to generate suggestions' });
+  }
+};
+
+/**
+ * Export user's chats to CSV
+ * GET /api/chat/export/csv
+ */
+export const exportChatsAsCSV = async (req: AuthRequest, res: Response) => {
+  try {
+    const chats = await prisma.chat.findMany({
+      where: { userId: req.user!.id },
+      include: {
+        kb: { select: { title: true } },
+        messages: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const csv = exportChatsToCSV(chats);
+    const filename = getExportFilename('chats');
+
+    res.setHeader('Content-Type', 'text/csv;charset=utf-8;');
+    res.setHeader('Content-Disposition', `attachment;filename="${filename}"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Export chats error:', error);
+    res.status(500).json({ error: 'Failed to export chats' });
   }
 };

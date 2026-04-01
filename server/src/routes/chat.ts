@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middlewares/auth.js';
-import { chatWithAgent, getChats, getChatDetails, submitFeedback, clearChat, regenerateResponse, getSuggestions } from '../controllers/chat.js';
+import { chatWithAgent, getChats, getChatDetails, submitFeedback, clearChat, regenerateResponse, getSuggestions, exportChatsAsCSV } from '../controllers/chat.js';
 
 const router = Router();
 
@@ -15,6 +15,9 @@ router.post('/message/:id/feedback', submitFeedback as any);
 router.delete('/:id/clear', clearChat as any);
 router.post('/:id/regenerate', regenerateResponse as any);
 router.get('/:id/suggestions', getSuggestions as any);
+
+// Export endpoints (Wave 5)
+router.get('/export/csv', exportChatsAsCSV as any);
 
 export default router;
 
