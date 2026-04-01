@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
 import { generateEmbeddings } from '../utils/jina.js';
+import { formatPaginatedResponse, parsePaginationParams, calculateSkipTake } from '../utils/pagination.js';
 import { ChatGroq } from '@langchain/groq';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ChatOpenAI } from '@langchain/openai';
@@ -270,12 +271,21 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
 
 export const getChats = async (req: AuthRequest, res: Response) => {
   try {
-    const chats = await prisma.chat.findMany({
-      where: { userId: req.user!.id },
-      orderBy: { updatedAt: 'desc' },
-      include: { kb: { select: { title: true } } }
-    });
-    res.json(chats);
+    const { page, limit } = parsePaginationParams(req.query);
+    const { skip, take } = calculateSkipTake(page, limit);
+
+    const [chats, total] = await Promise.all([
+      prisma.chat.findMany({
+        where: { userId: req.user!.id },
+        orderBy: { updatedAt: 'desc' },
+        include: { kb: { select: { title: true } } },
+        skip,
+        take
+      }),
+      prisma.chat.count({ where: { userId: req.user!.id } })
+    ]);
+
+    res.json(formatPaginatedResponse(chats, total, page, limit));
   } catch (error) { res.status(500).json({ error: 'Failed to fetch chats' }); }
 };
 

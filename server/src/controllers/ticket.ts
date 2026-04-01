@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
 import { ChatGroq } from '@langchain/groq';
+import { formatPaginatedResponse, parsePaginationParams, calculateSkipTake } from '../utils/pagination.js';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
@@ -35,12 +36,21 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
 
 export const getMyTickets = async (req: AuthRequest, res: Response) => {
   try {
-    const tickets = await prisma.ticket.findMany({
-      where: { userId: req.user!.id },
-      orderBy: { createdAt: 'desc' },
-      include: { assignedTo: { select: { name: true, email: true } } }
-    });
-    res.json(tickets);
+    const { page, limit } = parsePaginationParams(req.query);
+    const { skip, take } = calculateSkipTake(page, limit);
+
+    const [tickets, total] = await Promise.all([
+      prisma.ticket.findMany({
+        where: { userId: req.user!.id },
+        orderBy: { createdAt: 'desc' },
+        include: { assignedTo: { select: { name: true, email: true } } },
+        skip,
+        take
+      }),
+      prisma.ticket.count({ where: { userId: req.user!.id } })
+    ]);
+
+    res.json(formatPaginatedResponse(tickets, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch your tickets' });
   }
@@ -49,14 +59,23 @@ export const getMyTickets = async (req: AuthRequest, res: Response) => {
 export const getAllTickets = async (req: AuthRequest, res: Response) => {
   try {
     // Only admins should call this (handled by middleware)
-    const tickets = await prisma.ticket.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { name: true, email: true } },
-        assignedTo: { select: { name: true, email: true } }
-      }
-    });
-    res.json(tickets);
+    const { page, limit } = parsePaginationParams(req.query);
+    const { skip, take } = calculateSkipTake(page, limit);
+
+    const [tickets, total] = await Promise.all([
+      prisma.ticket.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { name: true, email: true } },
+          assignedTo: { select: { name: true, email: true } }
+        },
+        skip,
+        take
+      }),
+      prisma.ticket.count()
+    ]);
+
+    res.json(formatPaginatedResponse(tickets, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch all tickets' });
   }
