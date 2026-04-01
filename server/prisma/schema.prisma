@@ -1,11 +1,9 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider   = "postgresql"
-  extensions = [vector]
+  provider = "postgresql"
 }
 
 model User {
@@ -19,6 +17,8 @@ model User {
   updatedAt      DateTime         @updatedAt
   knowledgeBases KnowledgeBase[]
   chats          Chat[]
+  tickets        Ticket[]        @relation("UserTickets")
+  assignedTickets Ticket[]       @relation("AdminTickets")
 }
 
 enum Role {
@@ -52,7 +52,7 @@ model Document {
 model DocumentChunk {
   id        String    @id @default(uuid())
   content   String
-  embedding Unsupported("vector(768)")
+  embedding Float[]
   docId     String
   document  Document  @relation(fields: [docId], references: [id], onDelete: Cascade)
 }
@@ -65,16 +65,60 @@ model Chat {
   kbId      String
   kb        KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
   messages  Message[]
+  tickets   Ticket[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
 
 model Message {
+  id         String   @id @default(uuid())
+  role       String   // 'user' or 'ai'
+  content    String
+  sources    Json?    // Store exact chunk matches
+  confidence Float?   // AI confidence score (0-1)
+  rating     Int?     // 1 for 👍, -1 for 👎
+  feedback   String?  // Optional text feedback
+  chatId     String
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model Ticket {
+  id          String       @id @default(uuid())
+  title       String
+  description String
+  status      TicketStatus @default(OPEN)
+  priority    Priority     @default(MEDIUM)
+  userId      String
+  user        User         @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+  assignedToId String?
+  assignedTo  User?        @relation("AdminTickets", fields: [assignedToId], references: [id])
+  chatId      String?
+  chat        Chat?        @relation(fields: [chatId], references: [id])
+  notes       TicketNote[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model TicketNote {
   id        String   @id @default(uuid())
-  role      String   // 'user' or 'ai'
   content   String
-  sources   Json?    // Store exact chunk matches
-  chatId    String
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  adminId   String
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }

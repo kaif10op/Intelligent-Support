@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, MessageSquare, Database, Settings, HelpCircle, Clock } from 'lucide-react';
+import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 
@@ -33,6 +33,10 @@ const Sidebar = () => {
           <Database size={20} />
           <span>Knowledge Bases</span>
         </NavLink>
+        <NavLink to="/tickets" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Ticket size={20} />
+          <span>Tickets</span>
+        </NavLink>
 
         <div className="recent-list-section">
            <div className="section-label">
@@ -40,7 +44,7 @@ const Sidebar = () => {
               <span>Recently Active</span>
            </div>
            <div className="recent-items">
-              {recentChats.map(chat => (
+              {recentChats.map((chat: any) => (
                 <NavLink key={chat.id} to={`/chat/${chat.id}?kbId=${chat.kbId}`} className="recent-item">
                   <div className="dot"></div>
                   <span>{chat.title}</span>

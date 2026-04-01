@@ -5,18 +5,27 @@ import { useNavigate } from 'react-router-dom';
 import { Bot, ShieldCheck, Zap } from 'lucide-react';
 
 const Login = () => {
-  const { setUser, checkAuth } = useAuthStore();
+  const { setUser } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSuccess = async (response: any) => {
     try {
       const { credential } = response;
-      const res = await axios.post('http://localhost:8000/api/auth/google', { token: credential });
+      const res = await axios.post('http://localhost:8000/api/auth/google', 
+        { token: credential },
+        { withCredentials: true }
+      );
       setUser(res.data.user);
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Google login failed', err);
+      alert(err.response?.data?.error || 'Authentication with backend failed. Please try again.');
     }
+  };
+
+  const handleFailure = () => {
+    console.error('Google Login Failed to initialize');
+    alert(`Google Login failed to initialize. Please check your browser's third-party cookie settings.`);
   };
 
   return (
@@ -49,8 +58,7 @@ const Login = () => {
           <p>Please sign in with your Google account to get started.</p>
           <GoogleLogin
             onSuccess={handleSuccess}
-            onError={() => console.log('Login Failed')}
-            useOneTap
+            onError={handleFailure}
             theme="filled_black"
             shape="pill"
           />

@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "npx tsx watch src/index.ts",
-    "start": "npx tsx src/index.ts",
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "start": "node --loader ts-node/esm src/index.ts",
     "postinstall": "npx prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -19,9 +19,12 @@
     "@langchain/google-genai": "^2.1.26",
     "@langchain/groq": "^1.1.5",
     "@langchain/openai": "^1.4.1",
+    "@langchain/tavily": "^1.2.0",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
+    "@prisma/config": "^7.6.0",
     "axios": "^1.14.0",
+    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",

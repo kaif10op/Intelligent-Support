@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import { Send, Bot, ChevronLeft, Loader2, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { Send, Bot, ChevronLeft, Loader2, Info, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, AlertTriangle, Paperclip, File, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import axios from 'axios';
 
 interface Message {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
   sources?: any[];
@@ -19,31 +21,42 @@ const Chat = () => {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [showSources, setShowSources] = useState<number | null>(null);
+  const [feedbackGiven, setFeedbackGiven] = useState<Record<string, number>>({});
+  const [uploading, setUploading] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<any>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
       if (!id || id === 'new') return;
       try {
-        const res = await fetch(`http://localhost:8000/api/chat/${id}`, {
-          credentials: 'include'
+        const res = await axios.get(`http://localhost:8000/api/chat/${id}`, {
+          withCredentials: true
         });
-        const data = await res.json();
+        const data = res.data;
         if (data.messages) {
           const formatted = data.messages.map((m: any) => ({
+            id: m.id,
             role: m.role === 'ai' ? 'assistant' : 'user',
             content: m.content,
             sources: m.sources
           }));
           setMessages(formatted);
+          
+          const fb: Record<string, number> = {};
+          data.messages.forEach((m: any) => {
+            if (m.rating) fb[m.id] = m.rating;
+          });
+          setFeedbackGiven(fb);
         }
       } catch (err) {
         console.error('Failed to load chat history:', err);
       }
     };
     fetchHistory();
-  }, [id]);
+  }, [id, kbId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -51,16 +64,47 @@ const Chat = () => {
     }
   }, [messages, streaming]);
 
-  const handleSend = async () => {
-    if (!input.trim() || streaming) return;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !kbId) return;
 
-    const userMessage = input.trim();
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('kbId', kbId);
+
+    try {
+      const res = await axios.post('http://localhost:8000/api/kb/upload', formData, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setAttachedFile({ name: file.name, id: res.data.document.id });
+    } catch (err) {
+      console.error('File upload failed:', err);
+      alert('Failed to upload and process file.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if ((!input.trim() && !attachedFile) || streaming) return;
+
+    let userMessage = input.trim();
+    if (attachedFile && !userMessage) {
+        userMessage = `I've uploaded a file: ${attachedFile.name}. Can you summarize it or answer questions based on it?`;
+    } else if (attachedFile) {
+        userMessage = `(Attached: ${attachedFile.name}) ${userMessage}`;
+    }
+
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setAttachedFile(null);
+    setMessages((prev: Message[]) => [...prev, { role: 'user', content: userMessage }]);
     setStreaming(true);
 
     const assistantMessage: Message = { role: 'assistant', content: '' };
-    setMessages(prev => [...prev, assistantMessage]);
+    setMessages((prev: Message[]) => [...prev, assistantMessage]);
+
 
     try {
       const response = await fetch('http://localhost:8000/api/chat', {
@@ -73,7 +117,6 @@ const Chat = () => {
           chatId: id !== 'new' ? id : undefined 
         })
       });
-
 
       if (!response.body) throw new Error('No response body');
 
@@ -98,19 +141,12 @@ const Chat = () => {
                   return [...prev.slice(0, -1), { ...last, content: last.content + data.token }];
                 });
               } else if (data.event === 'done') {
-                if (data.sources) {
-                  setMessages(prev => {
-                    const last = prev[prev.length - 1];
-                    return [...prev.slice(0, -1), { ...last, sources: data.sources }];
-                  });
-                }
                 if (data.chatId && id === 'new') {
                    navigate(`/chat/${data.chatId}?kbId=${kbId}`, { replace: true });
                 }
+                setTimeout(() => fetchHistoryAgain(data.chatId || id), 500);
               }
-            } catch (e) {
-                // Fragmented JSON
-            }
+            } catch (e) { }
           }
         }
       }
@@ -122,16 +158,46 @@ const Chat = () => {
     }
   };
 
+  const fetchHistoryAgain = async (chatId: string) => {
+    if (!chatId || chatId === 'new') return;
+    try {
+      const res = await axios.get(`http://localhost:8000/api/chat/${chatId}`, { withCredentials: true });
+      const data = res.data;
+      if (data.messages) {
+        setMessages(data.messages.map((m: any) => ({
+          id: m.id,
+          role: m.role === 'ai' ? 'assistant' : 'user',
+          content: m.content,
+          sources: m.sources
+        })));
+      }
+    } catch (e) {}
+  };
+
+  const handleFeedback = async (messageId: string, rating: number) => {
+    if (!messageId) return;
+    try {
+      await axios.post(`http://localhost:8000/api/chat/message/${messageId}/feedback`, { rating }, { withCredentials: true });
+      setFeedbackGiven(prev => ({ ...prev, [messageId]: rating }));
+    } catch (err) {
+      console.error('Feedback error:', err);
+    }
+  };
+
+  const isLowConfidence = (content: string) => {
+     const lower = content.toLowerCase();
+     return lower.includes('support ticket') || lower.includes('not fully confident') || lower.includes('create a ticket');
+  };
 
   return (
     <div className="chat-page fade-in">
-      <header className="chat-header">
+      <header className="chat-header glass">
         <button onClick={() => navigate(-1)} className="back-btn">
           <ChevronLeft size={20} />
           <span>Exit Chat</span>
         </button>
         <div className="kb-indicator">
-          <Bot size={20} color="#8a2be2" />
+          <Bot size={20} color="var(--accent-primary)" />
           <span>AI Assistant</span>
         </div>
       </header>
@@ -140,7 +206,7 @@ const Chat = () => {
         {messages.length === 0 && (
           <div className="welcome-state">
             <div className="bot-icon-large glass">
-              <Bot size={48} color="#8a2be2" />
+              <Bot size={48} color="var(--accent-primary)" />
             </div>
             <h2>How can I help you today?</h2>
             <p>I can answer questions based on the documents you've uploaded to this knowledge base.</p>
@@ -148,12 +214,41 @@ const Chat = () => {
         )}
 
         {messages.map((m, i) => (
-          <div key={i} className={`message-wrap ${m.role}`}>
+          <div key={i} className={`message-wrap ${m.role} fade-in`}>
             <div className={`message glass ${m.role === 'assistant' ? 'assistant-msg' : 'user-msg'}`}>
               <div className="msg-content">
                  <ReactMarkdown>{m.content}</ReactMarkdown>
               </div>
               
+              {m.role === 'assistant' && (
+                <div className="msg-actions fade-in">
+                   <div className="feedback-btns">
+                      <button 
+                        className={`fb-btn ${feedbackGiven[m.id!] === 1 ? 'active' : ''}`}
+                        onClick={() => handleFeedback(m.id!, 1)}
+                        disabled={!m.id}
+                        title="Helpful"
+                      >
+                         <ThumbsUp size={14} />
+                      </button>
+                      <button 
+                        className={`fb-btn ${feedbackGiven[m.id!] === -1 ? 'active' : ''}`}
+                        onClick={() => handleFeedback(m.id!, -1)}
+                        disabled={!m.id}
+                        title="Not Helpful"
+                      >
+                         <ThumbsDown size={14} />
+                      </button>
+                   </div>
+                   {isLowConfidence(m.content) && (
+                     <button className="escalate-btn" onClick={() => navigate('/tickets')}>
+                        <AlertTriangle size={14} />
+                        <span>Create Support Ticket</span>
+                     </button>
+                   )}
+                </div>
+              )}
+
               {m.sources && m.sources.length > 0 && (
                 <div className="sources-wrap">
                   <button onClick={() => setShowSources(showSources === i ? null : i)} className="sources-toggle">
@@ -179,62 +274,110 @@ const Chat = () => {
           <div className="message-wrap assistant">
              <div className="message glass assistant-msg loading-msg">
                 <Loader2 className="spinner" size={18} />
-                <span>Thinking...</span>
+                <span>AI is thinking...</span>
              </div>
           </div>
         )}
       </div>
 
-      <div className="input-container">
-        <div className="input-wrap glass">
-          <textarea 
-            placeholder="Type your question..." 
-            value={input} 
-            onChange={(e) => setInput(e.target.value)} 
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-            rows={1}
-          />
-          <button onClick={handleSend} disabled={streaming || !input.trim()} className="send-btn">
-            {streaming ? <Loader2 className="spinner" size={20} /> : <Send size={20} />}
-          </button>
+      <div className="input-area-wrapper">
+        {attachedFile && (
+           <div className="attachment-preview glass fade-in">
+              <File size={16} color="var(--accent-secondary)" />
+              <span>{attachedFile.name}</span>
+              <button onClick={() => setAttachedFile(null)} className="remove-attach">
+                 <X size={14} />
+              </button>
+           </div>
+        )}
+        <div className="input-container">
+          <div className="input-wrap glass focus-within">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              hidden 
+              onChange={handleFileUpload} 
+              accept=".pdf,.txt,.docx,.md"
+            />
+            <button 
+              className={`attach-btn ${uploading ? 'loading' : ''}`} 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || streaming}
+              title="Attach File (PDF, DOCX, TXT)"
+            >
+              {uploading ? <Loader2 size={20} className="spinner" /> : <Paperclip size={20} />}
+            </button>
+            <textarea 
+              placeholder="Ask anything about your documents..." 
+              value={input} 
+              onChange={(e) => setInput(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+              rows={1}
+            />
+            <button onClick={handleSend} disabled={streaming || uploading || (!input.trim() && !attachedFile)} className="send-btn">
+              {streaming ? <Loader2 className="spinner" size={20} /> : <Send size={20} />}
+            </button>
+          </div>
+          <p className="chat-footer">Powered by RAG Agentic Pipeline • v2.0</p>
         </div>
-        <p className="chat-footer">AI will answer ONLY based on your documents. If unsure, it will say so.</p>
       </div>
 
       <style>{`
         .chat-page { display: flex; flex-direction: column; height: 100%; max-height: calc(100vh - 100px); }
-        .chat-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--glass-border); margin-bottom: 16px; }
-        .back-btn { display: flex; align-items: center; gap: 4px; color: var(--text-muted); background: none; border: none; cursor: pointer; transition: 0.2s; }
+        .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; border-radius: 16px 16px 0 0; margin-bottom: 8px; }
+        .back-btn { display: flex; align-items: center; gap: 6px; color: var(--text-muted); background: none; border: none; cursor: pointer; transition: 0.2s; font-weight: 500; }
         .back-btn:hover { color: #fff; transform: translateX(-4px); }
-        .kb-indicator { display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 6px 12px; background: rgba(138, 43, 226, 0.1); border-radius: 20px; border: 1px solid rgba(138, 43, 226, 0.2); }
-        .messages-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 16px 0; }
-        .welcome-state { margin: auto; text-align: center; max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 16px; opacity: 0.6; }
-        .bot-icon-large { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; border-radius: 28px; background: rgba(138, 43, 226, 0.05); }
-        .message-wrap { display: flex; width: 100%; }
+        .kb-indicator { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 8px 16px; background: rgba(138, 43, 226, 0.1); border-radius: 12px; }
+        .messages-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 24px 0;scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+        .welcome-state { margin: auto; text-align: center; max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 20px; opacity: 0.7; }
+        .bot-icon-large { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 36px; background: rgba(138, 43, 226, 0.05); }
+        .message-wrap { display: flex; width: 100%; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .message-wrap.user { justify-content: flex-end; }
         .message-wrap.assistant { justify-content: flex-start; }
-        .message { max-width: 80%; padding: 16px 20px; border-radius: 20px; font-size: 1rem; line-height: 1.5; position: relative; }
-        .user-msg { background: rgba(138, 43, 226, 0.15); border-color: rgba(138, 43, 226, 0.3); border-bottom-right-radius: 4px; }
-        .assistant-msg { background: var(--bg-card); border-bottom-left-radius: 4px; }
-        .loading-msg { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 0.9rem; }
+        .message { max-width: 75%; padding: 16px 24px; border-radius: 24px; font-size: 1rem; line-height: 1.6; position: relative; }
+        .user-msg { background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(138, 43, 226, 0.1)); border-color: rgba(138, 43, 226, 0.3); border-bottom-right-radius: 4px; }
+        .assistant-msg { background: var(--bg-card); border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
+        .loading-msg { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 0.95rem; }
         .msg-content { color: #f0f0f0; }
-        .msg-content p { color: #f0f0f0; margin-bottom: 12px; }
+        .msg-content p { margin-bottom: 12px; }
         .msg-content p:last-child { margin-bottom: 0; }
-        .sources-wrap { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--glass-border); }
-        .sources-toggle { background: none; border: none; color: var(--accent-secondary); display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
+        
+        .msg-actions { margin-top: 16px; display: flex; align-items: center; gap: 20px; }
+        .feedback-btns { display: flex; gap: 10px; }
+        .fb-btn { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: var(--text-muted); padding: 6px 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .fb-btn:hover:not(:disabled) { border-color: var(--accent-primary); color: #fff; background: rgba(138, 43, 226, 0.1); }
+        .fb-btn.active { background: rgba(138, 43, 226, 0.2); color: var(--accent-primary); border-color: var(--accent-primary); box-shadow: 0 0 10px rgba(138, 43, 226, 0.2); }
+        .escalate-btn { display: flex; align-items: center; gap: 8px; background: rgba(255, 127, 0, 0.1); border: 1px solid rgba(255, 127, 0, 0.3); color: #ff7f00; padding: 6px 14px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: 0.3s; }
+        .escalate-btn:hover { background: rgba(255, 127, 0, 0.2); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255, 127, 0, 0.2); }
+
+        .sources-wrap { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .sources-toggle { background: none; border: none; color: var(--accent-secondary); display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 700; padding: 6px 10px; border-radius: 6px; transition: 0.2s; }
         .sources-toggle:hover { background: rgba(0, 210, 255, 0.1); }
-        .sources-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-        .source-item { font-size: 0.75rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
-        .input-container { padding-top: 24px; position: relative; }
-        .input-wrap { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 24px; border: 1px solid var(--glass-border); background: rgba(15, 15, 15, 0.8); }
-        .input-wrap textarea { flex: 1; min-height: 24px; max-height: 150px; background: none; border: none; padding: 0; resize: none; font-size: 1rem; color: #fff; }
-        .input-wrap textarea:focus { box-shadow: none; }
-        .send-btn { background: var(--accent-primary); border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
-        .send-btn:hover:not(:disabled) { background: #9b4dff; transform: scale(1.05); }
-        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .chat-footer { text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 12px; }
+        .sources-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+        .source-item { font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); line-height: 1.4; }
+        
+        .input-area-wrapper { padding-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+        .attachment-preview { align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 12px; background: rgba(0, 210, 255, 0.1); border: 1px solid rgba(0, 210, 255, 0.2); font-size: 0.85rem; }
+        .remove-attach { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 2px; border-radius: 50%; }
+        .remove-attach:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .input-container { position: relative; }
+        .input-wrap { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-radius: 28px; border: 1px solid var(--glass-border); background: rgba(10, 10, 10, 0.8); transition: 0.3s; }
+        .input-wrap.focus-within:focus-within { border-color: var(--accent-primary); box-shadow: 0 0 15px rgba(138, 43, 226, 0.1); }
+        .attach-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-muted); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+        .attach-btn:hover:not(:disabled) { border-color: var(--accent-secondary); color: var(--accent-secondary); background: rgba(0, 210, 255, 0.05); }
+        .attach-btn.loading { opacity: 0.7; }
+        .input-wrap textarea { flex: 1; min-height: 24px; max-height: 200px; background: none; border: none; padding: 10px 0; resize: none; font-size: 1.05rem; color: #fff; }
+        .input-wrap textarea:focus { outline: none; }
+        .send-btn { background: var(--accent-primary); border: none; color: #fff; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
+        .send-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 0 15px rgba(138, 43, 226, 0.4); }
+        .send-btn:disabled { opacity: 0.4; filter: grayscale(1); }
+        .chat-footer { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.5; }
         .spinner { animation: rotate 2s linear infinite; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
+
+
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore.js';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Pages
 import Login from './pages/Login';
@@ -12,7 +13,9 @@ import RecentChats from './pages/RecentChats';
 import KnowledgeBases from './pages/KnowledgeBases';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
+import Tickets from './pages/Tickets';
 import Layout from './components/Layout';
+
 
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
@@ -26,6 +29,8 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
 };
 
 
+
+
 function App() {
   const { checkAuth } = useAuthStore();
 
@@ -34,8 +39,9 @@ function App() {
   }, [checkAuth]);
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <BrowserRouter>
+        <Routes>
         <Route path="/login" element={<Login />} />
         
         <Route path="/" element={
@@ -80,7 +86,14 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/tickets" element={
+          <ProtectedRoute>
+            <Layout><Tickets /></Layout>
+          </ProtectedRoute>
+        } />
+
         <Route path="/admin" element={
+
           <ProtectedRoute adminOnly>
             <Layout><Admin /></Layout>
           </ProtectedRoute>
@@ -88,6 +101,7 @@ function App() {
 
       </Routes>
     </BrowserRouter>
+  </GoogleOAuthProvider>
   );
 }
 

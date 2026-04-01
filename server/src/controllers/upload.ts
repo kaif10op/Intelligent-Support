@@ -1,7 +1,11 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
-import { PDFParse } from 'pdf-parse';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdf = require('pdf-parse');
+// In this specific environment, pdf-parse seems to export an object with PDFParse class
+const PDFParse = pdf.PDFParse;
 import mammoth from 'mammoth';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { generateEmbeddings } from '../utils/jina.js';
@@ -23,9 +27,21 @@ export const uploadDocument = async (req: AuthRequest, res: Response) => {
     let rawText = '';
 
     if (file.mimetype === 'application/pdf') {
-      const parser = new PDFParse({ data: file.buffer } as any);
-      const textResult = await (parser as any).getText();
-      rawText = textResult.text;
+      try {
+          if (typeof pdf === 'function') {
+              const data = await (pdf as any)(file.buffer);
+              rawText = data.text;
+          } else if (PDFParse) {
+              const parser = new (PDFParse as any)({ data: file.buffer } as any);
+              const textResult = await (parser as any).getText();
+              rawText = textResult.text;
+          } else {
+              throw new Error('PDF parser not found in package');
+          }
+      } catch (e: any) {
+          console.error('[Upload Debug] PDF Parse failed:', e);
+          throw new Error('Failed to parse PDF: ' + e.message);
+      }
     } else if (file.mimetype === 'text/plain' || file.mimetype === 'text/markdown') {
 
 
@@ -65,16 +81,18 @@ export const uploadDocument = async (req: AuthRequest, res: Response) => {
     // Embeddings
     const embeddings = await generateEmbeddings(chunkTexts);
 
-    // Save to Postgres pgvector using Prisma raw query since vector field is Unsupported
+    // Save to Postgres as standard Float[] arrays
     for (let i = 0; i < chunkTexts.length; i++) {
         const embedding = embeddings[i];
         if (!embedding) continue;
-        const vectorStr = `[${embedding.join(',')}]`;
         
-        await prisma.$executeRaw`
-          INSERT INTO "DocumentChunk" (id, content, embedding, "docId")
-          VALUES (gen_random_uuid(), ${chunkTexts[i]}, ${vectorStr}::vector, ${document.id})
-        `;
+        await (prisma.documentChunk as any).create({
+          data: {
+            content: chunkTexts[i],
+            embedding: embedding,
+            docId: document.id
+          }
+        });
     }
 
     res.json({ message: 'Document uploaded and processed successfully', document });
