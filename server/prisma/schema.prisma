@@ -98,6 +98,8 @@ model Ticket {
   chatId      String?
   chat        Chat?        @relation(fields: [chatId], references: [id])
   notes       TicketNote[]
+  dueAt       DateTime?    // SLA due date
+  isOverdue   Boolean      @default(false) // Helper field for overdue status
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }

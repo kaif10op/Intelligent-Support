@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Send, Bot, ChevronLeft, Loader2, Info, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, AlertTriangle, Paperclip, File, X, Copy, RotateCcw, Trash2, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
+import { useToast } from '../contexts/ToastContext';
 
 interface Message {
   id?: string;
@@ -17,6 +18,7 @@ const Chat = () => {
   const [searchParams] = useSearchParams();
   const kbId = searchParams.get('kbId');
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -195,9 +197,11 @@ const Chat = () => {
     try {
       await navigator.clipboard.writeText(content);
       setCopiedMessageId(messageId || 'temp');
+      addToast('Message copied to clipboard!', 'success');
       setTimeout(() => setCopiedMessageId(null), 2000);
     } catch (err) {
       console.error('Copy error:', err);
+      addToast('Failed to copy message', 'error');
     }
   };
 
@@ -296,8 +300,10 @@ const Chat = () => {
       setMessages([]);
       setSuggestions([]);
       setShowConfirmClear(false);
+      addToast('Chat cleared successfully', 'success');
     } catch (err) {
       console.error('Clear chat error:', err);
+      addToast('Failed to clear chat', 'error');
       setError('Failed to clear chat');
     }
   };

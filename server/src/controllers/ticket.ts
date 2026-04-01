@@ -1,11 +1,18 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { ChatGroq } from '@langchain/groq';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
     const { title, description, priority, chatId } = req.body;
     if (!title || !description) return res.status(400).json({ error: 'Title and description are required' });
+
+    // Calculate SLA due date based on priority
+    const now = new Date();
+    const slaDays: Record<string, number> = { LOW: 7, MEDIUM: 3, HIGH: 1, URGENT: 0.25 }; // 0.25 = 6 hours
+    const slaDuration = (slaDays[priority || 'MEDIUM'] || 3) * 24 * 60 * 60 * 1000;
+    const dueAt = new Date(now.getTime() + slaDuration);
 
     const ticket = await prisma.ticket.create({
       data: {
@@ -13,7 +20,9 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
         description,
         priority: priority || 'MEDIUM',
         userId: req.user!.id,
-        chatId: chatId || null
+        chatId: chatId || null,
+        dueAt,
+        isOverdue: false
       }
     });
 
@@ -58,12 +67,24 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { status, priority, assignedToId } = req.body;
 
-    const ticket = await prisma.ticket.update({
+    // Check if ticket is overdue
+    const ticket = await prisma.ticket.findUnique({ where: { id: id as string } });
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    const now = new Date();
+    const isOverdue = ticket.dueAt && new Date(ticket.dueAt) < now && ticket.status !== 'CLOSED' && ticket.status !== 'RESOLVED';
+
+    const updatedTicket = await prisma.ticket.update({
       where: { id: id as string },
-      data: { status, priority, assignedToId }
+      data: {
+        status,
+        priority,
+        assignedToId,
+        isOverdue: isOverdue || false
+      }
     });
 
-    res.json(ticket);
+    res.json(updatedTicket);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update ticket' });
   }
@@ -169,5 +190,71 @@ export const deleteTicketMessage = async (req: AuthRequest, res: Response) => {
     res.json({ success: true, message: 'Message deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete message' });
+  }
+};
+
+/**
+ * Get AI-suggested professional reply for a ticket
+ * POST /api/tickets/:id/suggest-reply
+ */
+export const suggestReply = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Only admins can get suggestions
+    if (req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only admins can get reply suggestions' });
+    }
+
+    // Get ticket with messages
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: id as string },
+      include: {
+        notes: { orderBy: { createdAt: 'asc' }, take: 10 },
+        user: { select: { name: true } }
+      }
+    });
+
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    // Build conversation context
+    const conversationHistory = ticket.notes
+      .map(note => `${note.role === 'admin' ? 'Admin' : 'User'}: ${note.content}`)
+      .join('\n\n');
+
+    const context = conversationHistory || `User (${ticket.user?.name}): ${ticket.description}`;
+
+    // Use LLM to generate a professional reply
+    try {
+      const llm = new ChatGroq({
+        apiKey: process.env.GROQ_API_KEY!,
+        model: 'llama-3.1-8b-instant',
+        temperature: 0.7,
+      });
+
+      const prompt = `You are a helpful and professional customer support representative. Based on the following ticket conversation, generate a professional and empathetic reply to help resolve the customer's issue.
+
+Conversation:
+${context}
+
+Generate a concise, professional reply (2-3 paragraphs max) that:
+1. Acknowledges the customer's concern
+2. Provides helpful information or next steps
+3. Maintains a professional and friendly tone
+4. Offers further assistance if needed
+
+Reply:`;
+
+      const response = await llm.invoke(prompt);
+      const suggestedReply = response.content?.toString() || '';
+
+      res.json({ suggestedReply });
+    } catch (llmError) {
+      console.error('LLM error generating reply:', llmError);
+      res.status(500).json({ error: 'Failed to generate suggestion' });
+    }
+  } catch (error) {
+    console.error('Suggest reply error:', error);
+    res.status(500).json({ error: 'Failed to generate reply suggestion' });
   }
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from './Navbar.tsx';
 import Sidebar from './Sidebar.tsx';
+import Breadcrumb from './Breadcrumb.tsx';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -9,6 +10,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <div className="main-content">
         <Sidebar />
         <main className="content-area">
+          <Breadcrumb />
           {children}
         </main>
       </div>

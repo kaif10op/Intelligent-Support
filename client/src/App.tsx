@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore.js';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { ToastProvider } from './contexts/ToastContext';
+import ErrorBoundary from './components/ErrorBoundary';
+import ToastContainer from './components/ToastContainer';
 
 // Pages
 import Login from './pages/Login';
@@ -39,69 +42,74 @@ function App() {
   }, [checkAuth]);
 
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <BrowserRouter>
-        <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Layout><Dashboard /></Layout>
-          </ProtectedRoute>
-        } />
+    <ErrorBoundary>
+      <ToastProvider>
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+          <BrowserRouter>
+            <ToastContainer />
+            <Routes>
+            <Route path="/login" element={<Login />} />
 
-        <Route path="/kb/:id" element={
-          <ProtectedRoute>
-            <Layout><KBDetails /></Layout>
-          </ProtectedRoute>
-        } />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout><Dashboard /></Layout>
+              </ProtectedRoute>
+            } />
 
-        <Route path="/chat/:id" element={
-          <ProtectedRoute>
-            <Layout><Chat /></Layout>
-          </ProtectedRoute>
-        } />
+            <Route path="/kb/:id" element={
+              <ProtectedRoute>
+                <Layout><KBDetails /></Layout>
+              </ProtectedRoute>
+            } />
 
-        <Route path="/chats" element={
-          <ProtectedRoute>
-            <Layout><RecentChats /></Layout>
-          </ProtectedRoute>
-        } />
+            <Route path="/chat/:id" element={
+              <ProtectedRoute>
+                <Layout><Chat /></Layout>
+              </ProtectedRoute>
+            } />
 
-        <Route path="/knowledge-bases" element={
-          <ProtectedRoute>
-            <Layout><KnowledgeBases /></Layout>
-          </ProtectedRoute>
-        } />
+            <Route path="/chats" element={
+              <ProtectedRoute>
+                <Layout><RecentChats /></Layout>
+              </ProtectedRoute>
+            } />
 
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <Layout><Settings /></Layout>
-          </ProtectedRoute>
-        } />
+            <Route path="/knowledge-bases" element={
+              <ProtectedRoute>
+                <Layout><KnowledgeBases /></Layout>
+              </ProtectedRoute>
+            } />
 
-        <Route path="/help" element={
-          <ProtectedRoute>
-            <Layout><Help /></Layout>
-          </ProtectedRoute>
-        } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Layout><Settings /></Layout>
+              </ProtectedRoute>
+            } />
 
-        <Route path="/tickets" element={
-          <ProtectedRoute>
-            <Layout><Tickets /></Layout>
-          </ProtectedRoute>
-        } />
+            <Route path="/help" element={
+              <ProtectedRoute>
+                <Layout><Help /></Layout>
+              </ProtectedRoute>
+            } />
 
-        <Route path="/admin" element={
+            <Route path="/tickets" element={
+              <ProtectedRoute>
+                <Layout><Tickets /></Layout>
+              </ProtectedRoute>
+            } />
 
-          <ProtectedRoute adminOnly>
-            <Layout><Admin /></Layout>
-          </ProtectedRoute>
-        } />
+            <Route path="/admin" element={
 
-      </Routes>
-    </BrowserRouter>
-  </GoogleOAuthProvider>
+              <ProtectedRoute adminOnly>
+                <Layout><Admin /></Layout>
+              </ProtectedRoute>
+            } />
+
+          </Routes>
+        </BrowserRouter>
+      </GoogleOAuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 
