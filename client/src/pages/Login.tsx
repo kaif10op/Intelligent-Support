@@ -2,7 +2,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useNavigate } from 'react-router-dom';
-import { Bot, ShieldCheck, Zap } from 'lucide-react';
+import { Bot, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
 
 const Login = () => {
   const { setUser } = useAuthStore();
@@ -11,7 +11,7 @@ const Login = () => {
   const handleSuccess = async (response: any) => {
     try {
       const { credential } = response;
-      const res = await axios.post('http://localhost:8000/api/auth/google', 
+      const res = await axios.post('http://localhost:8000/api/auth/google',
         { token: credential },
         { withCredentials: true }
       );
@@ -29,55 +29,148 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="glow-bg"></div>
-      
-      <div className="hero-section glass fade-in">
-        <div className="logo-container">
-          <div className="icon-glow">
-            <Bot size={48} color="#8a2be2" />
-          </div>
-          <h1>AI CUSTOMER SUPPORT</h1>
-          <p>The next generation of RAG-powered knowledge management.</p>
-        </div>
+    <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 py-12">
+      {/* Gradient Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-3xl opacity-20"></div>
+        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-bl from-secondary/20 to-transparent rounded-full blur-3xl opacity-20"></div>
+      </div>
 
-        <div className="features-grid">
-          <div className="feature">
-            <ShieldCheck size={24} color="#00d2ff" />
-            <h3>Secure Data</h3>
-            <p>Your documents are encrypted and protected.</p>
-          </div>
-          <div className="feature">
-            <Zap size={24} color="#ff0080" />
-            <h3>Hyper Fast</h3>
-            <p>Instant answers with vector-powered search.</p>
-          </div>
-        </div>
+      {/* Main Content */}
+      <div className="relative z-10 w-full max-w-5xl">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left: Hero Content */}
+          <div className="space-y-12">
+            {/* Logo & Title */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 backdrop-blur-sm">
+                  <Bot className="w-8 h-8 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-primary uppercase tracking-wider">SUPPORT AI</h2>
+                </div>
+              </div>
 
-        <div className="login-action">
-          <p>Please sign in with your Google account to get started.</p>
-          <GoogleLogin
-            onSuccess={handleSuccess}
-            onError={handleFailure}
-            theme="filled_black"
-            shape="pill"
-          />
+              <div className="space-y-3">
+                <h1 className="text-5xl lg:text-6xl font-bold tracking-tight">
+                  <span className="text-foreground">Intelligent </span>
+                  <span className="gradient-text">Support</span>
+                </h1>
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  RAG-powered knowledge management and AI-driven customer support. Faster responses. Smarter answers.
+                </p>
+              </div>
+            </div>
+
+            {/* Features */}
+            <div className="space-y-4">
+              <div className="flex gap-4 items-start group cursor-pointer">
+                <div className="flex-shrink-0 mt-1">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <ShieldCheck className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Enterprise Secure</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Your documents are encrypted and protected with bank-level security.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start group cursor-pointer">
+                <div className="flex-shrink-0 mt-1">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+                    <Zap className="h-6 w-6 text-secondary" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Lightning Fast</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Instant answers with vector-powered semantic search across your knowledge base.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 pt-8 border-t border-border/50">
+              <div>
+                <div className="text-3xl font-bold text-primary">105+</div>
+                <p className="text-sm text-muted-foreground mt-1">Features Built</p>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-secondary">99.9%</div>
+                <p className="text-sm text-muted-foreground mt-1">Uptime SLA</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Login Card */}
+          <div className="lg:flex justify-center">
+            <div className="w-full max-w-sm">
+              {/* Glass Card */}
+              <div className="glass-elevated p-8 space-y-8">
+                {/* Heading */}
+                <div className="space-y-2 text-center">
+                  <h2 className="text-2xl font-bold text-foreground">Get Started</h2>
+                  <p className="text-sm text-muted-foreground">Sign in with your Google account to unlock the full potential of AI-powered support.</p>
+                </div>
+
+                {/* Google Sign In */}
+                <div className="space-y-4">
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={handleSuccess}
+                      onError={handleFailure}
+                      theme="filled_black"
+                      shape="pill"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-border/20"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="px-2 bg-card text-muted-foreground">Secure & Encrypted</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info Box */}
+                <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">
+                    By signing in, you agree to our Terms of Service and Privacy Policy. Your data is encrypted and never shared.
+                  </p>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                  <span>First time here?</span>
+                  <span className="text-primary font-medium flex items-center gap-1">
+                    Create account <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="mt-8 flex items-center justify-center gap-6 px-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-foreground">5M+</div>
+                  <p className="text-xs text-muted-foreground mt-1">Conversations</p>
+                </div>
+                <div className="w-px h-8 bg-border/30"></div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-foreground">1K+</div>
+                  <p className="text-xs text-muted-foreground mt-1">Customers</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <style>{`
-        .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; padding: 24px; }
-        .glow-bg { position: absolute; width: 100%; height: 100%; background: radial-gradient(circle at 30% 30%, rgba(138, 43, 226, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 70%, rgba(0, 210, 255, 0.1) 0%, transparent 50%); z-index: -1; }
-        .hero-section { max-width: 800px; padding: 64px; text-align: center; display: flex; flex-direction: column; gap: 48px; border-radius: 32px; background: rgba(10, 10, 10, 0.6); }
-        .logo-container h1 { font-size: 2.5rem; margin-top: 16px; letter-spacing: 4px; }
-        .icon-glow { width: 80px; height: 80px; margin: 0 auto; background: rgba(138, 43, 226, 0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(138, 43, 226, 0.3); }
-        .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; text-align: left; }
-        .feature { padding: 24px; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid var(--glass-border); transition: var(--transition-smooth); }
-        .feature:hover { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); }
-        .feature h3 { margin: 12px 0 8px 0; font-size: 1.1rem; }
-        .login-action { display: flex; flex-direction: column; align-items: center; gap: 16px; border-top: 1px solid var(--glass-border); padding-top: 48px; }
-        .login-action p { font-size: 0.9rem; color: var(--text-muted); }
-      `}</style>
+      {/* Animated Background Elements */}
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-primary/5 to-transparent rounded-full blur-3xl -z-10"></div>
+      <div className="absolute top-1/2 right-0 w-80 h-80 bg-gradient-to-bl from-secondary/5 to-transparent rounded-full blur-3xl -z-10"></div>
     </div>
   );
 };
