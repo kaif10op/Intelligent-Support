@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { MessageSquare, Calendar, Database, ArrowRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 
 const RecentChats = () => {
+  const { addToast } = useToast();
   const [chats, setChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,8 +15,9 @@ const RecentChats = () => {
       // Handle different response structures
       const data = Array.isArray(res.data) ? res.data : res.data.chats || res.data.data || [];
       setChats(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to load chats';
+      addToast(errorMsg, 'error');
       setChats([]);
     } finally {
       setLoading(false);

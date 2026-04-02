@@ -22,8 +22,9 @@ const KBDetails = () => {
       const res = await axios.get(`http://localhost:8000/api/kb/${id}`, { withCredentials: true });
       setKb(res.data);
       setLoading(false);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to load knowledge base';
+      addToast(errorMsg, 'error');
       setLoading(false);
     }
   };

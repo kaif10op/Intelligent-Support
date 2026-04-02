@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Ticket, Plus, Search, Filter, Clock, AlertCircle, MessageSquare, CheckCircle, User, Loader2, X } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
+import { useToast } from '../contexts/ToastContext';
 
 const Tickets = () => {
   const { user } = useAuthStore();
+  const { addToast } = useToast();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -25,8 +27,9 @@ const Tickets = () => {
       const data = Array.isArray(res.data) ? res.data : res.data.tickets || res.data.data || [];
       setTickets(Array.isArray(data) ? data : []);
       setLoading(false);
-    } catch (err) {
-      console.error('Fetch tickets error:', err);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to load tickets';
+      addToast(errorMsg, 'error');
       setTickets([]);
       setLoading(false);
     }
@@ -38,18 +41,22 @@ const Tickets = () => {
       await axios.post('http://localhost:8000/api/tickets', newTicket, { withCredentials: true });
       setShowCreateModal(false);
       setNewTicket({ title: '', description: '', priority: 'MEDIUM' });
+      addToast('Ticket created successfully!', 'success');
       fetchTickets();
-    } catch (err) {
-      console.error('Create ticket error:', err);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to create ticket';
+      addToast(errorMsg, 'error');
     }
   };
 
   const handleUpdateStatus = async (ticketId: string, status: string) => {
     try {
       await axios.put(`http://localhost:8000/api/tickets/${ticketId}`, { status }, { withCredentials: true });
+      addToast(`Ticket status updated to ${status}`, 'success');
       fetchTickets();
-    } catch (err) {
-      console.error('Update status error:', err);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to update ticket status';
+      addToast(errorMsg, 'error');
     }
   };
 

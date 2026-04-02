@@ -4,6 +4,26 @@ import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 const ToastContainer = () => {
   const { toasts, removeToast } = useToast();
 
+  const getIconColor = (type: string) => {
+    switch (type) {
+      case 'success': return 'text-emerald-400';
+      case 'error': return 'text-red-400';
+      case 'warning': return 'text-amber-400';
+      case 'info': return 'text-blue-400';
+      default: return 'text-foreground';
+    }
+  };
+
+  const getBgClasses = (type: string) => {
+    switch (type) {
+      case 'success': return 'bg-emerald-500/10 border-emerald-500/30';
+      case 'error': return 'bg-red-500/10 border-red-500/30';
+      case 'warning': return 'bg-amber-500/10 border-amber-500/30';
+      case 'info': return 'bg-blue-500/10 border-blue-500/30';
+      default: return 'bg-card/50 border-border/30';
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'success':
@@ -19,131 +39,41 @@ const ToastContainer = () => {
     }
   };
 
-  const getStyles = (type: string) => {
-    switch (type) {
-      case 'success':
-        return {
-          bg: 'rgba(74, 222, 128, 0.1)',
-          border: 'rgba(74, 222, 128, 0.3)',
-          icon: '#4ade80',
-          text: '#4ade80'
-        };
-      case 'error':
-        return {
-          bg: 'rgba(255, 100, 100, 0.1)',
-          border: 'rgba(255, 100, 100, 0.3)',
-          icon: '#ff6464',
-          text: '#ff6464'
-        };
-      case 'warning':
-        return {
-          bg: 'rgba(255, 165, 0, 0.1)',
-          border: 'rgba(255, 165, 0, 0.3)',
-          icon: '#ffa500',
-          text: '#ffa500'
-        };
-      case 'info':
-        return {
-          bg: 'rgba(0, 210, 255, 0.1)',
-          border: 'rgba(0, 210, 255, 0.3)',
-          icon: '#00d2ff',
-          text: '#00d2ff'
-        };
-      default:
-        return { bg: '', border: '', icon: '', text: '' };
-    }
-  };
-
   return (
-    <div className="toast-container">
-      {toasts.map(toast => {
-        const styles = getStyles(toast.type);
-        return (
-          <div
-            key={toast.id}
-            className="toast-item fade-in"
-            style={{
-              background: styles.bg,
-              border: `1px solid ${styles.border}`,
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              minWidth: '320px',
-              maxWidth: '400px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
-            }}
-          >
-            <div style={{ color: styles.icon, display: 'flex', alignItems: 'center' }}>
-              {getIcon(toast.type)}
-            </div>
-            <div style={{ flex: 1, color: '#f0f0f0', fontSize: '0.95rem' }}>
-              {toast.message}
-            </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: styles.text,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                opacity: 0.7,
-                transition: 'opacity 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
-            >
-              <X size={18} />
-            </button>
+    <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50 pointer-events-none max-w-sm">
+      {toasts.map(toast => (
+        <div
+          key={toast.id}
+          className={`
+            pointer-events-auto
+            flex items-center gap-3
+            px-4 py-4 rounded-lg
+            border
+            min-w-80 max-w-md
+            shadow-lg
+            animate-fadeIn
+            ${getBgClasses(toast.type)}
+          `}
+        >
+          {/* Icon */}
+          <div className={getIconColor(toast.type)} style={{ flexShrink: 0 }}>
+            {getIcon(toast.type)}
           </div>
-        );
-      })}
 
-      <style>{`
-        .toast-container {
-          position: fixed;
-          bottom: 24px;
-          right: 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          z-index: 2000;
-          pointer-events: none;
-        }
+          {/* Message */}
+          <div className="flex-1 text-sm text-foreground break-words">
+            {toast.message}
+          </div>
 
-        .toast-item {
-          pointer-events: auto;
-          animation: slideInRight 0.3s ease-out;
-        }
-
-        @keyframes slideInRight {
-          from {
-            transform: translateX(400px);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .toast-container {
-            bottom: 12px;
-            right: 12px;
-            left: 12px;
-          }
-
-          .toast-item {
-            min-width: auto;
-            max-width: none;
-          }
-        }
-      `}</style>
+          {/* Close Button */}
+          <button
+            onClick={() => removeToast(toast.id)}
+            className="ml-2 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      ))}
     </div>
   );
 };

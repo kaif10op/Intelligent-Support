@@ -14,8 +14,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 
 const Dashboard = () => {
+  const { addToast } = useToast();
   const [kbs, setKbs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -31,10 +33,12 @@ const Dashboard = () => {
   const fetchKBs = async () => {
     try {
       const res = await axios.get('http://localhost:8000/api/kb', { withCredentials: true });
-      setKbs(res.data);
+      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
+      setKbs(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (err) {
       console.error(err);
+      addToast('Failed to load knowledge bases', 'error');
       setLoading(false);
     }
   };
@@ -42,13 +46,13 @@ const Dashboard = () => {
   const fetchTickets = async () => {
     try {
       const res = await axios.get('http://localhost:8000/api/tickets/my', { withCredentials: true });
-      if (res.data) {
-        setTickets(res.data);
+      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
+      if (data.length > 0) {
+        setTickets(data);
         const stats = {
-          open: res.data.filter((t: any) => t.status === 'OPEN').length,
-          inProgress: res.data.filter((t: any) => t.status === 'IN_PROGRESS').length,
-          resolved: res.data.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED')
-            .length,
+          open: data.filter((t: any) => t.status === 'OPEN').length,
+          inProgress: data.filter((t: any) => t.status === 'IN_PROGRESS').length,
+          resolved: data.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
         };
         setTicketStats(stats);
       }
@@ -63,14 +67,19 @@ const Dashboard = () => {
   }, []);
 
   const handleCreate = async () => {
-    if (!newTitle) return;
+    if (!newTitle.trim()) {
+      addToast('Please enter a KB name', 'warning');
+      return;
+    }
     try {
       await axios.post('http://localhost:8000/api/kb', { title: newTitle }, { withCredentials: true });
+      addToast('Knowledge base created successfully!', 'success');
       setNewTitle('');
       setShowModal(false);
       fetchKBs();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      addToast(err.response?.data?.error || 'Failed to create KB', 'error');
     }
   };
 
@@ -78,9 +87,11 @@ const Dashboard = () => {
     if (!confirm('Are you sure you want to delete this knowledge base?')) return;
     try {
       await axios.delete(`http://localhost:8000/api/kb/${id}`, { withCredentials: true });
+      addToast('Knowledge base deleted', 'success');
       fetchKBs();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      addToast('Failed to delete KB', 'error');
     }
   };
 
@@ -280,8 +291,8 @@ const Dashboard = () => {
 
       {/* Create KB Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-elevated border border-border/50 rounded-lg p-6 w-full max-w-sm">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-elevated border border-border/50 rounded-lg p-8 w-full max-w-sm animate-fadeIn">
             <h2 className="text-2xl font-bold text-foreground mb-2">Create Knowledge Base</h2>
             <p className="text-muted-foreground text-sm mb-6">
               Enter a name for your new knowledge base
@@ -299,7 +310,10 @@ const Dashboard = () => {
 
             <div className="flex gap-3">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setNewTitle('');
+                }}
                 className="flex-1 px-4 py-2.5 rounded-lg border border-border/50 text-foreground font-medium hover:bg-card/50 transition-colors"
               >
                 Cancel
