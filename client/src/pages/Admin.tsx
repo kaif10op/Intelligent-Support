@@ -1,22 +1,28 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Users, Database, Shield, Zap, TrendingUp, Search, Filter, BarChart as BarIcon, PieChart as PieIcon, Activity, Loader2, AlertCircle } from 'lucide-react';
+import { Users, Database, Shield, Zap, TrendingUp, Search, Filter, BarChart as BarIcon, PieChart as PieIcon, Activity, Loader2, AlertCircle, MessageSquare } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+import { Link } from 'react-router-dom';
 
 const Admin = () => {
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [chats, setChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [chatSearchTerm, setChatSearchTerm] = useState('');
 
   const fetchAdminData = async () => {
     try {
-      const [statsRes, usersRes] = await Promise.all([
+      const [statsRes, usersRes, chatsRes] = await Promise.all([
         axios.get('http://localhost:8000/api/admin/stats', { withCredentials: true }),
-        axios.get('http://localhost:8000/api/admin/users', { withCredentials: true })
+        axios.get('http://localhost:8000/api/admin/users', { withCredentials: true }),
+        axios.get('http://localhost:8000/api/admin/chats', { withCredentials: true }).catch(() => ({ data: [] }))
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data);
+      const chatsData = Array.isArray(chatsRes.data) ? chatsRes.data : chatsRes.data.chats || [];
+      setChats(Array.isArray(chatsData) ? chatsData : []);
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -42,6 +48,13 @@ const Admin = () => {
   const filteredUsers = users.filter(u =>
     u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredChats = chats.filter(c =>
+    (c.title?.toLowerCase().includes(chatSearchTerm.toLowerCase()) ||
+      c.kb?.title?.toLowerCase().includes(chatSearchTerm.toLowerCase()) ||
+      c.user?.name?.toLowerCase().includes(chatSearchTerm.toLowerCase()) ||
+      c.user?.email?.toLowerCase().includes(chatSearchTerm.toLowerCase()))
   );
 
   if (loading) {
@@ -302,6 +315,65 @@ const Admin = () => {
             <div className="text-center py-12">
               <AlertCircle className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
               <p className="text-muted-foreground">No active tickets to manage.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Chat Management */}
+      <section className="glass-elevated border border-border/50 rounded-xl p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-2xl font-bold text-foreground">Chat Management</h2>
+          <div className="glass border border-border/30 rounded-lg flex items-center gap-3 px-4 py-2.5">
+            <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search chats by title, user, or KB..."
+              value={chatSearchTerm}
+              onChange={(e) => setChatSearchTerm(e.target.value)}
+              className="bg-transparent text-sm placeholder-muted-foreground text-foreground outline-none flex-1"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {filteredChats.length > 0 ? (
+            filteredChats.slice(0, 10).map((chat) => (
+              <Link
+                key={chat.id}
+                to={`/chat/${chat.id}?kbId=${chat.kbId}`}
+                className="glass-elevated border border-border/50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-primary/30 transition-colors group"
+              >
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-medium text-foreground truncate">{chat.title || 'Untitled Chat'}</h4>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      <span className="truncate">User: {chat.user?.name || 'Unknown'}</span>
+                      <span>•</span>
+                      <span className="truncate">KB: {chat.kb?.title || 'Unknown'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-xs text-muted-foreground">{chat.messages?.length || 0} messages</span>
+                  <span className="text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-medium">View</span>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <MessageSquare className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">
+                {chats.length === 0 ? 'No active chats' : 'No chats match your search'}
+              </p>
+            </div>
+          )}
+          {filteredChats.length > 10 && (
+            <div className="text-center pt-4">
+              <p className="text-sm text-muted-foreground">Showing 10 of {filteredChats.length} chats</p>
             </div>
           )}
         </div>
