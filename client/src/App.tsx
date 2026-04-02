@@ -24,6 +24,7 @@ import Help from './pages/Help';
 import Tickets from './pages/Tickets';
 import Search from './pages/Search';
 import Layout from './components/Layout';
+import ChatLayout from './components/ChatLayout';
 
 
 
@@ -72,7 +73,7 @@ function App() {
 
             <Route path="/chat/:id" element={
               <ProtectedRoute>
-                <Layout><Chat /></Layout>
+                <ChatLayout><Chat /></ChatLayout>
               </ProtectedRoute>
             } />
 

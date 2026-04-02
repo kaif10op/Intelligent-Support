@@ -577,8 +577,8 @@ const Chat = () => {
       </div>
 
       <style>{`
-        .chat-page { display: flex; flex-direction: column; height: 100%; max-height: calc(100vh - 100px); }
-        .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; border-radius: 16px 16px 0 0; margin-bottom: 8px; }
+        .chat-page { display: flex; flex-direction: column; height: 100%; flex: 1; }
+        .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-radius: 0; margin-bottom: 0; border-bottom: 1px solid rgba(30, 41, 59, 0.5); flex-shrink: 0; }
         .back-btn { display: flex; align-items: center; gap: 6px; color: var(--text-muted); background: none; border: none; cursor: pointer; transition: 0.2s; font-weight: 500; }
         .back-btn:hover { color: #fff; transform: translateX(-4px); }
         .kb-indicator { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 8px 16px; background: rgba(236, 72, 153, 0.1); border-radius: 12px; }
@@ -586,7 +586,7 @@ const Chat = () => {
         .clear-btn:hover:not(:disabled) { background: rgba(255, 127, 0, 0.1); color: #ff7f00; border-color: rgba(255, 127, 0, 0.4); }
         .clear-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        .error-banner { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(255, 100, 100, 0.1); border: 1px solid rgba(255, 100, 100, 0.3); border-radius: 12px; margin: 8px 24px 0 24px; color: #ff6464; font-size: 0.9rem; animation: slideIn 0.3s ease-out; }
+        .error-banner { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(255, 100, 100, 0.1); border: 1px solid rgba(255, 100, 100, 0.3); border-radius: 12px; margin: 8px 24px 0 24px; color: #ff6464; font-size: 0.9rem; animation: slideIn 0.3s ease-out; flex-shrink: 0; }
         .close-error { background: none; border: none; color: rgba(255, 100, 100, 0.6); cursor: pointer; display: flex; align-items: center; margin-left: auto; }
         .close-error:hover { color: #ff6464; }
 
@@ -600,7 +600,7 @@ const Chat = () => {
         .btn-danger { background: rgba(255, 100, 100, 0.2); border: 1px solid rgba(255, 100, 100, 0.4); color: #ff6464; padding: 10px 20px; border-radius: 10px; cursor: pointer; transition: 0.2s; font-weight: 600; }
         .btn-danger:hover { background: rgba(255, 100, 100, 0.3); }
 
-        .messages-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 24px 0;scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+        .messages-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 24px;scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
         .welcome-state { margin: auto; text-align: center; max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 20px; opacity: 0.7; }
         .bot-icon-large { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 36px; background: rgba(236, 72, 153, 0.05); }
         .message-wrap { display: flex; width: 100%; animation: slideIn 0.3s ease-out; }
@@ -643,7 +643,7 @@ const Chat = () => {
         .sources-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
         .source-item { font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); line-height: 1.4; }
 
-        .input-area-wrapper { padding-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+        .input-area-wrapper { padding: 24px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; border-top: 1px solid rgba(30, 41, 59, 0.5); }
         .attachment-preview { align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 12px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); font-size: 0.85rem; }
         .remove-attach { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 2px; border-radius: 50%; }
         .remove-attach:hover { background: rgba(255,255,255,0.1); color: #fff; }
