@@ -104,15 +104,13 @@ const Tickets = () => {
             <p className="text-muted-foreground mt-1">Manage and track your inquiries and escalations</p>
           </div>
         </div>
-        {user?.role !== 'ADMIN' && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition-colors w-full sm:w-auto justify-center"
-          >
-            <Plus className="w-5 h-5" />
-            New Ticket
-          </button>
-        )}
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition-colors w-full sm:w-auto justify-center"
+        >
+          <Plus className="w-5 h-5" />
+          New Ticket
+        </button>
       </div>
 
       {/* Filters */}
