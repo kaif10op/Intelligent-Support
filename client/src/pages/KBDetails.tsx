@@ -111,9 +111,52 @@ const KBDetails = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-96 gap-4">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading knowledge base...</p>
+      <div className="space-y-8">
+        {/* Back Link Skeleton */}
+        <div className="h-4 bg-border/30 rounded w-32 animate-pulse"></div>
+
+        {/* Header Skeleton */}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-14 h-14 bg-border/30 rounded-lg animate-pulse"></div>
+          <div className="flex-1 space-y-2">
+            <div className="h-8 bg-border/30 rounded w-1/3 animate-pulse"></div>
+            <div className="h-4 bg-border/30 rounded w-2/3 animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Two Column Layout Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Upload Section Skeleton */}
+          <div className="lg:col-span-1 space-y-4">
+            <div className="h-6 bg-border/30 rounded w-1/3 animate-pulse"></div>
+            <div className="border-2 border-dashed rounded-lg p-8 bg-border/10 animate-pulse">
+              <div className="space-y-3">
+                <div className="h-10 bg-border/30 rounded mx-auto w-10"></div>
+                <div className="h-4 bg-border/30 rounded w-2/3 mx-auto"></div>
+                <div className="h-3 bg-border/30 rounded w-1/2 mx-auto"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Documents List Skeleton */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="h-6 bg-border/30 rounded w-1/4 animate-pulse"></div>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="glass-elevated border border-border/50 rounded-lg p-4 flex items-center justify-between animate-pulse">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-10 h-10 bg-border/30 rounded-lg flex-shrink-0"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-border/30 rounded w-2/3"></div>
+                      <div className="h-3 bg-border/30 rounded w-1/3"></div>
+                    </div>
+                  </div>
+                  <div className="h-8 bg-border/30 rounded w-20 flex-shrink-0"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
