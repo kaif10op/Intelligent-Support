@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { MessageSquare, Calendar, Database, ArrowRight, Loader2 } from 'lucide-react';
+import { MessageSquare, Calendar, Database, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
@@ -38,9 +38,21 @@ const RecentChats = () => {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading your history...</p>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-elevated border border-border/50 rounded-lg p-6 animate-pulse">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="h-4 bg-border/30 rounded w-1/3"></div>
+                  <div className="flex gap-4">
+                    <div className="h-3 bg-border/30 rounded w-24"></div>
+                    <div className="h-3 bg-border/30 rounded w-20"></div>
+                  </div>
+                </div>
+                <div className="h-5 w-5 bg-border/30 rounded flex-shrink-0"></div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : chats.length === 0 ? (
         <div className="glass-elevated border border-border/50 rounded-lg p-12 text-center space-y-4 flex flex-col items-center">

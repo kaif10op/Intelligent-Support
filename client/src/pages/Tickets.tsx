@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Ticket, Plus, Search, Filter, Clock, AlertCircle, MessageSquare, CheckCircle, User, Loader2, X } from 'lucide-react';
+import { Ticket, Plus, Search, Filter, Clock, AlertCircle, MessageSquare, CheckCircle, User, X } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useToast } from '../contexts/ToastContext';
 
@@ -91,9 +91,41 @@ const Tickets = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-96 gap-4">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading your support tickets...</p>
+      <div className="space-y-8">
+        {/* Header Skeleton */}
+        <div className="space-y-4">
+          <div className="h-8 bg-border/30 rounded w-1/3 animate-pulse"></div>
+          <div className="h-4 bg-border/30 rounded w-2/3 animate-pulse"></div>
+        </div>
+
+        {/* Filter Skeleton */}
+        <div className="glass-elevated p-4 space-y-4 sm:space-y-0">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 bg-border/30 rounded animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tickets Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-elevated border border-border/50 rounded-lg p-6 space-y-4 animate-pulse">
+              <div className="flex justify-between items-start mb-4">
+                <div className="h-6 bg-border/30 rounded w-16"></div>
+                <div className="h-6 bg-border/30 rounded w-20"></div>
+              </div>
+              <div className="h-6 bg-border/30 rounded w-2/3"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-border/30 rounded w-full"></div>
+                <div className="h-4 bg-border/30 rounded w-4/5"></div>
+              </div>
+              <div className="pt-4 border-t border-border/30">
+                <div className="h-8 bg-border/30 rounded w-full"></div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

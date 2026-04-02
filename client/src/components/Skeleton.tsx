@@ -16,33 +16,15 @@ const Skeleton: React.FC<SkeletonProps> = ({
   const widthStyle = typeof width === 'number' ? `${width}px` : width;
   const heightStyle = typeof height === 'number' ? `${height}px` : height;
 
-  const baseStyles: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: variant === 'circle' ? '50%' : '8px',
-    width: widthStyle,
-    height: heightStyle,
-    display: 'inline-block',
-    animation: 'skeletonLoading 1.5s infinite',
-    border: '1px solid rgba(255, 255, 255, 0.1)'
-  };
-
   return (
-    <>
-      <div className={`skeleton ${className}`} style={baseStyles} />
-      <style>{`
-        @keyframes skeletonLoading {
-          0% {
-            background-color: rgba(255, 255, 255, 0.05);
-          }
-          50% {
-            background-color: rgba(255, 255, 255, 0.1);
-          }
-          100% {
-            background-color: rgba(255, 255, 255, 0.05);
-          }
-        }
-      `}</style>
-    </>
+    <div
+      className={`bg-gradient-to-r from-border/30 via-border/50 to-border/30 animate-pulse rounded ${className}`}
+      style={{
+        width: widthStyle,
+        height: heightStyle,
+        borderRadius: variant === 'circle' ? '50%' : '0.5rem'
+      }}
+    />
   );
 };
 
@@ -50,7 +32,7 @@ export default Skeleton;
 
 // Specialized skeleton components for common use cases
 export const SkeletonText = ({ lines = 1, ...props }: SkeletonProps & { lines?: number }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+  <div className="flex flex-col gap-2">
     {Array.from({ length: lines }).map((_, i) => (
       <Skeleton key={i} variant="text" height="16px" {...props} />
     ))}
@@ -62,11 +44,11 @@ export const SkeletonAvatar = (props: SkeletonProps) => (
 );
 
 export const SkeletonCard = (props: SkeletonProps) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
+  <div className="flex flex-col gap-3 p-4">
     <Skeleton height="24px" width="60%" {...props} />
     <Skeleton height="16px" width="100%" {...props} />
     <Skeleton height="16px" width="90%" {...props} />
-    <div style={{ marginTop: '12px' }}>
+    <div className="mt-3">
       <Skeleton height="40px" width="100%" {...props} />
     </div>
   </div>
