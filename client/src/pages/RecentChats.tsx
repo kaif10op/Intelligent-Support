@@ -3,6 +3,7 @@ import axios from 'axios';
 import { MessageSquare, Calendar, Database, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 const RecentChats = () => {
   const { addToast } = useToast();
@@ -11,7 +12,7 @@ const RecentChats = () => {
 
   const fetchChats = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/chat', { withCredentials: true });
+      const res = await axios.get(API_ENDPOINTS.CHAT_LIST, axiosConfig);
       // Handle different response structures
       const data = Array.isArray(res.data) ? res.data : res.data.chats || res.data.data || [];
       setChats(Array.isArray(data) ? data : []);

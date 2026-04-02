@@ -3,6 +3,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { TrendingUp, MessageSquare, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from '../contexts/ToastContext';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 const AnalyticsDashboard = () => {
   const { addToast } = useToast();
@@ -12,9 +13,7 @@ const AnalyticsDashboard = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await axios.get('http://localhost:8000/api/admin/analytics', {
-          withCredentials: true
-        });
+        const res = await axios.get(API_ENDPOINTS.ADMIN_ANALYTICS, axiosConfig);
         setAnalytics(res.data);
       } catch (err) {
         console.error('Failed to fetch analytics:', err);

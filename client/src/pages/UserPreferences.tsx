@@ -59,10 +59,8 @@ const UserPreferences = () => {
       // Save to localStorage (in production, POST to API)
       localStorage.setItem('userPreferences', JSON.stringify(preferences));
 
-      // In production:
-      // await axios.post('http://localhost:8000/api/user/preferences', preferences, {
-      //   withCredentials: true
-      // });
+      // In production, uncomment and import { API_ENDPOINTS, axiosConfig } from '../config/api':
+      // await axios.post(API_ENDPOINTS.PREFERENCES, preferences, axiosConfig);
 
       addToast('Preferences saved successfully', 'success');
     } catch (error) {

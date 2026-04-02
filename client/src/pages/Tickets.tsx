@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Ticket, Plus, Search, Filter, Clock, AlertCircle, MessageSquare, CheckCircle, User, X } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useToast } from '../contexts/ToastContext';
+import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
 
 const Tickets = () => {
   const { user } = useAuthStore();
@@ -21,8 +22,8 @@ const Tickets = () => {
 
   const fetchTickets = async () => {
     try {
-      const endpoint = user?.role === 'ADMIN' ? 'http://localhost:8000/api/tickets/all' : 'http://localhost:8000/api/tickets/my';
-      const res = await axios.get(endpoint, { withCredentials: true });
+      const endpoint = user?.role === 'ADMIN' ? apiUrl('/api/tickets/all') : apiUrl('/api/tickets/my');
+      const res = await axios.get(endpoint, axiosConfig);
       // Handle different response structures
       const data = Array.isArray(res.data) ? res.data : res.data.tickets || res.data.data || [];
       setTickets(Array.isArray(data) ? data : []);
@@ -38,7 +39,7 @@ const Tickets = () => {
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:8000/api/tickets', newTicket, { withCredentials: true });
+      await axios.post(API_ENDPOINTS.TICKET_CREATE, newTicket, axiosConfig);
       setShowCreateModal(false);
       setNewTicket({ title: '', description: '', priority: 'MEDIUM' });
       addToast('Ticket created successfully!', 'success');
@@ -51,7 +52,7 @@ const Tickets = () => {
 
   const handleUpdateStatus = async (ticketId: string, status: string) => {
     try {
-      await axios.put(`http://localhost:8000/api/tickets/${ticketId}`, { status }, { withCredentials: true });
+      await axios.put(API_ENDPOINTS.TICKET_UPDATE(ticketId), { status }, axiosConfig);
       addToast(`Ticket status updated to ${status}`, 'success');
       fetchTickets();
     } catch (err: any) {

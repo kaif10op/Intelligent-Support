@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search as SearchIcon, MessageSquare, Database, Ticket, File, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
 import axios from 'axios';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 interface SearchResults {
   chats: any[];
@@ -27,9 +28,9 @@ const Search = () => {
     setError(null);
 
     try {
-      const res = await axios.get('http://localhost:8000/api/search', {
+      const res = await axios.get(API_ENDPOINTS.SEARCH, {
         params: { q: query, type, limit: 50 },
-        withCredentials: true
+        ...axiosConfig
       });
 
       setResults(res.data.results);

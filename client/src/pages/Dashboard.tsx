@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
 
 const Dashboard = () => {
   const { addToast } = useToast();
@@ -32,7 +33,7 @@ const Dashboard = () => {
 
   const fetchKBs = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/kb', { withCredentials: true });
+      const res = await axios.get(API_ENDPOINTS.KB_LIST, axiosConfig);
       const data = Array.isArray(res.data) ? res.data : res.data.data || [];
       setKbs(Array.isArray(data) ? data : []);
       setLoading(false);
@@ -45,7 +46,7 @@ const Dashboard = () => {
 
   const fetchTickets = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/tickets/my', { withCredentials: true });
+      const res = await axios.get(apiUrl('/api/tickets/my'), axiosConfig);
       const data = Array.isArray(res.data) ? res.data : res.data.data || [];
       if (data.length > 0) {
         setTickets(data);
@@ -72,7 +73,7 @@ const Dashboard = () => {
       return;
     }
     try {
-      await axios.post('http://localhost:8000/api/kb', { title: newTitle }, { withCredentials: true });
+      await axios.post(API_ENDPOINTS.KB_CREATE, { title: newTitle }, axiosConfig);
       addToast('Knowledge base created successfully!', 'success');
       setNewTitle('');
       setShowModal(false);
@@ -86,7 +87,7 @@ const Dashboard = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this knowledge base?')) return;
     try {
-      await axios.delete(`http://localhost:8000/api/kb/${id}`, { withCredentials: true });
+      await axios.delete(API_ENDPOINTS.KB_DELETE(id), axiosConfig);
       addToast('Knowledge base deleted', 'success');
       fetchKBs();
     } catch (err: any) {

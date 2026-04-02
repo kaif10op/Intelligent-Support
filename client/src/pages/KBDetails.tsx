@@ -5,6 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import { FileText, Upload, Trash2, ChevronLeft, CheckCircle2, AlertCircle, Database, Loader2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import ProgressBar from '../components/ProgressBar';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 const KBDetails = () => {
   const { id } = useParams();
@@ -19,7 +20,7 @@ const KBDetails = () => {
 
   const fetchDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:8000/api/kb/${id}`, { withCredentials: true });
+      const res = await axios.get(API_ENDPOINTS.KB_DETAIL(id!), axiosConfig);
       setKb(res.data);
       setLoading(false);
     } catch (err: any) {
@@ -36,7 +37,7 @@ const KBDetails = () => {
   const handleDeleteDocument = async (docId: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
     try {
-      await axios.delete(`http://localhost:8000/api/kb/doc/${docId}`, { withCredentials: true });
+      await axios.delete(API_ENDPOINTS.KB_DOC_DELETE(docId), axiosConfig);
       fetchDetails();
       addToast('Document deleted successfully', 'success');
     } catch (err) {
@@ -59,8 +60,8 @@ const KBDetails = () => {
     formData.append('kbId', id!);
 
     try {
-      await axios.post('http://localhost:8000/api/kb/upload', formData, {
-        withCredentials: true,
+      await axios.post(API_ENDPOINTS.KB_UPLOAD, formData, {
+        ...axiosConfig,
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {

@@ -28,6 +28,7 @@ import {
   RefreshCw,
   Loader2
 } from 'lucide-react';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 interface AdminStats {
   totalUsers: number;
@@ -54,9 +55,7 @@ const AdminPortal = () => {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:8000/api/admin/stats', {
-        withCredentials: true
-      });
+      const response = await axios.get(API_ENDPOINTS.ADMIN_STATS, axiosConfig);
       setStats(response.data);
     } catch (error) {
       console.error('Failed to fetch admin stats:', error);
