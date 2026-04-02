@@ -4,6 +4,8 @@
  * For production: integrate with Sendgrid/Mailgun
  */
 
+import { logger } from './logger.js';
+
 interface EmailOptions {
   to: string;
   subject: string;
@@ -19,19 +21,20 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
     if (isDevelopment) {
-      console.log('📧 [EMAIL] Development Mode - Email would be sent:');
-      console.log(`   To: ${options.to}`);
-      console.log(`   Subject: ${options.subject}`);
-      console.log(`   Body: ${options.text || options.html.substring(0, 100)}...`);
+      logger.info('Development Mode - Email would be sent', {
+        to: options.to,
+        subject: options.subject,
+        bodyPreview: options.text || options.html.substring(0, 100)
+      });
       return true;
     }
 
     // In production, integrate with Sendgrid or similar
     // Example: await sgMail.send(options);
-    console.log('📧 [EMAIL] Production mode - implement email service');
+    logger.info('Production mode - implement email service');
     return true;
-  } catch (error) {
-    console.error('Email send error:', error);
+  } catch (error: any) {
+    logger.error('Email send error', { error: error.message, stack: error.stack });
     return false;
   }
 };

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useNavigate } from 'react-router-dom';
 import { Bot, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 const Login = () => {
   const { setUser } = useAuthStore();
@@ -11,9 +12,9 @@ const Login = () => {
   const handleSuccess = async (response: any) => {
     try {
       const { credential } = response;
-      const res = await axios.post('http://localhost:8000/api/auth/google',
+      const res = await axios.post(API_ENDPOINTS.AUTH_GOOGLE,
         { token: credential },
-        { withCredentials: true }
+        axiosConfig
       );
       setUser(res.data.user);
       navigate('/');

@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { useToast } from '../contexts/ToastContext';
 import { useSocket } from '../contexts/SocketContext';
+import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
 
 interface Message {
   id?: string;
@@ -44,7 +45,7 @@ const Chat = () => {
     const fetchHistory = async () => {
       if (!id || id === 'new') return;
       try {
-        const res = await axios.get(`http://localhost:8000/api/chat/${id}`, { withCredentials: true });
+        const res = await axios.get(API_ENDPOINTS.CHAT_DETAIL(id), axiosConfig);
         const data = res.data;
 
         // Set KB name
@@ -110,8 +111,8 @@ const Chat = () => {
     formData.append('kbId', kbId);
 
     try {
-      const res = await axios.post('http://localhost:8000/api/kb/upload', formData, {
-        withCredentials: true,
+      const res = await axios.post(API_ENDPOINTS.KB_UPLOAD, formData, {
+        ...axiosConfig,
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setAttachedFile({ name: file.name, id: res.data.document?.id });
@@ -144,7 +145,7 @@ const Chat = () => {
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat', {
+      const response = await fetch(API_ENDPOINTS.CHAT_CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -200,9 +201,9 @@ const Chat = () => {
     if (!messageId) return;
     try {
       await axios.post(
-        `http://localhost:8000/api/chat/message/${messageId}/feedback`,
+        apiUrl(`/api/chat/message/${messageId}/feedback`),
         { rating },
-        { withCredentials: true }
+        axiosConfig
       );
       setFeedbackGiven(prev => ({ ...prev, [messageId]: rating }));
       addToast('Feedback recorded', 'success');
@@ -226,7 +227,7 @@ const Chat = () => {
   const clearChat = async () => {
     if (!id || id === 'new') return;
     try {
-      await axios.delete(`http://localhost:8000/api/chat/${id}/clear`, { withCredentials: true });
+      await axios.delete(apiUrl(`/api/chat/${id}/clear`), axiosConfig);
       setMessages([]);
       setShowConfirmClear(false);
       addToast('Chat cleared successfully', 'success');
@@ -238,7 +239,7 @@ const Chat = () => {
   const getSuggestions = async (messageIndex: number) => {
     if (!id || id === 'new') return;
     try {
-      const res = await axios.get(`http://localhost:8000/api/chat/${id}/suggestions`, { withCredentials: true });
+      const res = await axios.get(apiUrl(`/api/chat/${id}/suggestions`), axiosConfig);
       if (res.data?.suggestions) {
         setSuggestions(res.data.suggestions);
         setShowSuggestionsFor(messageIndex);

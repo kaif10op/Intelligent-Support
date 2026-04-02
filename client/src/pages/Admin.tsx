@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Users, Database, Shield, Zap, TrendingUp, Search, Filter, BarChart as BarIcon, PieChart as PieIcon, Activity, Loader2, AlertCircle, MessageSquare } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { Link } from 'react-router-dom';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 const Admin = () => {
   const [stats, setStats] = useState<any>(null);
@@ -15,9 +16,9 @@ const Admin = () => {
   const fetchAdminData = async () => {
     try {
       const [statsRes, usersRes, chatsRes] = await Promise.all([
-        axios.get('http://localhost:8000/api/admin/stats', { withCredentials: true }),
-        axios.get('http://localhost:8000/api/admin/users', { withCredentials: true }),
-        axios.get('http://localhost:8000/api/admin/chats', { withCredentials: true }).catch(() => ({ data: [] }))
+        axios.get(API_ENDPOINTS.ADMIN_STATS, axiosConfig),
+        axios.get(API_ENDPOINTS.ADMIN_USERS, axiosConfig),
+        axios.get(API_ENDPOINTS.ADMIN_CHATS, axiosConfig).catch(() => ({ data: [] }))
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data);
@@ -36,7 +37,7 @@ const Admin = () => {
 
   const handleUpdateTicket = async (ticketId: string, status: string) => {
     try {
-      await axios.put(`http://localhost:8000/api/tickets/${ticketId}`, { status }, { withCredentials: true });
+      await axios.put(API_ENDPOINTS.TICKET_UPDATE(ticketId), { status }, axiosConfig);
       fetchAdminData();
     } catch (err) {
       console.error('Update ticket error:', err);

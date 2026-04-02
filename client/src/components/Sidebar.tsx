@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon, User, ChevronRight } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import axios from 'axios';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 const Sidebar = () => {
   const [recentChats, setRecentChats] = useState<any[]>([]);
@@ -9,7 +10,7 @@ const Sidebar = () => {
   useEffect(() => {
     const fetchRecent = async () => {
       try {
-        const res = await axios.get('http://localhost:8000/api/chat', { withCredentials: true });
+        const res = await axios.get(API_ENDPOINTS.CHAT_LIST, axiosConfig);
         setRecentChats(res.data.slice(0, 5));
       } catch (err) {
         console.error('Sidebar fetch error:', err);

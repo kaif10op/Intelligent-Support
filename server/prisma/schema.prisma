@@ -7,55 +7,32 @@ datasource db {
 }
 
 model User {
-  id             String           @id @default(uuid())
-  googleId       String           @unique
-  email          String           @unique
-  name           String
-  picture        String?
-  role           Role             @default(USER)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  knowledgeBases KnowledgeBase[]
-  chats          Chat[]
-  tickets        Ticket[]        @relation("UserTickets")
-  assignedTickets Ticket[]       @relation("AdminTickets")
-  ticketMessages TicketNote[]    // Messages sent by this user in tickets
-  auditLogs      AuditLog[] @relation("AdminLogs") // Admin actions performed by this user
-}
-
-
-enum Role {
-  USER
-  ADMIN
+  id              String          @id @default(uuid())
+  googleId        String          @unique
+  email           String          @unique
+  name            String
+  picture         String?
+  role            Role            @default(USER)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  auditLogs       AuditLog[]      @relation("AdminLogs")
+  chats           Chat[]
+  knowledgeBases  KnowledgeBase[]
+  assignedTickets Ticket[]        @relation("AdminTickets")
+  tickets         Ticket[]        @relation("UserTickets")
+  ticketMessages  TicketNote[]
 }
 
 model KnowledgeBase {
-  id          String       @id @default(uuid())
+  id          String     @id @default(uuid())
   title       String
   description String?
   userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents   Document[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   chats       Chat[]
-  versions    KBVersion[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-}
-
-model KBVersion {
-  id          String       @id @default(uuid())
-  kbId        String
-  kb          KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
-  versionNumber Int        // Sequential version number
-  title       String       // KB title at this version
-  description String?      // KB description at this version
-  docCount    Int          // Number of documents in this version
-  docIds      String[]     // List of document IDs in this version (JSON array)
-  changelog   String?      // What changed in this version
-  createdAt   DateTime     @default(now())
-
-  @@index([kbId])
-  @@unique([kbId, versionNumber])
+  documents   Document[]
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Document {
@@ -64,106 +41,91 @@ model Document {
   type      String
   size      Int
   kbId      String
+  createdAt DateTime        @default(now())
   kb        KnowledgeBase   @relation(fields: [kbId], references: [id], onDelete: Cascade)
   chunks    DocumentChunk[]
-  createdAt DateTime        @default(now())
 }
 
 model DocumentChunk {
-  id        String    @id @default(uuid())
+  id        String   @id @default(uuid())
   content   String
   embedding Float[]
   docId     String
-  document  Document  @relation(fields: [docId], references: [id], onDelete: Cascade)
+  document  Document @relation(fields: [docId], references: [id], onDelete: Cascade)
 }
 
 model Chat {
-  id        String    @id @default(uuid())
+  id        String        @id @default(uuid())
   title     String
   userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   kbId      String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   kb        KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  Message[]
   tickets   Ticket[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
 }
 
 model Message {
   id         String   @id @default(uuid())
-  role       String   // 'user' or 'ai'
+  role       String
   content    String
-  sources    Json?    // Store exact chunk matches
-  confidence Float?   // AI confidence score (0-1)
-  rating     Int?     // 1 for 👍, -1 for 👎
-  feedback   String?  // Optional text feedback
+  sources    Json?
+  confidence Float?
+  rating     Int?
+  feedback   String?
   chatId     String
-  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
 }
 
 model Ticket {
-  id          String       @id @default(uuid())
-  title       String
-  description String
-  status      TicketStatus @default(OPEN)
-  priority    Priority     @default(MEDIUM)
-  userId      String
-  user        User         @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+  id           String       @id @default(uuid())
+  title        String
+  description  String
+  status       TicketStatus @default(OPEN)
+  priority     Priority     @default(MEDIUM)
+  userId       String
   assignedToId String?
-  assignedTo  User?        @relation("AdminTickets", fields: [assignedToId], references: [id])
-  chatId      String?
-  chat        Chat?        @relation(fields: [chatId], references: [id])
-  notes       TicketNote[]
-  dueAt       DateTime?    // SLA due date
-  isOverdue   Boolean      @default(false) // Helper field for overdue status
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  chatId       String?
+  dueAt        DateTime?
+  isOverdue    Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  assignedTo   User?        @relation("AdminTickets", fields: [assignedToId], references: [id])
+  chat         Chat?        @relation(fields: [chatId], references: [id])
+  user         User         @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+  notes        TicketNote[]
 }
 
 model TicketNote {
   id        String   @id @default(uuid())
   content   String
-  role      String   @default("admin") // "admin" or "user" - who sent the message
-  adminId   String?  // NULL if user-created
-  userId    String?  // NULL if admin-created
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role      String   @default("admin")
+  adminId   String?
+  userId    String?
   ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
 }
 
 model AuditLog {
-  id          String   @id @default(uuid())
-  adminId     String
-  admin       User     @relation("AdminLogs", fields: [adminId], references: [id], onDelete: Cascade)
-  action      String   // "ticket_status_updated", "ticket_assigned", "user_role_changed", etc.
-  resourceId  String?  // ID of the affected resource (ticket, user, etc.)
-  resourceType String? // "ticket", "user", "kb", etc.
-  changes     Json?    // What changed: { field: "oldValue" -> "newValue" }
-  description String?  // Human-readable description
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  adminId      String
+  action       String
+  resourceId   String?
+  resourceType String?
+  changes      Json?
+  description  String?
+  createdAt    DateTime @default(now())
+  admin        User     @relation("AdminLogs", fields: [adminId], references: [id], onDelete: Cascade)
 }
 
-model Plugin {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  displayName String
-  description String?
-  version     String   @default("1.0.0")
-  author      String?
-  enabled     Boolean  @default(false)
-  config      Json?    // Plugin-specific configuration
-  hooks       String[] // Supported hooks: ["on_ticket_created", "on_chat_started", etc.]
-  permissions Json?    // Required permissions
-  installUrl  String?  // URL to install this plugin
-  webhookUrl  String?  // Webhook endpoint for events
-  metadata    Json?    // Additional plugin metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([enabled])
+enum Role {
+  USER
+  ADMIN
 }
 
 enum TicketStatus {

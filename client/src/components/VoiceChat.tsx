@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Volume2, Loader } from 'lucide-react';
 import axios from 'axios';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 interface VoiceChatProps {
   chatId: string;
@@ -73,9 +74,9 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
       formData.append('audio', audioBlob, 'audio.wav');
       formData.append('language', language);
 
-      const response = await axios.post('http://localhost:8000/api/voice/transcribe', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true
+      const response = await axios.post(API_ENDPOINTS.VOICE_TRANSCRIBE, formData, {
+        ...axiosConfig,
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       const text = response.data.transcription;
@@ -92,13 +93,13 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
       setIsSynthesizing(true);
 
       const response = await axios.post(
-        'http://localhost:8000/api/voice/synthesize',
+        API_ENDPOINTS.VOICE_SYNTHESIZE,
         {
           text,
           voice,
           language
         },
-        { withCredentials: true }
+        axiosConfig
       );
 
       const audioUrl = response.data.audio_url;

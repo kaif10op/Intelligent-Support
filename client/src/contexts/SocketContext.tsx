@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/useAuthStore';
+import { WS_BASE_URL } from '../config/api';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -23,11 +24,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
-    // Get base URL by removing /api suffix if present
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000';
-
     // Create socket connection
-    const newSocket = io(baseUrl, {
+    const newSocket = io(WS_BASE_URL, {
       auth: {
         userId: user.id,
         username: user.name,

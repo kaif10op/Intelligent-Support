@@ -398,13 +398,20 @@ export const regenerateResponse = async (req: AuthRequest, res: Response) => {
       await prisma.message.delete({ where: { id: lastAIMessage.id } });
     }
 
-    // Re-invoke the chat endpoint with the same user message
-    // For now, we'll return a placeholder response indicating regeneration is queued
-    res.json({
-      success: true,
-      message: 'Regenerating response...',
-      lastUserMessage: lastUserMessage.content
-    });
+    // Recreate the request body to call the chat function
+    // This triggers a fresh agent response with the same message
+    const regenerateReq = {
+      ...req,
+      body: {
+        message: lastUserMessage.content,
+        kbId: chat.kbId,
+        chatId: chat.id
+      }
+    };
+
+    // Call the main chat function to regenerate the response
+    // This will create a new AI message with potentially different output
+    await chatWithAgent(regenerateReq as AuthRequest, res);
   } catch (error: any) {
     console.error('Regenerate Error:', error);
     res.status(500).json({ error: 'Failed to regenerate response' });

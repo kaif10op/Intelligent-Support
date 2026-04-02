@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
 interface User {
   id: string;
@@ -17,7 +18,6 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
-const API_URL = 'http://localhost:8000/api';
 axios.defaults.withCredentials = true;
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -26,7 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user }),
   checkAuth: async () => {
     try {
-      const res = await axios.get(`${API_URL}/auth/me`);
+      const res = await axios.get(API_ENDPOINTS.AUTH_ME, axiosConfig);
       set({ user: res.data.user, loading: false });
     } catch {
       set({ user: null, loading: false });
@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: async () => {
     try {
-      await axios.post(`${API_URL}/auth/logout`);
+      await axios.post(API_ENDPOINTS.AUTH_LOGOUT, axiosConfig);
       set({ user: null });
     } catch (err) {
       console.error('Logout error', err);

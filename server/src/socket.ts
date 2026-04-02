@@ -2,6 +2,7 @@ import type { Server as HTTPServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import type { AuthRequest } from './middlewares/auth.js';
 import { prisma } from './prisma.js';
+import { logger } from './utils/logger.js';
 
 interface SocketUser {
   userId: string;
@@ -49,7 +50,7 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     const user = socket.user;
     if (!user) return;
 
-    console.log(`✓ User ${user.username} connected: ${socket.id}`);
+    logger.info('User connected', { username: user.username, socketId: socket.id });
 
     // Join user-specific room for direct notifications
     socket.join(`user-${user.userId}`);
@@ -64,12 +65,12 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     // Subscribe to ticket updates (for ticket details page)
     socket.on('subscribe-ticket', (ticketId: string) => {
       socket.join(`ticket-${ticketId}`);
-      console.log(`User ${user.username} subscribed to ticket ${ticketId}`);
+      logger.debug('User subscribed to ticket', { username: user.username, ticketId });
     });
 
     socket.on('unsubscribe-ticket', (ticketId: string) => {
       socket.leave(`ticket-${ticketId}`);
-      console.log(`User ${user.username} unsubscribed from ticket ${ticketId}`);
+      logger.debug('User unsubscribed from ticket', { username: user.username, ticketId });
     });
 
     // Ticket status updated
@@ -104,7 +105,7 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     // Subscribe to chat updates
     socket.on('subscribe-chat', (chatId: string) => {
       socket.join(`chat-${chatId}`);
-      console.log(`User ${user.username} subscribed to chat ${chatId}`);
+      logger.debug('User subscribed to chat', { username: user.username, chatId });
     });
 
     socket.on('unsubscribe-chat', (chatId: string) => {
@@ -174,12 +175,12 @@ export const initializeSocket = (httpServer: HTTPServer) => {
 
     // Disconnect handler
     socket.on('disconnect', () => {
-      console.log(`✗ User ${user.username} disconnected: ${socket.id}`);
+      logger.info('User disconnected', { username: user.username, socketId: socket.id });
     });
 
     // Error handler
     socket.on('error', (error: any) => {
-      console.error(`Socket error for user ${user.username}:`, error);
+      logger.error('Socket error', { username: user.username, error: error.message, stack: error.stack });
     });
   });
 
