@@ -23,8 +23,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
+    // Get base URL by removing /api suffix if present
+    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000';
+
     // Create socket connection
-    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:8000', {
+    const newSocket = io(baseUrl, {
       auth: {
         userId: user.id,
         username: user.name,

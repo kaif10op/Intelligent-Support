@@ -10,9 +10,12 @@ const RecentChats = () => {
   const fetchChats = async () => {
     try {
       const res = await axios.get('http://localhost:8000/api/chat', { withCredentials: true });
-      setChats(res.data);
+      // Handle different response structures
+      const data = Array.isArray(res.data) ? res.data : res.data.chats || res.data.data || [];
+      setChats(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setChats([]);
     } finally {
       setLoading(false);
     }

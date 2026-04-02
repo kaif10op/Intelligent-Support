@@ -20,11 +20,14 @@ const Tickets = () => {
   const fetchTickets = async () => {
     try {
       const endpoint = user?.role === 'ADMIN' ? 'http://localhost:8000/api/tickets/all' : 'http://localhost:8000/api/tickets/my';
-      const res = await axios.get(endpoint);
-      setTickets(res.data);
+      const res = await axios.get(endpoint, { withCredentials: true });
+      // Handle different response structures
+      const data = Array.isArray(res.data) ? res.data : res.data.tickets || res.data.data || [];
+      setTickets(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (err) {
       console.error('Fetch tickets error:', err);
+      setTickets([]);
       setLoading(false);
     }
   };
