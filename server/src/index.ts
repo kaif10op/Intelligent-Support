@@ -17,6 +17,8 @@ import adminChatRoutes from './routes/adminChat.js';
 import emailChannelRoutes from './routes/emailChannel.js';
 import abTestRoutes from './routes/abTest.js';
 import voiceRoutes from './routes/voice.js';
+import pluginRoutes from './routes/plugins.js';
+import webhookRoutes from './routes/webhooks.js';
 
 const app = express();
 
@@ -63,6 +65,8 @@ async function startServer() {
     app.use('/api/email-channel', emailChannelRoutes);
     app.use('/api/ab-tests', abTestRoutes);
     app.use('/api/voice', voiceRoutes);
+    app.use('/api/plugins', pluginRoutes);
+    app.use('/api/webhooks', webhookRoutes);
 
     console.log('✅ All routes registered');
 

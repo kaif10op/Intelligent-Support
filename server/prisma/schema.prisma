@@ -146,6 +146,26 @@ model AuditLog {
   createdAt   DateTime @default(now())
 }
 
+model Plugin {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  displayName String
+  description String?
+  version     String   @default("1.0.0")
+  author      String?
+  enabled     Boolean  @default(false)
+  config      Json?    // Plugin-specific configuration
+  hooks       String[] // Supported hooks: ["on_ticket_created", "on_chat_started", etc.]
+  permissions Json?    // Required permissions
+  installUrl  String?  // URL to install this plugin
+  webhookUrl  String?  // Webhook endpoint for events
+  metadata    Json?    // Additional plugin metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
+}
+
 enum TicketStatus {
   OPEN
   IN_PROGRESS

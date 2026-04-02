@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon } from 'lucide-react';
+import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon, User } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 
@@ -60,6 +60,10 @@ const Sidebar = () => {
       </div>
 
       <div className="sidebar-footer">
+        <NavLink to="/preferences" className="nav-item">
+          <User size={20} />
+          <span>Preferences</span>
+        </NavLink>
         <NavLink to="/settings" className="nav-item">
           <Settings size={20} />
           <span>Settings</span>

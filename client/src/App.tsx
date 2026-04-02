@@ -19,6 +19,7 @@ import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import RecentChats from './pages/RecentChats';
 import KnowledgeBases from './pages/KnowledgeBases';
 import Settings from './pages/Settings';
+import UserPreferences from './pages/UserPreferences';
 import Help from './pages/Help';
 import Tickets from './pages/Tickets';
 import Search from './pages/Search';
@@ -127,6 +128,12 @@ function App() {
             <Route path="/search" element={
               <ProtectedRoute>
                 <Layout><Search /></Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/preferences" element={
+              <ProtectedRoute>
+                <Layout><UserPreferences /></Layout>
               </ProtectedRoute>
             } />
 
