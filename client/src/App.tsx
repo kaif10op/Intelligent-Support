@@ -20,6 +20,7 @@ import KnowledgeBases from './pages/KnowledgeBases';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import Tickets from './pages/Tickets';
+import Search from './pages/Search';
 import Layout from './components/Layout';
 
 
@@ -113,6 +114,12 @@ function App() {
             <Route path="/analytics" element={
               <ProtectedRoute adminOnly>
                 <Layout><AnalyticsDashboard /></Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/search" element={
+              <ProtectedRoute>
+                <Layout><Search /></Layout>
               </ProtectedRoute>
             } />
 

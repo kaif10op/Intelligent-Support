@@ -4,6 +4,7 @@ import { prisma } from '../prisma.js';
 import { ChatGroq } from '@langchain/groq';
 import { formatPaginatedResponse, parsePaginationParams, calculateSkipTake } from '../utils/pagination.js';
 import { exportTicketsToCSV, getExportFilename } from '../utils/export.js';
+import { sendTicketReplyEmail, sendTicketStatusChangedEmail, sendTicketAssignedEmail } from '../utils/email.js';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
@@ -88,7 +89,10 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
     const { status, priority, assignedToId } = req.body;
 
     // Check if ticket is overdue
-    const ticket = await prisma.ticket.findUnique({ where: { id: id as string } });
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: id as string },
+      include: { user: { select: { email: true, name: true } }, assignedTo: { select: { name: true } } }
+    });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
 
     const now = new Date();
@@ -104,6 +108,25 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    // Send email notifications
+    if (ticket.user?.email) {
+      // Status changed
+      if (status && status !== ticket.status) {
+        await sendTicketStatusChangedEmail(ticket.user.email, ticket.title, status);
+      }
+
+      // Ticket assigned to someone
+      if (assignedToId && assignedToId !== ticket.assignedToId) {
+        const admin = await prisma.user.findUnique({
+          where: { id: assignedToId },
+          select: { name: true }
+        });
+        if (admin?.name) {
+          await sendTicketAssignedEmail(ticket.user.email, ticket.title, admin.name);
+        }
+      }
+    }
+
     res.json(updatedTicket);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update ticket' });
@@ -118,7 +141,10 @@ export const addTicketNote = async (req: AuthRequest, res: Response) => {
     if (!content) return res.status(400).json({ error: 'Note content is required' });
 
     // Check ticket ownership or admin status
-    const ticket = await prisma.ticket.findUnique({ where: { id: id as string } });
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: id as string },
+      include: { user: { select: { email: true, name: true } } }
+    });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
 
     const isOwner = ticket.userId === req.user!.id;
@@ -140,6 +166,16 @@ export const addTicketNote = async (req: AuthRequest, res: Response) => {
         ...(!isAdmin && { userId: req.user!.id })
       }
     });
+
+    // Send email notification if admin replied
+    if (isAdmin && ticket.user?.email) {
+      const adminUser = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: { name: true }
+      });
+      const replyPreview = content.substring(0, 100);
+      await sendTicketReplyEmail(ticket.user.email, ticket.title, adminUser?.name || 'Support', replyPreview);
+    }
 
     res.json(note);
   } catch (error) {

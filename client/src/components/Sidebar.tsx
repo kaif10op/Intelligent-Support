@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket } from 'lucide-react';
+import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 
@@ -36,6 +36,10 @@ const Sidebar = () => {
         <NavLink to="/tickets" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <Ticket size={20} />
           <span>Tickets</span>
+        </NavLink>
+        <NavLink to="/search" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <SearchIcon size={20} />
+          <span>Search</span>
         </NavLink>
 
         <div className="recent-list-section">
