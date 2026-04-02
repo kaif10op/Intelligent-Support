@@ -12,6 +12,8 @@ import kbRoutes from './routes/kb.js';
 import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import ticketRoutes from './routes/ticket.js';
+import searchRoutes from './routes/search.js';
+import adminChatRoutes from './routes/adminChat.js';
 
 const app = express();
 
@@ -52,6 +54,8 @@ async function startServer() {
     app.use('/api/kb', kbRoutes);
     app.use('/api/chat', chatRoutes);
     app.use('/api/admin', adminRoutes);
+    app.use('/api/admin-chat', adminChatRoutes);
+    app.use('/api/search', searchRoutes);
     app.use('/api/tickets', ticketRoutes);
 
     console.log('✅ All routes registered');

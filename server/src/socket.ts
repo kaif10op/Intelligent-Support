@@ -13,10 +13,12 @@ interface AuthenticatedSocket extends Socket {
   user?: SocketUser;
 }
 
+import { config } from './config.js';
+
 export const initializeSocket = (httpServer: HTTPServer) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+      origin: config.CORS_ORIGIN,
       credentials: true
     }
   });

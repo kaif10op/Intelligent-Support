@@ -76,15 +76,15 @@ const Chat = () => {
         console.error('Failed to load chat history:', err);
       }
 
-      return () => {
-        if (id && id !== 'new') {
-          unsubscribeFrom('chat', id);
-        }
-      };
     };
 
-    const cleanup = fetchHistory();
-    return cleanup as any;
+    fetchHistory();
+
+    return () => {
+      if (id && id !== 'new') {
+        unsubscribeFrom('chat', id);
+      }
+    };
   }, [id, kbId, subscribeTo, unsubscribeFrom, onChatMessage]);
 
   useEffect(() => {
