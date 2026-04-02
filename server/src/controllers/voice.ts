@@ -1,13 +1,120 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import axios from 'axios';
 import { logger } from '../utils/logger.js';
 
-/**
- * Voice I/O Features
- * - Speech-to-text: Convert audio to text
- * - Text-to-speech: Convert text to audio
- */
+const voiceAudioStore = new Map<string, { buffer: Buffer; contentType: string; createdAt: number }>();
+
+const cleanupVoiceAudioStore = () => {
+  const now = Date.now();
+  const ttlMs = 30 * 60 * 1000; // 30 minutes
+  for (const [id, item] of voiceAudioStore.entries()) {
+    if (now - item.createdAt > ttlMs) {
+      voiceAudioStore.delete(id);
+    }
+  }
+};
+
+const mapToAssemblyLanguage = (language: string) => {
+  const normalized = (language || 'en').toLowerCase();
+  const mapping: Record<string, string> = {
+    en: 'en',
+    es: 'es',
+    fr: 'fr',
+    de: 'de',
+    it: 'it',
+    pt: 'pt',
+    hi: 'hi',
+    ja: 'ja'
+  };
+  return mapping[normalized] || 'en';
+};
+
+const transcribeWithAssemblyAI = async (audioBuffer: Buffer, language: string) => {
+  const apiKey = process.env.ASSEMBLYAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('ASSEMBLYAI_API_KEY is not configured');
+  }
+
+  const uploadRes = await axios.post('https://api.assemblyai.com/v2/upload', audioBuffer, {
+    headers: {
+      authorization: apiKey,
+      'content-type': 'application/octet-stream'
+    },
+    maxBodyLength: Infinity
+  });
+
+  const audioUrl = uploadRes.data?.upload_url;
+  if (!audioUrl) {
+    throw new Error('AssemblyAI upload failed');
+  }
+
+  const transcriptRes = await axios.post(
+    'https://api.assemblyai.com/v2/transcript',
+    {
+      audio_url: audioUrl,
+      language_code: mapToAssemblyLanguage(language),
+      punctuate: true,
+      format_text: true
+    },
+    {
+      headers: { authorization: apiKey }
+    }
+  );
+
+  const transcriptId = transcriptRes.data?.id;
+  if (!transcriptId) {
+    throw new Error('AssemblyAI transcript creation failed');
+  }
+
+  for (let i = 0; i < 15; i++) {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const pollRes = await axios.get(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+      headers: { authorization: apiKey }
+    });
+
+    const status = pollRes.data?.status;
+    if (status === 'completed') {
+      return {
+        text: pollRes.data?.text || '',
+        confidence: Number(pollRes.data?.confidence ?? 0.85)
+      };
+    }
+    if (status === 'error') {
+      throw new Error(pollRes.data?.error || 'AssemblyAI transcription failed');
+    }
+  }
+
+  throw new Error('AssemblyAI transcription timed out');
+};
+
+const synthesizeWithOpenAI = async (text: string, voice: 'male' | 'female') => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
+  const openAIVoice = voice === 'male' ? 'alloy' : 'shimmer';
+  const response = await axios.post(
+    'https://api.openai.com/v1/audio/speech',
+    {
+      model: 'gpt-4o-mini-tts',
+      voice: openAIVoice,
+      input: text,
+      format: 'mp3'
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      responseType: 'arraybuffer'
+    }
+  );
+
+  return Buffer.from(response.data);
+};
 
 /**
  * Process speech-to-text from audio buffer
@@ -23,8 +130,6 @@ export const transcribeAudio = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'No audio file provided' });
     }
 
-    // In production, integrate with AssemblyAI or Google Cloud Speech-to-Text
-    // For now, return a placeholder that would be replaced with actual transcription
     const audioBuffer = file.buffer || Buffer.from(file);
 
     // Estimate text length from audio duration
@@ -47,26 +152,28 @@ export const transcribeAudio = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // Placeholder transcription result
-    // In production: send to Speech-to-Text API
-    const placeholderTranscriptions = [
-      "I need help with my account",
-      "Can I create a support ticket?",
-      "What's the status of my previous ticket?",
-      "I want to search the knowledge base"
-    ];
-
-    const transcribedText =
-      placeholderTranscriptions[Math.floor(Math.random() * placeholderTranscriptions.length)];
+    let transcribedText = '';
+    let confidence = 0;
+    try {
+      const transcription = await transcribeWithAssemblyAI(audioBuffer, language);
+      transcribedText = transcription.text;
+      confidence = transcription.confidence;
+    } catch (err: any) {
+      logger.warn('Voice transcription provider unavailable', { error: err.message });
+      return res.status(503).json({
+        error: 'Voice transcription service unavailable',
+        details: err.message
+      });
+    }
 
     res.json({
       success: true,
       transcription: transcribedText,
       language,
       duration_seconds: estimatedDurationSeconds,
-      confidence: 0.95, // Placeholder confidence score
+      confidence,
       session_id: transcriptionLog.id,
-      message: 'Audio transcribed successfully (demo mode - integrate with Speech-to-Text API)'
+      message: 'Audio transcribed successfully'
     });
   } catch (error: any) {
     logger.error('Transcribe Audio Error', { error: error.message, stack: error.stack });
@@ -107,20 +214,35 @@ export const synthesizeText = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // In production, integrate with Google Text-to-Speech, Azure Speech, or similar
-    // For now, return metadata about what would be synthesized
-    const estimatedDurationSeconds = text.length / 15; // Rough estimate: ~15 chars per second
+    let audioBuffer: Buffer;
+    try {
+      audioBuffer = await synthesizeWithOpenAI(text, voice);
+    } catch (err: any) {
+      logger.warn('Voice synthesis provider unavailable', { error: err.message });
+      return res.status(503).json({
+        error: 'Voice synthesis service unavailable',
+        details: err.message
+      });
+    }
+
+    cleanupVoiceAudioStore();
+    voiceAudioStore.set(synthesisLog.id, {
+      buffer: audioBuffer,
+      contentType: 'audio/mpeg',
+      createdAt: Date.now()
+    });
+    const estimatedDurationSeconds = text.length / 15;
+    const audioUrl = `${req.protocol}://${req.get('host')}/api/voice/audio/${synthesisLog.id}`;
 
     res.json({
       success: true,
-      message: 'Text scheduled for synthesis (demo mode - integrate with Text-to-Speech API)',
+      message: 'Text synthesized successfully',
       session_id: synthesisLog.id,
       text,
       voice,
       language,
       estimated_duration_seconds: estimatedDurationSeconds,
-      audio_url: `/api/voice/audio/${synthesisLog.id}`,
-      note: 'In production, audio would be returned as MP3/WAV stream'
+      audio_url: audioUrl
     });
   } catch (error: any) {
     logger.error('Synthesize Text Error', { error: error.message, stack: error.stack });
@@ -134,7 +256,7 @@ export const synthesizeText = async (req: AuthRequest, res: Response) => {
  */
 export const getAudioStream = async (req: AuthRequest, res: Response) => {
   try {
-    const { sessionId } = req.params;
+    const sessionId = String(req.params.sessionId || '');
 
     const session = await prisma.auditLog.findUnique({
       where: { id: sessionId as string }
@@ -144,18 +266,17 @@ export const getAudioStream = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Audio session not found' });
     }
 
-    // Return demo audio placeholder
-    res.set({
-      'Content-Type': 'audio/mpeg',
-      'Content-Disposition': `inline; filename="audio-${sessionId}.mp3"`
-    });
+    const storedAudio = voiceAudioStore.get(sessionId);
+    if (!storedAudio) {
+      return res.status(404).json({ error: 'Audio buffer expired or unavailable' });
+    }
 
-    res.json({
-      message: 'Audio stream would be returned here',
-      session_id: sessionId,
-      format: 'mp3',
-      note: 'Demo mode - actual audio synthesis needed'
+    res.set({
+      'Content-Type': storedAudio.contentType,
+      'Content-Disposition': `inline; filename="audio-${sessionId}.mp3"`,
+      'Cache-Control': 'no-store'
     });
+    res.send(storedAudio.buffer);
   } catch (error: any) {
     logger.error('Get Audio Stream Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to retrieve audio' });
