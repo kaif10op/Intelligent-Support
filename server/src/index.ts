@@ -16,6 +16,7 @@ import searchRoutes from './routes/search.js';
 import adminChatRoutes from './routes/adminChat.js';
 import emailChannelRoutes from './routes/emailChannel.js';
 import abTestRoutes from './routes/abTest.js';
+import voiceRoutes from './routes/voice.js';
 
 const app = express();
 
@@ -61,6 +62,7 @@ async function startServer() {
     app.use('/api/tickets', ticketRoutes);
     app.use('/api/email-channel', emailChannelRoutes);
     app.use('/api/ab-tests', abTestRoutes);
+    app.use('/api/voice', voiceRoutes);
 
     console.log('✅ All routes registered');
 
