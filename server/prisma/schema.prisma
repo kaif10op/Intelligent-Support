@@ -37,8 +37,25 @@ model KnowledgeBase {
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents   Document[]
   chats       Chat[]
+  versions    KBVersion[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+model KBVersion {
+  id          String       @id @default(uuid())
+  kbId        String
+  kb          KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  versionNumber Int        // Sequential version number
+  title       String       // KB title at this version
+  description String?      // KB description at this version
+  docCount    Int          // Number of documents in this version
+  docIds      String[]     // List of document IDs in this version (JSON array)
+  changelog   String?      // What changed in this version
+  createdAt   DateTime     @default(now())
+
+  @@index([kbId])
+  @@unique([kbId, versionNumber])
 }
 
 model Document {

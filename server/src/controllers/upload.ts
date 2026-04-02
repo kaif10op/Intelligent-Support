@@ -9,6 +9,7 @@ const PDFParse = pdf.PDFParse;
 import mammoth from 'mammoth';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { generateEmbeddings } from '../utils/jina.js';
+import { autoCreateVersionInternalVersion } from './kb.js';
 
 export const uploadDocument = async (req: AuthRequest, res: Response) => {
   try {
@@ -94,6 +95,9 @@ export const uploadDocument = async (req: AuthRequest, res: Response) => {
           }
         });
     }
+
+    // Auto-create version snapshot after document upload
+    await autoCreateVersionInternalVersion(kb.id, `Document added: ${file.originalname}`);
 
     res.json({ message: 'Document uploaded and processed successfully', document });
   } catch (error: any) {
