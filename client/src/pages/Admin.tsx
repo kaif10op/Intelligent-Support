@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Users, Database, Shield, Zap, TrendingUp, Search, Filter, BarChart as BarIcon, PieChart as PieIcon, Activity } from 'lucide-react';
+import { Users, Database, Shield, Zap, TrendingUp, Search, Filter, BarChart as BarIcon, PieChart as PieIcon, Activity, Loader2, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 
 const Admin = () => {
@@ -12,8 +12,8 @@ const Admin = () => {
   const fetchAdminData = async () => {
     try {
       const [statsRes, usersRes] = await Promise.all([
-        axios.get('http://localhost:8000/api/admin/stats'),
-        axios.get('http://localhost:8000/api/admin/users')
+        axios.get('http://localhost:8000/api/admin/stats', { withCredentials: true }),
+        axios.get('http://localhost:8000/api/admin/users', { withCredentials: true })
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data);
@@ -30,252 +30,282 @@ const Admin = () => {
 
   const handleUpdateTicket = async (ticketId: string, status: string) => {
     try {
-      await axios.put(`http://localhost:8000/api/tickets/${ticketId}`, { status });
+      await axios.put(`http://localhost:8000/api/tickets/${ticketId}`, { status }, { withCredentials: true });
       fetchAdminData();
     } catch (err) {
       console.error('Update ticket error:', err);
     }
   };
 
-  const COLORS = ['#8a2be2', '#00d2ff', '#00ff80', '#ff4d4d', '#ffcc00'];
+  const COLORS = ['#ec4899', '#3b82f6', '#06b6d4', '#ef4444', '#f59e0b'];
 
-  const filteredUsers = users.filter(u => 
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredUsers = users.filter(u =>
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div className="loading">Loading admin analytics...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-96 gap-4">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading admin analytics...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="admin-page fade-in">
-      <header className="admin-header">
-        <div className="header-info">
-          <Shield size={32} color="#00d2ff" />
-          <h1>Admin Command Center</h1>
+    <div className="space-y-12 pb-12">
+      {/* Header */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-4 mb-1">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Shield className="w-6 h-6 text-primary" />
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Admin Command Center</h1>
         </div>
-        <p>Global platform overview and user management.</p>
-      </header>
+        <p className="text-muted-foreground">Global platform overview and user management.</p>
+      </div>
 
-      <div className="stats-grid">
-        <div className="stat-card glass">
-          <div className="stat-icon" style={{background: 'rgba(138, 43, 226, 0.1)'}}>
-            <Users size={24} color="#8a2be2" />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Total Users */}
+        <div className="glass-elevated border border-border/50 rounded-xl p-8 flex items-center gap-6 group relative">
+          <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+            <Users className="w-7 h-7 text-primary" />
           </div>
-          <div className="stat-info">
-            <h3>Total Users</h3>
-            <span>{stats?.totalUsers || 0}</span>
+          <div className="flex-1">
+            <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Total Users</p>
+            <p className="text-3xl font-bold text-foreground">{stats?.totalUsers || 0}</p>
           </div>
-          <TrendingUp size={20} color="#00ff80" />
-        </div>
-
-        <div className="stat-card glass">
-          <div className="stat-icon" style={{background: 'rgba(0, 210, 255, 0.1)'}}>
-            <Database size={24} color="#00d2ff" />
-          </div>
-          <div className="stat-info">
-            <h3>Knowledge Bases</h3>
-            <span>{stats?.totalKBs || 0}</span>
-          </div>
-          <Zap size={20} color="#ff0080" />
+          <TrendingUp className="w-5 h-5 text-emerald-500 absolute top-4 right-4 opacity-60" />
         </div>
 
-        <div className="stat-card glass">
-          <div className="stat-icon" style={{background: 'rgba(0, 255, 128, 0.1)'}}>
-            <Zap size={24} color="#00ff80" />
+        {/* Knowledge Bases */}
+        <div className="glass-elevated border border-border/50 rounded-xl p-8 flex items-center gap-6 group relative">
+          <div className="w-14 h-14 rounded-xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+            <Database className="w-7 h-7 text-secondary" />
           </div>
-          <div className="stat-info">
-            <h3>Total Tickets</h3>
-            <span>{stats?.totalTickets || 0}</span>
+          <div className="flex-1">
+            <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Knowledge Bases</p>
+            <p className="text-3xl font-bold text-foreground">{stats?.totalKBs || 0}</p>
           </div>
-          <Activity size={20} color="#8a2be2" />
+          <Zap className="w-5 h-5 text-destructive absolute top-4 right-4 opacity-60" />
+        </div>
+
+        {/* Total Tickets */}
+        <div className="glass-elevated border border-border/50 rounded-xl p-8 flex items-center gap-6 group relative">
+          <div className="w-14 h-14 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
+            <Zap className="w-7 h-7 text-amber-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Total Tickets</p>
+            <p className="text-3xl font-bold text-foreground">{stats?.totalTickets || 0}</p>
+          </div>
+          <Activity className="w-5 h-5 text-primary absolute top-4 right-4 opacity-60" />
         </div>
       </div>
 
-      <div className="analytics-row">
-         <div className="chart-card glass">
-            <div className="chart-header">
-               <BarIcon size={18} color="var(--accent-primary)" />
-               <h3>AI Confidence Distribution</h3>
-            </div>
-            <div className="chart-container">
-               <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={stats?.confidenceDist}>
-                     <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} />
-                     <YAxis stroke="var(--text-muted)" fontSize={12} />
-                     <Tooltip 
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: '8px' }}
-                     />
-                     <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                        {stats?.confidenceDist?.map((_entry: any, index: number) => (
-                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                     </Bar>
-                  </BarChart>
-               </ResponsiveContainer>
-            </div>
-         </div>
+      {/* Analytics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* AI Confidence Distribution */}
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <BarIcon className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">AI Confidence Distribution</h3>
+          </div>
+          <div className="h-64 -mx-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats?.confidenceDist || []}>
+                <XAxis dataKey="name" stroke="#a0aec0" fontSize={12} />
+                <YAxis stroke="#a0aec0" fontSize={12} />
+                <Tooltip
+                  contentStyle={{ background: '#0f1629', border: '1px solid #1e293b', borderRadius: '8px' }}
+                  cursor={{ fill: 'rgba(236, 72, 153, 0.1)' }}
+                />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {stats?.confidenceDist?.map((_entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-         <div className="chart-card glass">
-            <div className="chart-header">
-               <PieIcon size={18} color="var(--accent-secondary)" />
-               <h3>User Feedback Quality</h3>
-            </div>
-            <div className="chart-container">
-               <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                     <Pie
-                        data={stats?.feedbackStats}
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                     >
-                        {stats?.feedbackStats?.map((_entry: any, index: number) => (
-                           <Cell key={`cell-${index}`} fill={COLORS[(index+1) % COLORS.length]} />
-                        ))}
-                     </Pie>
-
-                     <Tooltip 
-                         contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: '8px' }}
-                     />
-                     <Legend verticalAlign="bottom" height={36}/>
-                  </PieChart>
-               </ResponsiveContainer>
-            </div>
-         </div>
+        {/* User Feedback Quality */}
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <PieIcon className="w-5 h-5 text-secondary" />
+            <h3 className="text-lg font-semibold text-foreground">User Feedback Quality</h3>
+          </div>
+          <div className="h-64 -mx-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={stats?.feedbackStats || []}
+                  innerRadius={50}
+                  outerRadius={75}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {stats?.feedbackStats?.map((_entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ background: '#0f1629', border: '1px solid #1e293b', borderRadius: '8px' }}
+                />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
-      <section className="user-management glass">
-        <div className="section-header">
-          <h2>User Management</h2>
-          <div className="search-box glass">
-            <Search size={18} />
-            <input 
-              type="text" 
-              placeholder="Search by name or email..." 
+      {/* User Management */}
+      <section className="glass-elevated border border-border/50 rounded-xl p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-2xl font-bold text-foreground">User Management</h2>
+          <div className="glass border border-border/30 rounded-lg flex items-center gap-3 px-4 py-2.5">
+            <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-transparent text-sm placeholder-muted-foreground text-foreground outline-none flex-1"
             />
           </div>
         </div>
 
-        <div className="users-table-container">
-          <table className="users-table">
+        {/* Users Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
             <thead>
-              <tr>
-                <th>User</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Created</th>
-                <th>KBs</th>
-                <th>Status</th>
+              <tr className="border-b border-border/30">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">User</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Email</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Role</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Created</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">KBs</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Status</th>
               </tr>
             </thead>
-
             <tbody>
               {filteredUsers.map(user => (
-                <tr key={user.id}>
-                  <td>
-                    <div className="user-cell">
-                      {user.picture ? <img src={user.picture} alt="" /> : <div className="p-icon"><Users size={14}/></div>}
-                      <span>{user.name}</span>
+                <tr key={user.id} className="border-b border-border/10 hover:bg-card/50 transition-colors">
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      {user.picture ? (
+                        <img src={user.picture} alt="" className="w-9 h-9 rounded-full border border-border/30" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-card/50 flex items-center justify-center">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="font-medium text-foreground">{user.name}</span>
                     </div>
                   </td>
-                  <td>{user.email}</td>
-                  <td><span className={`role-badge ${user.role}`}>{user.role}</span></td>
-                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                  <td>{user._count?.knowledgeBases || 0}</td>
-                  <td><span className="status-dot active"></span> Active</td>
+                  <td className="px-4 py-4 text-sm text-muted-foreground">{user.email}</td>
+                  <td className="px-4 py-4">
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                      user.role === 'ADMIN'
+                        ? 'bg-secondary/10 text-secondary'
+                        : 'bg-muted/10 text-muted-foreground'
+                    }`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-sm text-muted-foreground">{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-4 text-sm text-foreground font-medium">{user._count?.knowledgeBases || 0}</td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span className="text-sm text-emerald-400 font-medium">Active</span>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
-
-      <section className="ticket-management glass">
-        <div className="section-header">
-          <h2>Ticket Management</h2>
-          <div className="filter-box">
-             <Filter size={18} />
-             <span>Recent Tickets</span>
-          </div>
-        </div>
-
-        <div className="tickets-list">
-          {stats?.tickets?.map((ticket: any) => (
-            <div key={ticket.id} className="admin-ticket-row glass">
-              <div className="ticket-main">
-                <span className={`p-badge ${ticket.priority.toLowerCase()}`}>{ticket.priority}</span>
-                <div className="ticket-text">
-                  <h4>{ticket.title}</h4>
-                  <p>from <strong>{ticket.user?.email}</strong></p>
-                </div>
-              </div>
-              <div className="ticket-status-actions">
-                <span className={`s-badge ${ticket.status.toLowerCase().replace('_', '-')}`}>{ticket.status}</span>
-                {ticket.status === 'OPEN' && (
-                  <button className="btn-s" onClick={() => handleUpdateTicket(ticket.id, 'IN_PROGRESS')}>Handle</button>
-                )}
-                {ticket.status === 'IN_PROGRESS' && (
-                   <button className="btn-s success" onClick={() => handleUpdateTicket(ticket.id, 'RESOLVED')}>Resolve</button>
-                )}
-              </div>
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-12">
+              <AlertCircle className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">No users found</p>
             </div>
-          ))}
-          {(!stats?.tickets || stats.tickets.length === 0) && (
-            <p className="empty-hint">No active tickets to manage.</p>
           )}
         </div>
       </section>
 
-      <style>{`
-        .admin-page { display: flex; flex-direction: column; gap: 48px; padding-bottom: 50px; }
-        .admin-header h1 { font-size: 2.2rem; }
-        .header-info { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
-        .stat-card { padding: 32px; display: flex; align-items: center; gap: 24px; position: relative; }
-        .stat-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
-        .stat-info h3 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 4px; }
-        .stat-info span { font-size: 1.8rem; font-weight: 700; color: #fff; }
-        .stat-card svg:last-child { position: absolute; top: 32px; right: 32px; opacity: 0.6; }
-        .user-management, .ticket-management { padding: 32px; border-radius: 24px; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-        .search-box { display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-radius: 12px; max-width: 400px; width: 100%; }
-        .search-box input { border: none; background: none; padding: 0; flex: 1; font-size: 0.9rem; }
-        .users-table-container { overflow-x: auto; }
-        .users-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .users-table th { color: var(--text-muted); font-weight: 600; font-size: 0.85rem; padding: 16px; border-bottom: 1px solid var(--glass-border); text-transform: uppercase; letter-spacing: 1px; }
-        .users-table td { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #fff; font-size: 0.95rem; }
-        .user-cell { display: flex; align-items: center; gap: 12px; }
-        .user-cell img { width: 32px; height: 32px; border-radius: 50%; }
-        .p-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; }
-        .role-badge { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
-        .role-badge.ADMIN { background: rgba(0, 210, 255, 0.1); color: #00d2ff; }
-        .role-badge.USER { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
-        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
-        .status-dot.active { background: #00ff80; box-shadow: 0 0 8px #00ff80; }
-        
-        .tickets-list { display: flex; flex-direction: column; gap: 16px; }
-        .admin-ticket-row { padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .ticket-main { display: flex; align-items: center; gap: 20px; }
-        .p-badge { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); }
-        .p-badge.urgent { color: #ff4d4d; border: 1px solid #ff4d4d; }
-        .p-badge.high { color: #ff7f00; border: 1px solid #ff7f00; }
-        .p-badge.medium { color: #00d2ff; border: 1px solid #00d2ff; }
-        .p-badge.low { color: #8a2be2; border: 1px solid #8a2be2; }
-        .ticket-text h4 { margin: 0 0 4px 0; font-size: 1rem; color: #fff; }
-        .ticket-text p { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
-        .ticket-status-actions { display: flex; align-items: center; gap: 16px; }
-        .s-badge { font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
-        .s-badge.open { background: rgba(0, 255, 128, 0.1); color: #00ff80; }
-        .s-badge.in-progress { background: rgba(255, 204, 0, 0.1); color: #ffcc00; }
-        .s-badge.resolved { background: rgba(138, 43, 226, 0.1); color: #8a2be2; }
-        .btn-s { background: var(--accent-primary); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
-        .btn-s.success { background: #00ff80; color: #000; }
-        .filter-box { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.85rem; }
-      `}</style>
+      {/* Ticket Management */}
+      <section className="glass-elevated border border-border/50 rounded-xl p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-foreground">Ticket Management</h2>
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <Filter className="w-4 h-4" />
+            <span>Recent Tickets</span>
+          </div>
+        </div>
 
+        <div className="space-y-3">
+          {stats?.tickets && stats.tickets.length > 0 ? (
+            stats.tickets.map((ticket: any) => (
+              <div key={ticket.id} className="glass-elevated border border-border/50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-primary/30 transition-colors group">
+                <div className="flex items-center gap-4 min-w-0">
+                  {/* Priority Badge */}
+                  <span className={`text-xs font-bold px-2 py-1 rounded border ${
+                    ticket.priority === 'URGENT' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                    ticket.priority === 'HIGH' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                    ticket.priority === 'MEDIUM' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {ticket.priority}
+                  </span>
+
+                  {/* Ticket Info */}
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-medium text-foreground truncate">{ticket.title}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">from <span className="font-medium">{ticket.user?.email}</span></p>
+                  </div>
+                </div>
+
+                {/* Status & Actions */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                    ticket.status === 'OPEN' ? 'bg-red-500/10 text-red-400' :
+                    ticket.status === 'IN_PROGRESS' ? 'bg-amber-500/10 text-amber-400' :
+                    'bg-emerald-500/10 text-emerald-400'
+                  }`}>
+                    {ticket.status}
+                  </span>
+
+                  {ticket.status === 'OPEN' && (
+                    <button
+                      onClick={() => handleUpdateTicket(ticket.id, 'IN_PROGRESS')}
+                      className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 text-xs font-medium transition-colors"
+                    >
+                      Handle
+                    </button>
+                  )}
+                  {ticket.status === 'IN_PROGRESS' && (
+                    <button
+                      onClick={() => handleUpdateTicket(ticket.id, 'RESOLVED')}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-medium transition-colors"
+                    >
+                      Resolve
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <AlertCircle className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">No active tickets to manage.</p>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 };

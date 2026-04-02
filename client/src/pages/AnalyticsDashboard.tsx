@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, MessageSquare, AlertCircle, CheckCircle } from 'lucide-react';
+import { TrendingUp, MessageSquare, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from '../contexts/ToastContext';
-import { SkeletonCard } from '../components/Skeleton';
 
 const AnalyticsDashboard = () => {
   const { addToast } = useToast();
@@ -30,24 +29,23 @@ const AnalyticsDashboard = () => {
 
   if (loading) {
     return (
-      <div className="analytics-page">
-        <h1>Analytics Dashboard</h1>
-        <div className="stats-grid">
-          {Array(6).fill(0).map((_, i) => (
-            <div key={i} className="glass stat-card" style={{ padding: '20px' }}>
-              <SkeletonCard />
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-96 gap-4">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading analytics...</p>
       </div>
     );
   }
 
   if (!analytics) {
-    return <div className="error-msg">Failed to load analytics data</div>;
+    return (
+      <div className="glass-elevated border border-border/50 rounded-lg p-8 text-center">
+        <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+        <p className="text-foreground font-semibold">Failed to load analytics data</p>
+      </div>
+    );
   }
 
-  const COLORS = ['#8a2be2', '#00d2ff', '#4ade80', '#ffa500'];
+  const COLORS = ['#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
   // Prepare chart data from conversationsByDate
   const chartData = Object.entries(analytics.conversationsByDate || {})
@@ -55,291 +53,191 @@ const AnalyticsDashboard = () => {
     .map(([date, count]) => ({ date, conversations: count }));
 
   return (
-    <div className="analytics-page fade-in">
-      <header className="analytics-header">
-        <h1>Analytics Dashboard</h1>
-        <p>System performance and user engagement metrics</p>
-      </header>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Analytics Dashboard</h1>
+        <p className="text-muted-foreground">System performance and user engagement metrics</p>
+      </div>
 
-      {/* KPIs */}
-      <div className="stats-grid">
-        <div className="glass stat-card">
-          <div className="stat-icon" style={{ color: '#8a2be2' }}>
-            <MessageSquare size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{analytics.messageStats?.total || 0}</div>
-            <div className="stat-label">Total Messages</div>
-            <div className="stat-detail" style={{ color: '#00d2ff' }}>
-              {analytics.messageStats?.aiPercentage}% AI-generated
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="w-6 h-6 text-primary" />
             </div>
+          </div>
+          <div>
+            <p className="text-3xl font-bold text-foreground">{analytics.messageStats?.total || 0}</p>
+            <p className="text-xs text-muted-foreground uppercase font-medium mt-1">Total Messages</p>
+            <p className="text-sm text-secondary font-medium mt-2">{analytics.messageStats?.aiPercentage || 0}% AI-generated</p>
           </div>
         </div>
 
-        <div className="glass stat-card">
-          <div className="stat-icon" style={{ color: '#4ade80' }}>
-            <AlertCircle size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{analytics.ticketStats?.total || 0}</div>
-            <div className="stat-label">Support Tickets</div>
-            <div className="stat-detail" style={{ color: '#ff6464' }}>
-              {analytics.ticketStats?.overdue} overdue
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-emerald-500" />
             </div>
+          </div>
+          <div>
+            <p className="text-3xl font-bold text-foreground">{analytics.ticketStats?.total || 0}</p>
+            <p className="text-xs text-muted-foreground uppercase font-medium mt-1">Support Tickets</p>
+            <p className="text-sm text-destructive font-medium mt-2">{analytics.ticketStats?.overdue || 0} overdue</p>
           </div>
         </div>
 
-        <div className="glass stat-card">
-          <div className="stat-icon" style={{ color: '#ffa500' }}>
-            <TrendingUp size={24} />
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-amber-500" />
+            </div>
           </div>
-          <div className="stat-content">
-            <div className="stat-value">{analytics.avgConfidence}</div>
-            <div className="stat-label">Avg Confidence</div>
-            <div className="stat-detail">AI Response Quality</div>
+          <div>
+            <p className="text-3xl font-bold text-foreground">{analytics.avgConfidence || '0'}</p>
+            <p className="text-xs text-muted-foreground uppercase font-medium mt-1">Avg Confidence</p>
+            <p className="text-sm text-muted-foreground font-medium mt-2">AI Response Quality</p>
           </div>
         </div>
 
-        <div className="glass stat-card">
-          <div className="stat-icon" style={{ color: '#00d2ff' }}>
-            <CheckCircle size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{analytics.feedbackStats?.positivePercentage}%</div>
-            <div className="stat-label">Positive Feedback</div>
-            <div className="stat-detail">
-              {analytics.feedbackStats?.positive}/{analytics.feedbackStats?.total} ratings
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-secondary" />
             </div>
+          </div>
+          <div>
+            <p className="text-3xl font-bold text-foreground">{analytics.feedbackStats?.positivePercentage || 0}%</p>
+            <p className="text-xs text-muted-foreground uppercase font-medium mt-1">Positive Feedback</p>
+            <p className="text-sm text-muted-foreground font-medium mt-2">{analytics.feedbackStats?.positive || 0}/{analytics.feedbackStats?.total || 0} ratings</p>
           </div>
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="charts-grid">
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ticket Status Distribution */}
-        <div className="glass chart-card">
-          <h3>Ticket Status Distribution</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={[
-                  { name: 'Open', value: analytics.ticketStats?.open },
-                  { name: 'In Progress', value: analytics.ticketStats?.inProgress },
-                  { name: 'Resolved', value: analytics.ticketStats?.resolved },
-                  { name: 'Closed', value: analytics.ticketStats?.closed }
-                ]}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {COLORS.map((color, index) => (
-                  <Cell key={`cell-${index}`} fill={color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">Ticket Status Distribution</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Open', value: analytics.ticketStats?.open || 0 },
+                    { name: 'In Progress', value: analytics.ticketStats?.inProgress || 0 },
+                    { name: 'Resolved', value: analytics.ticketStats?.resolved || 0 },
+                    { name: 'Closed', value: analytics.ticketStats?.closed || 0 }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {COLORS.map((color, index) => (
+                    <Cell key={`cell-${index}`} fill={color} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ background: '#0f1629', border: '1px solid #1e293b', borderRadius: '8px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Priority Distribution */}
-        <div className="glass chart-card">
-          <h3>Ticket Priority Distribution</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={Object.entries(analytics.priorityDistribution || {}).map(([name, value]) => ({ name, value }))}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="name" stroke="#999" />
-              <YAxis stroke="#999" />
-              <Tooltip />
-              <Bar dataKey="value" fill="#8a2be2" name="Count" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">Ticket Priority Distribution</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={Object.entries(analytics.priorityDistribution || {}).map(([name, value]) => ({ name, value }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="name" stroke="#a0aec0" />
+                <YAxis stroke="#a0aec0" />
+                <Tooltip contentStyle={{ background: '#0f1629', border: '1px solid #1e293b', borderRadius: '8px' }} />
+                <Bar dataKey="value" fill="#ec4899" name="Count" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Conversations Over Time */}
-        <div className="glass chart-card" style={{ gridColumn: '1 / -1' }}>
-          <h3>Conversations Over 30 Days</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="date" stroke="#999" />
-              <YAxis stroke="#999" />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="conversations" stroke="#00d2ff" strokeWidth={2} dot={{ fill: '#8a2be2', r: 4 }} name="Messages" />
-            </LineChart>
-          </ResponsiveContainer>
+        {/* Conversations Over Time - Full Width */}
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-4 lg:col-span-2">
+          <h3 className="text-lg font-semibold text-foreground">Conversations Over 30 Days</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="date" stroke="#a0aec0" />
+                <YAxis stroke="#a0aec0" />
+                <Tooltip contentStyle={{ background: '#0f1629', border: '1px solid #1e293b', borderRadius: '8px' }} />
+                <Legend />
+                <Line type="monotone" dataKey="conversations" stroke="#06b6d4" strokeWidth={2} dot={{ fill: '#ec4899', r: 4 }} name="Messages" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* AI vs User Messages */}
-        <div className="glass chart-card">
-          <h3>AI vs User Messages</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={[
-                  { name: 'AI', value: analytics.messageStats?.aiMessages },
-                  { name: 'User', value: analytics.messageStats?.userMessages }
-                ]}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                <Cell fill="#8a2be2" />
-                <Cell fill="#00d2ff" />
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">AI vs User Messages</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'AI', value: analytics.messageStats?.aiMessages || 0 },
+                    { name: 'User', value: analytics.messageStats?.userMessages || 0 }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  <Cell fill="#ec4899" />
+                  <Cell fill="#3b82f6" />
+                </Pie>
+                <Tooltip contentStyle={{ background: '#0f1629', border: '1px solid #1e293b', borderRadius: '8px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* SLA Performance */}
-        <div className="glass chart-card">
-          <h3>SLA Performance</h3>
-          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="sla-stat">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <AlertCircle size={20} style={{ color: '#ff6464' }} />
-                <span>Overdue Tickets</span>
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ff6464' }}>
-                {analytics.overdueStats?.count}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                Avg {analytics.overdueStats?.avgDaysOverdue}d overdue
-              </div>
-            </div>
+        <div className="glass-elevated border border-border/50 rounded-xl p-6 space-y-6">
+          <h3 className="text-lg font-semibold text-foreground">SLA Performance</h3>
 
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-
-            <div className="sla-stat">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <CheckCircle size={20} style={{ color: '#4ade80' }} />
-                <span>On-Time Tickets</span>
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4ade80' }}>
-                {analytics.ticketStats?.total - analytics.overdueStats?.count}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                {((((analytics.ticketStats?.total - analytics.overdueStats?.count) / (analytics.ticketStats?.total || 1)) * 100) || 0).toFixed(1)}% on-time
-              </div>
+          {/* Overdue Tickets */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertCircle className="w-5 h-5 text-destructive" />
+              <span className="text-sm font-medium text-foreground">Overdue Tickets</span>
             </div>
+            <p className="text-3xl font-bold text-destructive">{analytics.overdueStats?.count || 0}</p>
+            <p className="text-xs text-muted-foreground">Avg {analytics.overdueStats?.avgDaysOverdue || 0}d overdue</p>
+          </div>
+
+          <div className="h-px bg-border/30" />
+
+          {/* On-Time Tickets */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <span className="text-sm font-medium text-foreground">On-Time Tickets</span>
+            </div>
+            <p className="text-3xl font-bold text-emerald-500">{(analytics.ticketStats?.total || 0) - (analytics.overdueStats?.count || 0)}</p>
+            <p className="text-xs text-muted-foreground">
+              {((((analytics.ticketStats?.total - analytics.overdueStats?.count) / (analytics.ticketStats?.total || 1)) * 100) || 0).toFixed(1)}% on-time
+            </p>
           </div>
         </div>
       </div>
-
-      <style>{`
-        .analytics-page {
-          display: flex;
-          flex-direction: column;
-          gap: 32px;
-        }
-
-        .analytics-header {
-          margin-bottom: 16px;
-        }
-
-        .analytics-header h1 {
-          font-size: 2rem;
-          margin: 0 0 8px 0;
-          color: #fff;
-        }
-
-        .analytics-header p {
-          color: var(--text-muted);
-          margin: 0;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 16px;
-        }
-
-        .stat-card {
-          display: flex;
-          align-items: stretch;
-          gap: 16px;
-          padding: 20px;
-          border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .stat-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 48px;
-          opacity: 0.8;
-        }
-
-        .stat-content {
-          flex: 1;
-        }
-
-        .stat-value {
-          font-size: 1.8rem;
-          font-weight: 700;
-          color: #fff;
-          margin-bottom: 4px;
-        }
-
-        .stat-label {
-          font-size: 0.85rem;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          margin-bottom: 8px;
-        }
-
-        .stat-detail {
-          font-size: 0.9rem;
-          font-weight: 500;
-        }
-
-        .charts-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-          gap: 16px;
-        }
-
-        .chart-card {
-          padding: 20px;
-          border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .chart-card h3 {
-          margin: 0 0 16px 0;
-          font-size: 1.1rem;
-          color: #fff;
-        }
-
-        .sla-stat {
-          padding: 12px 0;
-        }
-
-        @media (max-width: 768px) {
-          .stats-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .charts-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .chart-card {
-            grid-column: auto !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

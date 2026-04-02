@@ -7,6 +7,11 @@
 @layer base {
   :root {
     background: #0a0e27;
+    --accent-primary: #ec4899;
+    --accent-secondary: #3b82f6;
+    --text-muted: #a0aec0;
+    --bg-card: #0f1629;
+    --glass-border: rgba(30, 41, 59, 0.5);
   }
 
   body {

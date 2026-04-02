@@ -38,101 +38,138 @@ const Settings = () => {
   };
 
   return (
-    <div className="settings-page fade-in">
-      <header className="page-header">
-        <h1>Account Settings</h1>
-        <p>Manage your profile, security, and preferences.</p>
-      </header>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Account Settings</h1>
+        <p className="text-muted-foreground">Manage your profile, security, and preferences.</p>
+      </div>
 
-      <div className="settings-grid">
-        <section className="settings-section glass">
-          <div className="section-header">
-            <User size={20} color="#8a2be2" />
-            <h2>Profile Information</h2>
+      {/* Settings Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Profile Section */}
+        <section className="glass-elevated border border-border/50 rounded-xl p-8 space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-border/30">
+            <User className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Profile Information</h2>
           </div>
-          <div className="profile-edit">
-            <div className="avatar-large">
-              {user?.picture ? <img src={user.picture} alt="" /> : <User size={48} />}
-              <button className="change-btn">Change Avatar</button>
+
+          <div className="space-y-4">
+            {/* Avatar */}
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-24 h-24 rounded-full border-2 border-primary flex items-center justify-center bg-primary/10 flex-shrink-0 overflow-hidden">
+                {user?.picture ? (
+                  <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-10 h-10 text-primary" />
+                )}
+              </div>
+              <button className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                Change Avatar
+              </button>
             </div>
-            <div className="input-group">
-                <label>Full Name</label>
-                <input type="text" defaultValue={user?.name} readOnly />
+
+            {/* Name Field */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase">Full Name</label>
+              <input
+                type="text"
+                defaultValue={user?.name}
+                readOnly
+                className="w-full px-4 py-2.5 bg-muted/30 text-muted-foreground rounded-lg border border-border/30 cursor-not-allowed"
+              />
             </div>
-            <div className="input-group">
-                <label>Email Address</label>
-                <input type="email" defaultValue={user?.email} readOnly />
+
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase">Email Address</label>
+              <input
+                type="email"
+                defaultValue={user?.email}
+                readOnly
+                className="w-full px-4 py-2.5 bg-muted/30 text-muted-foreground rounded-lg border border-border/30 cursor-not-allowed"
+              />
             </div>
           </div>
         </section>
 
-        <section className="settings-section glass">
-          <div className="section-header">
-            <Lock size={20} color="#8a2be2" />
-            <h2>Security & Role</h2>
+        {/* Security Section */}
+        <section className="glass-elevated border border-border/50 rounded-xl p-8 space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-border/30">
+            <Lock className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Security & Role</h2>
           </div>
-          <div className="security-info">
-             <div className="info-row">
-                <span>Account Type:</span>
-                <span className={`role-badge ${user?.role}`}>{user?.role}</span>
-             </div>
-             <div className="info-row">
-                <span>Passcode/Auto-Login:</span>
-                <span>Active (Google Auth)</span>
-             </div>
-             <button className="secondary-btn">Manage Passwords</button>
+
+          <div className="space-y-4">
+            {/* Account Type */}
+            <div className="flex items-center justify-between py-3 border-b border-border/20">
+              <span className="text-sm text-muted-foreground">Account Type:</span>
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                user?.role === 'ADMIN'
+                  ? 'bg-secondary/10 text-secondary'
+                  : 'bg-muted/10 text-muted-foreground'
+              }`}>
+                {user?.role}
+              </span>
+            </div>
+
+            {/* Auth Status */}
+            <div className="flex items-center justify-between py-3 border-b border-border/20">
+              <span className="text-sm text-muted-foreground">Passcode/Auto-Login:</span>
+              <span className="text-xs font-medium text-emerald-400">Active (Google Auth)</span>
+            </div>
+
+            {/* Manage Passwords Button */}
+            <button className="w-full px-4 py-2.5 border border-border/50 text-foreground font-medium rounded-lg hover:bg-card/50 transition-colors text-sm mt-4">
+              Manage Passwords
+            </button>
           </div>
         </section>
 
-        <section className="settings-section glass">
-          <div className="section-header">
-            <Moon size={20} color="#8a2be2" />
-            <h2>App Preferences</h2>
+        {/* Preferences Section */}
+        <section className="glass-elevated border border-border/50 rounded-xl p-8 space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-border/30">
+            <Moon className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">App Preferences</h2>
           </div>
-          <div className="preference-list">
-             <div className="pref-item">
-                <div className="pref-info">
-                   <h3>Dark Mode</h3>
-                   <p>Toggle between light and dark theme.</p>
-                </div>
-                <div className={`toggle ${darkMode ? 'active' : ''}`} onClick={toggleDarkMode}></div>
-             </div>
-             <div className="pref-item">
-                <div className="pref-info">
-                   <h3>Notifications</h3>
-                   <p>Get email alerts about KB activities.</p>
-                </div>
-                <div className="toggle" title="Coming soon"></div>
-             </div>
+
+          <div className="space-y-4">
+            {/* Dark Mode Toggle */}
+            <div className="flex items-center justify-between py-3 border-b border-border/20">
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium text-foreground">Dark Mode</h3>
+                <p className="text-xs text-muted-foreground">Toggle between light and dark theme.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={darkMode}
+                  onChange={toggleDarkMode}
+                  className="sr-only peer"
+                />
+                <div className={`w-11 h-6 rounded-full transition-all ${
+                  darkMode ? 'bg-primary' : 'bg-muted/50'
+                } peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary`}></div>
+                <span className={`absolute w-5 h-5 bg-white rounded-full transition-all ${
+                  darkMode ? 'translate-x-5' : 'translate-x-0.5'
+                } top-0.5 left-0.5`}></span>
+              </label>
+            </div>
+
+            {/* Notifications Toggle (Coming Soon) */}
+            <div className="flex items-center justify-between py-3">
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium text-foreground">Notifications</h3>
+                <p className="text-xs text-muted-foreground">Get email alerts about KB activities.</p>
+              </div>
+              <div className="relative inline-flex items-center cursor-not-allowed opacity-50">
+                <div className="w-11 h-6 bg-muted/50 rounded-full"></div>
+                <span className="absolute w-5 h-5 bg-white rounded-full top-0.5 left-0.5"></span>
+              </div>
+            </div>
           </div>
         </section>
       </div>
-
-      <style>{`
-        .settings-page { display: flex; flex-direction: column; gap: 32px; }
-        .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
-        .settings-section { padding: 32px; display: flex; flex-direction: column; gap: 24px; }
-        .section-header { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--glass-border); padding-bottom: 16px; }
-        .avatar-large { display: flex; flex-direction: column; align-items: center; gap: 16px; margin: 0 auto; }
-        .avatar-large img { width: 100px; height: 100px; border-radius: 50%; border: 2px solid var(--accent-primary); }
-        .change-btn { background: none; border: none; color: var(--accent-primary); font-size: 0.85rem; font-weight: 600; cursor: pointer; }
-        .input-group { display: flex; flex-direction: column; gap: 8px; }
-        .input-group label { font-size: 0.85rem; color: var(--text-muted); }
-        .input-group input { background: rgba(0,0,0,0.2) !important; color: #aaa; cursor: not-allowed; }
-        .info-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; margin-bottom: 16px; }
-        .pref-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .pref-info h3 { font-size: 1rem; margin-bottom: 4px; }
-        .pref-info p { font-size: 0.8rem; }
-        .toggle { width: 44px; height: 24px; background: rgba(255,255,255,0.1); border-radius: 12px; position: relative; cursor: pointer; }
-        .toggle.active { background: var(--accent-primary); }
-        .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: 0.2s; }
-        .toggle.active::after { left: 23px; }
-        .role-badge { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
-        .role-badge.ADMIN { background: rgba(0, 210, 255, 0.1); color: #00d2ff; }
-        .role-badge.USER { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
-        .secondary-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: #fff; font-weight: 500; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 8px; }
-        .secondary-btn:hover { background: rgba(255,255,255,0.1); }
-      `}</style>
     </div>
   );
 };

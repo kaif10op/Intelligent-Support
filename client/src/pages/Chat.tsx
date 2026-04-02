@@ -581,7 +581,7 @@ const Chat = () => {
         .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; border-radius: 16px 16px 0 0; margin-bottom: 8px; }
         .back-btn { display: flex; align-items: center; gap: 6px; color: var(--text-muted); background: none; border: none; cursor: pointer; transition: 0.2s; font-weight: 500; }
         .back-btn:hover { color: #fff; transform: translateX(-4px); }
-        .kb-indicator { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 8px 16px; background: rgba(138, 43, 226, 0.1); border-radius: 12px; }
+        .kb-indicator { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 8px 16px; background: rgba(236, 72, 153, 0.1); border-radius: 12px; }
         .clear-btn { background: rgba(255, 127, 0, 0.05); border: 1px solid rgba(255, 127, 0, 0.2); color: rgba(255, 127, 0, 0.6); padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
         .clear-btn:hover:not(:disabled) { background: rgba(255, 127, 0, 0.1); color: #ff7f00; border-color: rgba(255, 127, 0, 0.4); }
         .clear-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -602,13 +602,13 @@ const Chat = () => {
 
         .messages-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 24px 0;scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
         .welcome-state { margin: auto; text-align: center; max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 20px; opacity: 0.7; }
-        .bot-icon-large { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 36px; background: rgba(138, 43, 226, 0.05); }
+        .bot-icon-large { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 36px; background: rgba(236, 72, 153, 0.05); }
         .message-wrap { display: flex; width: 100%; animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .message-wrap.user { justify-content: flex-end; }
         .message-wrap.assistant { justify-content: flex-start; }
         .message { max-width: 75%; padding: 16px 24px; border-radius: 24px; font-size: 1rem; line-height: 1.6; position: relative; }
-        .user-msg { background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(138, 43, 226, 0.1)); border-color: rgba(138, 43, 226, 0.3); border-bottom-right-radius: 4px; }
+        .user-msg { background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.1)); border: 1px solid rgba(236, 72, 153, 0.3); border-bottom-right-radius: 4px; }
         .assistant-msg { background: var(--bg-card); border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
         .loading-msg { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 0.95rem; }
         .msg-content { color: #f0f0f0; }
@@ -624,39 +624,39 @@ const Chat = () => {
         .msg-actions { margin-top: 16px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
         .feedback-btns { display: flex; gap: 10px; }
         .fb-btn { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: var(--text-muted); padding: 6px 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        .fb-btn:hover:not(:disabled) { border-color: var(--accent-primary); color: #fff; background: rgba(138, 43, 226, 0.1); }
-        .fb-btn.active { background: rgba(138, 43, 226, 0.2); color: var(--accent-primary); border-color: var(--accent-primary); box-shadow: 0 0 10px rgba(138, 43, 226, 0.2); }
+        .fb-btn:hover:not(:disabled) { border-color: var(--accent-primary); color: #fff; background: rgba(236, 72, 153, 0.1); }
+        .fb-btn.active { background: rgba(236, 72, 153, 0.2); color: var(--accent-primary); border-color: var(--accent-primary); box-shadow: 0 0 10px rgba(236, 72, 153, 0.2); }
         .escalate-btn { display: flex; align-items: center; gap: 8px; background: rgba(255, 127, 0, 0.1); border: 1px solid rgba(255, 127, 0, 0.3); color: #ff7f00; padding: 6px 14px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: 0.3s; }
         .escalate-btn:hover { background: rgba(255, 127, 0, 0.2); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255, 127, 0, 0.2); }
 
-        .suggestions-wrap { margin-top: 16px; padding: 12px; background: rgba(0, 210, 255, 0.05); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 12px; }
+        .suggestions-wrap { margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; }
         .suggestions-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
         .suggestions-list { display: flex; flex-direction: column; gap: 8px; }
-        .suggestion-btn { background: rgba(0, 210, 255, 0.1); border: 1px solid rgba(0, 210, 255, 0.3); color: var(--accent-secondary); padding: 8px 12px; border-radius: 8px; cursor: pointer; text-align: left; transition: 0.2s; font-size: 0.9rem; }
-        .suggestion-btn:hover { background: rgba(0, 210, 255, 0.2); border-color: var(--accent-secondary); }
-        .show-suggestions-btn { background: rgba(0, 210, 255, 0.08); border: 1px solid rgba(0, 210, 255, 0.2); color: var(--accent-secondary); padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 0.8rem; font-weight: 600; margin-top: 12px; }
-        .show-suggestions-btn:hover { background: rgba(0, 210, 255, 0.15); }
+        .suggestion-btn { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: var(--accent-secondary); padding: 8px 12px; border-radius: 8px; cursor: pointer; text-align: left; transition: 0.2s; font-size: 0.9rem; }
+        .suggestion-btn:hover { background: rgba(59, 130, 246, 0.2); border-color: var(--accent-secondary); }
+        .show-suggestions-btn { background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); color: var(--accent-secondary); padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 0.8rem; font-weight: 600; margin-top: 12px; }
+        .show-suggestions-btn:hover { background: rgba(59, 130, 246, 0.15); }
 
         .sources-wrap { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); }
         .sources-toggle { background: none; border: none; color: var(--accent-secondary); display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 700; padding: 6px 10px; border-radius: 6px; transition: 0.2s; }
-        .sources-toggle:hover { background: rgba(0, 210, 255, 0.1); }
+        .sources-toggle:hover { background: rgba(59, 130, 246, 0.1); }
         .sources-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
         .source-item { font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); line-height: 1.4; }
 
         .input-area-wrapper { padding-top: 24px; display: flex; flex-direction: column; gap: 12px; }
-        .attachment-preview { align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 12px; background: rgba(0, 210, 255, 0.1); border: 1px solid rgba(0, 210, 255, 0.2); font-size: 0.85rem; }
+        .attachment-preview { align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 12px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); font-size: 0.85rem; }
         .remove-attach { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 2px; border-radius: 50%; }
         .remove-attach:hover { background: rgba(255,255,255,0.1); color: #fff; }
         .input-container { position: relative; }
         .input-wrap { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-radius: 28px; border: 1px solid var(--glass-border); background: rgba(10, 10, 10, 0.8); transition: 0.3s; }
-        .input-wrap.focus-within:focus-within { border-color: var(--accent-primary); box-shadow: 0 0 15px rgba(138, 43, 226, 0.1); }
+        .input-wrap.focus-within:focus-within { border-color: var(--accent-primary); box-shadow: 0 0 15px rgba(236, 72, 153, 0.1); }
         .attach-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-muted); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
-        .attach-btn:hover:not(:disabled) { border-color: var(--accent-secondary); color: var(--accent-secondary); background: rgba(0, 210, 255, 0.05); }
+        .attach-btn:hover:not(:disabled) { border-color: var(--accent-secondary); color: var(--accent-secondary); background: rgba(59, 130, 246, 0.05); }
         .attach-btn.loading { opacity: 0.7; }
         .input-wrap textarea { flex: 1; min-height: 24px; max-height: 200px; background: none; border: none; padding: 10px 0; resize: none; font-size: 1.05rem; color: #fff; }
         .input-wrap textarea:focus { outline: none; }
         .send-btn { background: var(--accent-primary); border: none; color: #fff; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
-        .send-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 0 15px rgba(138, 43, 226, 0.4); }
+        .send-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 0 15px rgba(236, 72, 153, 0.4); }
         .send-btn:disabled { opacity: 0.4; filter: grayscale(1); }
         .chat-footer { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.5; }
         .spinner { animation: rotate 2s linear infinite; }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { MessageSquare, Calendar, Database, ArrowRight } from 'lucide-react';
+import { MessageSquare, Calendar, Database, ArrowRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const RecentChats = () => {
@@ -9,7 +9,7 @@ const RecentChats = () => {
 
   const fetchChats = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/chat');
+      const res = await axios.get('http://localhost:8000/api/chat', { withCredentials: true });
       setChats(res.data);
     } catch (err) {
       console.error(err);
@@ -23,57 +23,59 @@ const RecentChats = () => {
   }, []);
 
   return (
-    <div className="recent-chats-page fade-in">
-      <header className="page-header">
-        <h1>Recent Conversations</h1>
-        <p>Return to your previous chats and AI assistance sessions.</p>
-      </header>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Recent Conversations</h1>
+        <p className="text-muted-foreground">Return to your previous chats and AI assistance sessions.</p>
+      </div>
 
+      {/* Content */}
       {loading ? (
-        <div className="loading">Loading your history...</div>
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading your history...</p>
+        </div>
       ) : chats.length === 0 ? (
-        <div className="empty-state glass">
-          <MessageSquare size={48} />
-          <h2>No chats yet</h2>
-          <p>Start a new conversation from your Knowledge Base dashboard.</p>
-          <Link to="/" className="btn-glow">Go to Dashboard</Link>
+        <div className="glass-elevated border border-border/50 rounded-lg p-12 text-center space-y-4 flex flex-col items-center">
+          <MessageSquare className="w-12 h-12 text-muted-foreground/50" />
+          <h2 className="text-2xl font-semibold text-foreground">No chats yet</h2>
+          <p className="text-muted-foreground">Start a new conversation from your Knowledge Base dashboard.</p>
+          <Link to="/" className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition-colors mt-4">
+            Go to Dashboard
+          </Link>
         </div>
       ) : (
-        <div className="chats-list">
+        <div className="space-y-3">
           {chats.map(chat => (
-            <Link key={chat.id} to={`/chat/${chat.id}?kbId=${chat.kbId}`} className="chat-card glass">
-              <div className="chat-info">
-                <div className="chat-icon">
-                  <MessageSquare size={24} color="#8a2be2" />
+            <Link
+              key={chat.id}
+              to={`/chat/${chat.id}?kbId=${chat.kbId}`}
+              className="glass-elevated border border-border/50 rounded-lg p-6 flex items-center justify-between hover:border-primary/30 transition-all group"
+            >
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                  <MessageSquare className="w-6 h-6 text-primary" />
                 </div>
-                <div className="chat-meta">
-                  <h3>{chat.title || 'Untitled Conversation'}</h3>
-                  <div className="chat-tags">
-                    <span><Database size={14} /> {chat.kb?.title}</span>
-                    <span><Calendar size={14} /> {new Date(chat.updatedAt).toLocaleDateString()}</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-medium text-foreground truncate">{chat.title || 'Untitled Conversation'}</h3>
+                  <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Database className="w-3.5 h-3.5" />
+                      {chat.kb?.title}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {new Date(chat.updatedAt).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               </div>
-              <ArrowRight size={20} className="arrow" />
+              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors ml-4 flex-shrink-0" />
             </Link>
           ))}
         </div>
       )}
-
-      <style>{`
-        .recent-chats-page { display: flex; flex-direction: column; gap: 32px; }
-        .chats-list { display: flex; flex-direction: column; gap: 16px; }
-        .chat-card { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; text-decoration: none; transition: 0.3s; }
-        .chat-card:hover { transform: translateX(8px); }
-        .chat-info { display: flex; align-items: center; gap: 16px; }
-        .chat-icon { width: 48px; height: 48px; background: rgba(138, 43, 226, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        .chat-meta h3 { font-size: 1.1rem; color: #fff; margin-bottom: 4px; }
-        .chat-tags { display: flex; gap: 16px; font-size: 0.85rem; color: var(--text-muted); }
-        .chat-tags span { display: flex; align-items: center; gap: 4px; }
-        .arrow { color: var(--text-muted); opacity: 0.5; }
-        .chat-card:hover .arrow { opacity: 1; color: var(--accent-primary); }
-        .empty-state { padding: 64px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-      `}</style>
     </div>
   );
 };
