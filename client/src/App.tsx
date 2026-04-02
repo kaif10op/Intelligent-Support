@@ -14,6 +14,7 @@ import Dashboard from './pages/Dashboard';
 import KBDetails from './pages/KBDetails';
 import Chat from './pages/Chat';
 import Admin from './pages/Admin';
+import AdminPortal from './pages/AdminPortal';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import RecentChats from './pages/RecentChats';
 import KnowledgeBases from './pages/KnowledgeBases';
@@ -106,6 +107,12 @@ function App() {
 
             <Route path="/admin" element={
 
+              <ProtectedRoute adminOnly>
+                <AdminPortal />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/dashboard" element={
               <ProtectedRoute adminOnly>
                 <Layout><Admin /></Layout>
               </ProtectedRoute>
