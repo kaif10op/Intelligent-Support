@@ -24,18 +24,18 @@ const app = express();
 
 async function startServer() {
   try {
-    console.log('🚀 Starting server initialization...');
+    logger.info('Starting server initialization...');
 
     // Initialize Redis cache
     await initRedis();
-    console.log('✅ Redis cache initialized (or disabled)');
+    logger.info('Redis cache initialized (or disabled)');
 
     // Create HTTP server to attach Socket.io
     const httpServer = createHTTPServer(app);
 
     // Initialize Socket.io
     const io = initializeSocket(httpServer);
-    console.log('✅ Socket.io initialized');
+    logger.info('Socket.io initialized');
 
     // Middleware
     app.use(cors({
@@ -49,7 +49,7 @@ async function startServer() {
     // Store io instance in app for use in controllers
     app.set('io', io);
 
-    console.log('✅ Core middleware initialized');
+    logger.info('Core middleware initialized');
 
     // Test route
     app.get('/ping', (req, res) => res.send('pong'));
@@ -68,7 +68,7 @@ async function startServer() {
     app.use('/api/plugins', pluginRoutes);
     app.use('/api/webhooks', webhookRoutes);
 
-    console.log('✅ All routes registered');
+    logger.info('All routes registered');
 
     // 404 handler
     app.use((req, res) => {
@@ -77,7 +77,7 @@ async function startServer() {
 
     // Global error handler (simplified)
     app.use((err: any, req: any, res: any, next: any) => {
-      console.error('Error:', err.message || err);
+      logger.error('Request error', { error: err.message || err, stack: err.stack });
       const statusCode = err.statusCode || 500;
       res.status(statusCode).json({
         error: err.message || 'Internal server error',

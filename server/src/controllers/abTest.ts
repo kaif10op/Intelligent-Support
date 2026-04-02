@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * A/B Test management for AI prompt optimization
@@ -53,8 +54,8 @@ export const createABTest = async (req: AuthRequest, res: Response) => {
       metric_type,
       status: status || 'active'
     });
-  } catch (error) {
-    console.error('Create AB Test Error:', error);
+  } catch (error: any) {
+    logger.error('Create AB Test Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to create A/B test' });
   }
 };
@@ -125,8 +126,8 @@ export const recordABTestResult = async (req: AuthRequest, res: Response) => {
         avg_score_b: results.b_count > 0 ? (results.b_score / results.b_count).toFixed(2) : 0
       }
     });
-  } catch (error) {
-    console.error('Record AB Test Result Error:', error);
+  } catch (error: any) {
+    logger.error('Record AB Test Result Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to record A/B test result' });
   }
 };
@@ -194,8 +195,8 @@ export const getABTestResults = async (req: AuthRequest, res: Response) => {
       created_at: test.createdAt,
       last_recorded: changes.last_recorded || null
     });
-  } catch (error) {
-    console.error('Get AB Test Results Error:', error);
+  } catch (error: any) {
+    logger.error('Get AB Test Results Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch A/B test results' });
   }
 };
@@ -248,8 +249,8 @@ export const listABTests = async (req: AuthRequest, res: Response) => {
       tests: formattedTests,
       count: formattedTests.length
     });
-  } catch (error) {
-    console.error('List AB Tests Error:', error);
+  } catch (error: any) {
+    logger.error('List AB Tests Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to list A/B tests' });
   }
 };
@@ -324,8 +325,8 @@ export const applyABTestWinner = async (req: AuthRequest, res: Response) => {
         improvement: Math.abs(avgScoreA - avgScoreB).toFixed(2)
       }
     });
-  } catch (error) {
-    console.error('Apply AB Test Winner Error:', error);
+  } catch (error: any) {
+    logger.error('Apply AB Test Winner Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to apply A/B test winner' });
   }
 };

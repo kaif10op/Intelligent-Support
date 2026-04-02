@@ -2,6 +2,8 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
 import axios from 'axios';
+import crypto from 'crypto';
+import { logger } from '../utils/logger.js';
 
 /**
  * Advanced Webhook Management
@@ -67,8 +69,8 @@ export const createWebhook = async (req: AuthRequest, res: Response) => {
         created_at: webhook.createdAt
       }
     });
-  } catch (error) {
-    console.error('Create Webhook Error:', error);
+  } catch (error: any) {
+    logger.error('Create Webhook Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to create webhook' });
   }
 };
@@ -106,8 +108,8 @@ export const getWebhooks = async (req: AuthRequest, res: Response) => {
       total: formattedWebhooks.length,
       active: formattedWebhooks.filter(w => w.active).length
     });
-  } catch (error) {
-    console.error('Get Webhooks Error:', error);
+  } catch (error: any) {
+    logger.error('Get Webhooks Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch webhooks' });
   }
 };
@@ -172,8 +174,8 @@ export const updateWebhook = async (req: AuthRequest, res: Response) => {
         active: (updated.changes as any).active
       }
     });
-  } catch (error) {
-    console.error('Update Webhook Error:', error);
+  } catch (error: any) {
+    logger.error('Update Webhook Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to update webhook' });
   }
 };
@@ -215,8 +217,8 @@ export const deleteWebhook = async (req: AuthRequest, res: Response) => {
       success: true,
       message: 'Webhook deleted successfully'
     });
-  } catch (error) {
-    console.error('Delete Webhook Error:', error);
+  } catch (error: any) {
+    logger.error('Delete Webhook Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to delete webhook' });
   }
 };
@@ -283,8 +285,8 @@ export const getWebhookEvents = async (req: AuthRequest, res: Response) => {
       events,
       total: events.length
     });
-  } catch (error) {
-    console.error('Get Webhook Events Error:', error);
+  } catch (error: any) {
+    logger.error('Get Webhook Events Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch webhook events' });
   }
 };
@@ -323,8 +325,18 @@ export const testWebhook = async (req: AuthRequest, res: Response) => {
     };
 
     try {
+      const payloadString = JSON.stringify(testPayload);
+      const signature = changes.secret
+        ? crypto.createHmac('sha256', changes.secret).update(payloadString).digest('hex')
+        : null;
+
       const response = await axios.post(webhookUrl, testPayload, {
-        timeout: 5000
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Event': 'webhook.test',
+          ...(signature ? { 'X-Webhook-Signature': `sha256=${signature}` } : {})
+        }
       });
 
       res.json({
@@ -343,8 +355,8 @@ export const testWebhook = async (req: AuthRequest, res: Response) => {
         status: axiosError.response?.status
       });
     }
-  } catch (error) {
-    console.error('Test Webhook Error:', error);
+  } catch (error: any) {
+    logger.error('Test Webhook Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to test webhook' });
   }
 };
@@ -393,8 +405,8 @@ export const getWebhookLogs = async (req: AuthRequest, res: Response) => {
         offset: Number(offset)
       }
     });
-  } catch (error) {
-    console.error('Get Webhook Logs Error:', error);
+  } catch (error: any) {
+    logger.error('Get Webhook Logs Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch webhook logs' });
   }
 };
@@ -425,37 +437,72 @@ export const broadcastWebhookEvent = async (eventId: string, data: any) => {
         const webhookUrl = changes.url;
         const startTime = Date.now();
 
-        try {
-          const response = await axios.post(
-            webhookUrl,
-            {
-              event: eventId,
-              data,
-              timestamp: new Date().toISOString(),
-              webhook_id: webhook.id
-            },
-            { timeout: 10000 }
-          );
+        const payload = {
+          event: eventId,
+          data,
+          timestamp: new Date().toISOString(),
+          webhook_id: webhook.id
+        };
+        const payloadString = JSON.stringify(payload);
+        const signature = changes.secret
+          ? crypto.createHmac('sha256', changes.secret).update(payloadString).digest('hex')
+          : null;
 
-          // Log successful delivery
-          await prisma.auditLog.create({
-            data: {
-              adminId: webhook.adminId,
-              action: 'webhook_delivered',
-              resourceType: 'webhook',
-              resourceId: webhook.id,
-              description: `Webhook delivered: ${eventId}`,
-              changes: {
-                event: eventId,
-                status: 'success',
-                response_code: response.status,
-                duration_ms: Date.now() - startTime
-              } as any
+        const maxAttempts = 3;
+        let delivered = false;
+        let lastError: string | null = null;
+        let lastStatusCode: number | null = null;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            const response = await axios.post(webhookUrl, payload, {
+              timeout: 10000,
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Webhook-Event': eventId,
+                'X-Webhook-Attempt': String(attempt),
+                ...(signature ? { 'X-Webhook-Signature': `sha256=${signature}` } : {})
+              }
+            });
+
+            delivered = true;
+            lastStatusCode = response.status;
+
+            await prisma.auditLog.create({
+              data: {
+                adminId: webhook.adminId,
+                action: 'webhook_delivered',
+                resourceType: 'webhook',
+                resourceId: webhook.id,
+                description: `Webhook delivered: ${eventId}`,
+                changes: {
+                  event: eventId,
+                  status: 'success',
+                  response_code: response.status,
+                  attempt,
+                  duration_ms: Date.now() - startTime
+                } as any
+              }
+            });
+            break;
+          } catch (error: any) {
+            lastError = error.message;
+            lastStatusCode = error.response?.status ?? null;
+
+            if (attempt < maxAttempts) {
+              const backoffMs = 500 * Math.pow(2, attempt - 1);
+              await new Promise(resolve => setTimeout(resolve, backoffMs));
             }
+          }
+        }
+
+        if (!delivered) {
+          logger.error('Webhook delivery failed', {
+            url: webhookUrl,
+            event: eventId,
+            statusCode: lastStatusCode,
+            error: lastError
           });
-        } catch (error: any) {
-          // Log failed delivery
-          console.error(`Webhook delivery failed for ${webhookUrl}:`, error.message);
 
           await prisma.auditLog.create({
             data: {
@@ -467,7 +514,9 @@ export const broadcastWebhookEvent = async (eventId: string, data: any) => {
               changes: {
                 event: eventId,
                 status: 'failed',
-                error: error.message,
+                response_code: lastStatusCode,
+                error: lastError,
+                attempts: maxAttempts,
                 duration_ms: Date.now() - startTime
               } as any
             }
@@ -475,7 +524,7 @@ export const broadcastWebhookEvent = async (eventId: string, data: any) => {
         }
       }
     }
-  } catch (error) {
-    console.error('Broadcast Webhook Event Error:', error);
+  } catch (error: any) {
+    logger.error('Broadcast Webhook Event Error', { error: error.message, stack: error.stack });
   }
 };

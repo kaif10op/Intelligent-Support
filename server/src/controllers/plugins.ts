@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
 import axios from 'axios';
 
 /**
@@ -66,8 +67,8 @@ export const installPlugin = async (req: AuthRequest, res: Response) => {
       message: `Plugin "${displayName}" installed successfully`,
       plugin
     });
-  } catch (error) {
-    console.error('Install Plugin Error:', error);
+  } catch (error: any) {
+    logger.error('Install Plugin Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to install plugin' });
   }
 };
@@ -114,8 +115,8 @@ export const togglePlugin = async (req: AuthRequest, res: Response) => {
       message: `Plugin "${plugin.displayName}" ${updated.enabled ? 'enabled' : 'disabled'}`,
       plugin: updated
     });
-  } catch (error) {
-    console.error('Toggle Plugin Error:', error);
+  } catch (error: any) {
+    logger.error('Toggle Plugin Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to toggle plugin' });
   }
 };
@@ -140,8 +141,8 @@ export const getPlugins = async (req: AuthRequest, res: Response) => {
       enabled: plugins.filter(p => p.enabled).length,
       disabled: plugins.filter(p => !p.enabled).length
     });
-  } catch (error) {
-    console.error('Get Plugins Error:', error);
+  } catch (error: any) {
+    logger.error('Get Plugins Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch plugins' });
   }
 };
@@ -167,8 +168,8 @@ export const getPluginDetails = async (req: AuthRequest, res: Response) => {
     }
 
     res.json(plugin);
-  } catch (error) {
-    console.error('Get Plugin Details Error:', error);
+  } catch (error: any) {
+    logger.error('Get Plugin Details Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch plugin details' });
   }
 };
@@ -219,8 +220,8 @@ export const updatePluginConfig = async (req: AuthRequest, res: Response) => {
       message: 'Plugin configuration updated',
       plugin: updated
     });
-  } catch (error) {
-    console.error('Update Plugin Config Error:', error);
+  } catch (error: any) {
+    logger.error('Update Plugin Config Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to update plugin configuration' });
   }
 };
@@ -263,8 +264,8 @@ export const uninstallPlugin = async (req: AuthRequest, res: Response) => {
       success: true,
       message: `Plugin "${plugin.displayName}" uninstalled successfully`
     });
-  } catch (error) {
-    console.error('Uninstall Plugin Error:', error);
+  } catch (error: any) {
+    logger.error('Uninstall Plugin Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to uninstall plugin' });
   }
 };
@@ -295,16 +296,17 @@ export const triggerPluginHook = async (hookName: string, data: any) => {
             pluginId: plugin.id,
             timestamp: new Date().toISOString()
           });
-        } catch (error) {
-          console.error(
-            `Failed to trigger webhook for plugin ${plugin.name}:`,
-            error
-          );
+        } catch (error: any) {
+          logger.error('Failed to trigger webhook for plugin', { 
+            pluginName: plugin.name, 
+            error: error.message, 
+            stack: error.stack 
+          });
         }
       }
     }
-  } catch (error) {
-    console.error('Trigger Plugin Hook Error:', error);
+  } catch (error: any) {
+    logger.error('Trigger Plugin Hook Error', { error: error.message, stack: error.stack });
   }
 };
 
@@ -365,8 +367,8 @@ export const getAvailableHooks = async (req: AuthRequest, res: Response) => {
       hooks: availableHooks,
       total: availableHooks.length
     });
-  } catch (error) {
-    console.error('Get Available Hooks Error:', error);
+  } catch (error: any) {
+    logger.error('Get Available Hooks Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch available hooks' });
   }
 };

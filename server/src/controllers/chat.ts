@@ -11,6 +11,7 @@ import { TavilySearch } from '@langchain/tavily';
 import { DynamicTool } from '@langchain/core/tools';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
+import { logger } from '../utils/logger.js';
 
 // 1. LLM Definitions with Fallbacks
 const llmGroq = new ChatGroq({
@@ -111,8 +112,8 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
           const maxSimilarity = Math.max(...topChunks.map(c => c.similarity));
           (req as any).maxSimilarity = maxSimilarity;
           return topChunks.map(c => `File: ${c.filename} (Similarity: ${c.similarity.toFixed(2)})\nContent: ${c.content}`).join('\n\n');
-        } catch (err) {
-            console.error('KB Search Tool Error:', err);
+        } catch (err: any) {
+            logger.error('KB Search Tool Error', { error: err.message, stack: err.stack });
             return 'Error searching internal KB.';
         }
       }
@@ -127,8 +128,8 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
           const search = new TavilySearch({ maxResults: 3 });
           // @ts-ignore - TavilySearch invoke method type mismatch (pre-existing)
           return await search.invoke(query);
-        } catch (err) {
-          console.error('Web Search Tool Error:', err);
+        } catch (err: any) {
+          logger.error('Web Search Tool Error', { error: err.message, stack: err.stack });
           return 'Web search failed.';
         }
       }
@@ -150,7 +151,7 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
 
     for (const provider of llmProviders) {
       try {
-        console.log(`[Chat] Attempting with provider: ${provider.name}`);
+        logger.debug('Attempting with provider', { provider: provider.name });
 
         // Rewrite step with current provider
         let searchSource = message;
@@ -161,8 +162,8 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
           Search Query:`;
           const rewrittenQueryRes = await provider.llm.invoke(rewritePrompt);
           searchSource = rewrittenQueryRes.content?.toString() || message;
-        } catch (e) {
-          console.warn(`[Chat] Provider ${provider.name} rewriter failed, using original.`);
+        } catch (e: any) {
+          logger.warn('Provider rewriter failed, using original', { provider: provider.name, error: e.message });
         }
 
         // Agent step with current provider
@@ -193,9 +194,9 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
               })
               .concat([new HumanMessage(message)]); // Add current message at the end
 
-            console.log(`[Chat] Context memory loaded: ${messageHistory.length} messages`);
-          } catch (err) {
-            console.warn(`[Chat] Failed to load context memory:`, err);
+            logger.debug('Context memory loaded', { messageCount: messageHistory.length });
+          } catch (err: any) {
+            logger.warn('Failed to load context memory', { error: err.message });
             // Fall back to just current message
             messageHistory = [new HumanMessage(message)];
           }
@@ -206,11 +207,15 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
         });
 
         if (result) {
-          console.log(`[Chat] Success with provider: ${provider.name}`);
+          logger.info('Success with provider', { provider: provider.name });
           break;
         }
-      } catch (err) {
-        console.error(`[Chat] Provider ${provider.name} failed:`, err);
+      } catch (err: any) {
+        logger.error('Provider failed', { 
+          provider: provider.name, 
+          error: err.message,
+          stack: err.stack 
+        });
         lastError = err;
         continue; // Try next provider
       }
@@ -261,7 +266,7 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
     res.end();
 
   } catch (error: any) {
-    console.error('Agent Error:', error);
+    logger.error('Agent Error', { error: error.message, stack: error.stack });
     if (!res.headersSent) res.status(500).json({ error: 'Agent failed' });
     else {
       res.write(`data: ${JSON.stringify({ error: 'Generation failed' })}\n\n`);
@@ -325,8 +330,8 @@ export const submitFeedback = async (req: AuthRequest, res: Response) => {
 
 
     res.json({ success: true });
-  } catch (error) {
-    console.error('Feedback Error:', error);
+  } catch (error: any) {
+    logger.error('Feedback Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to submit feedback' });
   }
 };
@@ -355,7 +360,7 @@ export const clearChat = async (req: AuthRequest, res: Response) => {
 
     res.json({ success: true, message: 'Chat cleared' });
   } catch (error: any) {
-    console.error('Clear Chat Error:', error);
+    logger.error('Clear Chat Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to clear chat' });
   }
 };
@@ -413,7 +418,7 @@ export const regenerateResponse = async (req: AuthRequest, res: Response) => {
     // This will create a new AI message with potentially different output
     await chatWithAgent(regenerateReq as AuthRequest, res);
   } catch (error: any) {
-    console.error('Regenerate Error:', error);
+    logger.error('Regenerate Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to regenerate response' });
   }
 };
@@ -482,8 +487,8 @@ Return format: ["question 1", "question 2", "question 3"]`;
       }
 
       res.json({ suggestions: suggestions.slice(0, 3) });
-    } catch (llmError) {
-      console.warn('Failed to generate suggestions with LLM, using defaults');
+    } catch (llmError: any) {
+      logger.warn('Failed to generate suggestions with LLM, using defaults', { error: llmError.message });
       res.json({
         suggestions: [
           'Can you elaborate on that?',
@@ -493,7 +498,7 @@ Return format: ["question 1", "question 2", "question 3"]`;
       });
     }
   } catch (error: any) {
-    console.error('Suggestions Error:', error);
+    logger.error('Suggestions Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to generate suggestions' });
   }
 };
@@ -519,8 +524,8 @@ export const exportChatsAsCSV = async (req: AuthRequest, res: Response) => {
     res.setHeader('Content-Type', 'text/csv;charset=utf-8;');
     res.setHeader('Content-Disposition', `attachment;filename="${filename}"`);
     res.send(csv);
-  } catch (error) {
-    console.error('Export chats error:', error);
+  } catch (error: any) {
+    logger.error('Export chats error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to export chats' });
   }
 };

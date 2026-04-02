@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Admin: Take over a chat session
@@ -43,8 +44,8 @@ export const takeoverChat = async (req: AuthRequest, res: Response) => {
         takenOverAt: systemMessage.createdAt
       }
     });
-  } catch (error) {
-    console.error('Chat takeover error:', error);
+  } catch (error: any) {
+    logger.error('Chat takeover error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to takeover chat' });
   }
 };
@@ -96,8 +97,8 @@ export const injectMessageIntoChat = async (req: AuthRequest, res: Response) => 
         injectedBy: admin?.name || req.user!.email
       }
     });
-  } catch (error) {
-    console.error('Inject message error:', error);
+  } catch (error: any) {
+    logger.error('Inject message error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to inject message' });
   }
 };
@@ -140,8 +141,8 @@ export const flagChatForReview = async (req: AuthRequest, res: Response) => {
       priority,
       flaggedAt: reviewNote.createdAt
     });
-  } catch (error) {
-    console.error('Flag for review error:', error);
+  } catch (error: any) {
+    logger.error('Flag for review error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to flag chat' });
   }
 };
@@ -212,8 +213,8 @@ export const getReviewQueue = async (req: AuthRequest, res: Response) => {
       total: reviewQueue.length,
       queue: reviewQueue
     });
-  } catch (error) {
-    console.error('Review queue error:', error);
+  } catch (error: any) {
+    logger.error('Review queue error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch review queue' });
   }
 };

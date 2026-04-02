@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
 import { JinaEmbeddings } from '@langchain/community/embeddings/jina';
+import { logger } from '../utils/logger.js';
 
 export const createKB = async (req: AuthRequest, res: Response) => {
   try {
@@ -94,8 +95,8 @@ export const deleteDocument = async (req: AuthRequest, res: Response) => {
     await autoCreateVersionInternalVersion(kbId, `Document removed: ${docFilename}`);
 
     res.json({ message: 'Document deleted successfully' });
-  } catch (error) {
-    console.error('Delete Document Error:', error);
+  } catch (error: any) {
+    logger.error('Delete Document Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to delete document' });
   }
 };
@@ -143,13 +144,13 @@ export const reindexDocuments = async (req: AuthRequest, res: Response) => {
             });
 
             reindexedCount++;
-          } catch (chunkError) {
-            console.error(`Failed to reindex chunk ${chunk.id}:`, chunkError);
+          } catch (chunkError: any) {
+            logger.error('Failed to reindex chunk', { chunkId: chunk.id, error: chunkError.message });
             // Continue with next chunk
           }
         }
-      } catch (docError) {
-        console.error(`Failed to reindex document ${doc.id}:`, docError);
+      } catch (docError: any) {
+        logger.error('Failed to reindex document', { docId: doc.id, error: docError.message });
         // Continue with next document
       }
     }
@@ -161,8 +162,8 @@ export const reindexDocuments = async (req: AuthRequest, res: Response) => {
       reindexedChunks: reindexedCount,
       totalChunks: kb.documents.reduce((sum, d) => sum + d.chunks.length, 0)
     });
-  } catch (error) {
-    console.error('Reindex error:', error);
+  } catch (error: any) {
+    logger.error('Reindex error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to reindex documents' });
   }
 };
@@ -206,8 +207,8 @@ export const createKBVersion = async (req: AuthRequest, res: Response) => {
       message: `Created version ${nextVersion}`,
       version
     });
-  } catch (error) {
-    console.error('Create KB Version Error:', error);
+  } catch (error: any) {
+    logger.error('Create KB Version Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to create KB version' });
   }
 };
@@ -250,8 +251,8 @@ export const getKBVersions = async (req: AuthRequest, res: Response) => {
         pages: Math.ceil(total / take)
       }
     });
-  } catch (error) {
-    console.error('Get KB Versions Error:', error);
+  } catch (error: any) {
+    logger.error('Get KB Versions Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch KB versions' });
   }
 };
@@ -293,8 +294,8 @@ export const getKBVersionDetails = async (req: AuthRequest, res: Response) => {
       documents: docs,
       documentCount: docs.length
     });
-  } catch (error) {
-    console.error('Get KB Version Details Error:', error);
+  } catch (error: any) {
+    logger.error('Get KB Version Details Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch KB version details' });
   }
 };
@@ -326,8 +327,8 @@ export const autoCreateVersionInternalVersion = async (kbId: string, changelog: 
         changelog
       }
     });
-  } catch (error) {
-    console.error('Auto-create version error:', error);
+  } catch (error: any) {
+    logger.error('Auto-create version error', { error: error.message, stack: error.stack });
     return null;
   }
 };

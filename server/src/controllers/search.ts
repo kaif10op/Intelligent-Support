@@ -3,6 +3,7 @@ import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
 import { ChatGroq } from '@langchain/groq';
 import { generateEmbeddings } from '../utils/jina.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Search across all chats and knowledge bases
@@ -86,8 +87,8 @@ export const globalSearch = async (req: AuthRequest, res: Response) => {
       totalResults: results.chats.length + results.kbs.length + results.tickets.length + results.documents.length,
       results
     });
-  } catch (error) {
-    console.error('Search error:', error);
+  } catch (error: any) {
+    logger.error('Search error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Search failed' });
   }
 };
@@ -137,12 +138,12 @@ Summary:`;
       const summary = response.content?.toString() || '';
 
       res.json({ summary, messageCount: chat.messages.length });
-    } catch (llmError) {
-      console.error('LLM summarization error:', llmError);
+    } catch (llmError: any) {
+      logger.error('LLM summarization error', { error: llmError.message, stack: llmError.stack });
       res.status(500).json({ error: 'Failed to generate summary' });
     }
-  } catch (error) {
-    console.error('Summarize error:', error);
+  } catch (error: any) {
+    logger.error('Summarize error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Summarization failed' });
   }
 };
@@ -200,16 +201,16 @@ Respond in this JSON format ONLY (no markdown):
         const jsonStr = response.content?.toString() || '{}';
         tags = JSON.parse(jsonStr);
       } catch (e) {
-        console.warn('Failed to parse tags JSON, using defaults');
+        logger.warn('Failed to parse tags JSON, using defaults');
       }
 
       res.json({ tags, context });
-    } catch (llmError) {
-      console.error('LLM tagging error:', llmError);
+    } catch (llmError: any) {
+      logger.error('LLM tagging error', { error: llmError.message, stack: llmError.stack });
       res.json({ tags: { primary: 'General Inquiry', secondary: [] }, context });
     }
-  } catch (error) {
-    console.error('Auto-tag error:', error);
+  } catch (error: any) {
+    logger.error('Auto-tag error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Auto-tagging failed' });
   }
 };

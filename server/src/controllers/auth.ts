@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -11,7 +12,7 @@ dotenv.config({ path: path.join(process.cwd(), '.env') });
 let oauthClient: OAuth2Client | null = null;
 const getOAuthClient = () => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    console.log('[Auth Debug] GOOGLE_CLIENT_ID from env:', clientId ? 'EXISTS' : 'MISSING');
+    logger.debug('GOOGLE_CLIENT_ID from env', { exists: clientId ? 'EXISTS' : 'MISSING' });
     if (!oauthClient) {
         if (!clientId) throw new Error('GOOGLE_CLIENT_ID is missing from environment');
         oauthClient = new OAuth2Client(clientId);
@@ -65,10 +66,9 @@ export const googleAuth = async (req: Request, res: Response) => {
 
     res.json({ user });
   } catch (err: any) {
-    console.error('[Auth Error] Google verification failed:', {
-        message: err.message,
-        stack: err.stack,
-        details: err
+    logger.error('Google verification failed', {
+        error: err.message,
+        stack: err.stack
     });
     res.status(401).json({ error: 'Authentication failed', details: err.message });
   }

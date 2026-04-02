@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logger } from './logger.js';
 
 const JINA_API_KEY = process.env.JINA_API_KEY;
 
@@ -22,7 +23,10 @@ export const generateEmbeddings = async (texts: string[]): Promise<number[][]> =
 
     return response.data.data.map((item: any) => item.embedding);
   } catch (error: any) {
-    console.error('Error fetching embeddings from Jina', error.response?.data || error.message);
+    logger.error('Error fetching embeddings from Jina', { 
+      error: error.response?.data || error.message,
+      stack: error.stack 
+    });
     throw new Error('Failed to generate embeddings');
   }
 };

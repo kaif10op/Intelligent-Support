@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
 import { ChatGroq } from '@langchain/groq';
 import { formatPaginatedResponse, parsePaginationParams, calculateSkipTake } from '../utils/pagination.js';
 import { exportTicketsToCSV, getExportFilename } from '../utils/export.js';
@@ -30,8 +31,8 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
     });
 
     res.json(ticket);
-  } catch (error) {
-    console.error('Create Ticket Error:', error);
+  } catch (error: any) {
+    logger.error('Create Ticket Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to create ticket' });
   }
 };
@@ -305,12 +306,12 @@ Reply:`;
       const suggestedReply = response.content?.toString() || '';
 
       res.json({ suggestedReply });
-    } catch (llmError) {
-      console.error('LLM error generating reply:', llmError);
+    } catch (llmError: any) {
+      logger.error('LLM error generating reply', { error: llmError.message, stack: llmError.stack });
       res.status(500).json({ error: 'Failed to generate suggestion' });
     }
-  } catch (error) {
-    console.error('Suggest reply error:', error);
+  } catch (error: any) {
+    logger.error('Suggest reply error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to generate reply suggestion' });
   }
 };
@@ -336,8 +337,8 @@ export const exportMyTicketsAsCSV = async (req: AuthRequest, res: Response) => {
     res.setHeader('Content-Type', 'text/csv;charset=utf-8;');
     res.setHeader('Content-Disposition', `attachment;filename="${filename}"`);
     res.send(csv);
-  } catch (error) {
-    console.error('Export tickets error:', error);
+  } catch (error: any) {
+    logger.error('Export tickets error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to export tickets' });
   }
 };
@@ -366,8 +367,8 @@ export const exportAllTicketsAsCSV = async (req: AuthRequest, res: Response) => 
     res.setHeader('Content-Type', 'text/csv;charset=utf-8;');
     res.setHeader('Content-Disposition', `attachment;filename="${filename}"`);
     res.send(csv);
-  } catch (error) {
-    console.error('Export all tickets error:', error);
+  } catch (error: any) {
+    logger.error('Export all tickets error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to export tickets' });
   }
 };

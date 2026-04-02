@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
 
 export const getAdminStats = async (req: AuthRequest, res: Response) => {
   try {
@@ -54,8 +55,8 @@ export const getAdminStats = async (req: AuthRequest, res: Response) => {
       recentUsers: await prisma.user.findMany({ take: 5, orderBy: { createdAt: 'desc' } }),
     });
 
-  } catch (error) {
-    console.error('Admin Stats Error:', error);
+  } catch (error: any) {
+    logger.error('Admin Stats Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch admin stats' });
   }
 };
@@ -202,8 +203,8 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
       },
       feedbackStats
     });
-  } catch (error) {
-    console.error('Analytics error:', error);
+  } catch (error: any) {
+    logger.error('Analytics error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch analytics' });
   }
 };
@@ -237,8 +238,8 @@ export const changeUserRole = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({ success: true, user });
-  } catch (error) {
-    console.error('Change user role error:', error);
+  } catch (error: any) {
+    logger.error('Change user role error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to change user role' });
   }
 };

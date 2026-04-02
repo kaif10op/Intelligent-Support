@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Voice I/O Features
@@ -67,8 +68,8 @@ export const transcribeAudio = async (req: AuthRequest, res: Response) => {
       session_id: transcriptionLog.id,
       message: 'Audio transcribed successfully (demo mode - integrate with Speech-to-Text API)'
     });
-  } catch (error) {
-    console.error('Transcribe Audio Error:', error);
+  } catch (error: any) {
+    logger.error('Transcribe Audio Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to transcribe audio' });
   }
 };
@@ -121,8 +122,8 @@ export const synthesizeText = async (req: AuthRequest, res: Response) => {
       audio_url: `/api/voice/audio/${synthesisLog.id}`,
       note: 'In production, audio would be returned as MP3/WAV stream'
     });
-  } catch (error) {
-    console.error('Synthesize Text Error:', error);
+  } catch (error: any) {
+    logger.error('Synthesize Text Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to synthesize text' });
   }
 };
@@ -155,8 +156,8 @@ export const getAudioStream = async (req: AuthRequest, res: Response) => {
       format: 'mp3',
       note: 'Demo mode - actual audio synthesis needed'
     });
-  } catch (error) {
-    console.error('Get Audio Stream Error:', error);
+  } catch (error: any) {
+    logger.error('Get Audio Stream Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to retrieve audio' });
   }
 };
@@ -207,8 +208,8 @@ export const updateVoiceSettings = async (req: AuthRequest, res: Response) => {
         voice: voice || 'female'
       }
     });
-  } catch (error) {
-    console.error('Update Voice Settings Error:', error);
+  } catch (error: any) {
+    logger.error('Update Voice Settings Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to update voice settings' });
   }
 };
@@ -260,8 +261,8 @@ export const getVoiceStats = async (req: AuthRequest, res: Response) => {
         syntheses: (syntheses / 30).toFixed(1)
       }
     });
-  } catch (error) {
-    console.error('Get Voice Stats Error:', error);
+  } catch (error: any) {
+    logger.error('Get Voice Stats Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch voice statistics' });
   }
 };

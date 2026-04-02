@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore.js';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -9,24 +9,23 @@ import ToastContainer from './components/ToastContainer';
 import ConnectionStatus from './components/ConnectionStatus';
 import './i18n/i18n'; // Initialize i18n
 
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import KBDetails from './pages/KBDetails';
-import Chat from './pages/Chat';
-import Admin from './pages/Admin';
-import AdminPortal from './pages/AdminPortal';
-import AnalyticsDashboard from './pages/AnalyticsDashboard';
-import RecentChats from './pages/RecentChats';
-import KnowledgeBases from './pages/KnowledgeBases';
-import Settings from './pages/Settings';
-import UserPreferences from './pages/UserPreferences';
-import Help from './pages/Help';
-import Tickets from './pages/Tickets';
-import Search from './pages/Search';
 import Layout from './components/Layout';
 import ChatLayout from './components/ChatLayout';
 
-
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const KBDetails = lazy(() => import('./pages/KBDetails'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Admin = lazy(() => import('./pages/Admin'));
+const AdminPortal = lazy(() => import('./pages/AdminPortal'));
+const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard'));
+const RecentChats = lazy(() => import('./pages/RecentChats'));
+const KnowledgeBases = lazy(() => import('./pages/KnowledgeBases'));
+const Settings = lazy(() => import('./pages/Settings'));
+const UserPreferences = lazy(() => import('./pages/UserPreferences'));
+const Help = lazy(() => import('./pages/Help'));
+const Tickets = lazy(() => import('./pages/Tickets'));
+const Search = lazy(() => import('./pages/Search'));
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
   const { user, loading } = useAuthStore();
@@ -56,6 +55,7 @@ function App() {
             <BrowserRouter>
               <ConnectionStatus />
               <ToastContainer />
+            <Suspense fallback={<div className="loading-container">Loading...</div>}>
             <Routes>
             <Route path="/login" element={<Login />} />
 
@@ -139,6 +139,7 @@ function App() {
             } />
 
           </Routes>
+            </Suspense>
             </BrowserRouter>
           </GoogleOAuthProvider>
         </SocketProvider>

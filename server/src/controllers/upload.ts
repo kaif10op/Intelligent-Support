@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const pdf = require('pdf-parse');
@@ -40,7 +41,7 @@ export const uploadDocument = async (req: AuthRequest, res: Response) => {
               throw new Error('PDF parser not found in package');
           }
       } catch (e: any) {
-          console.error('[Upload Debug] PDF Parse failed:', e);
+          logger.error('PDF Parse failed', { error: e.message, stack: e.stack });
           throw new Error('Failed to parse PDF: ' + e.message);
       }
     } else if (file.mimetype === 'text/plain' || file.mimetype === 'text/markdown') {
@@ -101,7 +102,7 @@ export const uploadDocument = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Document uploaded and processed successfully', document });
   } catch (error: any) {
-    console.error('Upload Error:', error);
+    logger.error('Upload Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to process document' });
   }
 };

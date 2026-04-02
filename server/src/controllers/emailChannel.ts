@@ -1,6 +1,8 @@
 import type { Response, Request } from 'express';
 import type { AuthRequest } from '../middlewares/auth.js';
 import { prisma } from '../prisma.js';
+import { logger } from '../utils/logger.js';
+import { sendTicketReplyEmail } from '../utils/email.js';
 
 /**
  * Simulate receiving an email as a support ticket
@@ -79,8 +81,8 @@ export const receiveEmailTicket = async (req: Request, res: Response) => {
       },
       metadata
     });
-  } catch (error) {
-    console.error('Receive Email Ticket Error:', error);
+  } catch (error: any) {
+    logger.error('Receive Email Ticket Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to process email ticket' });
   }
 };
@@ -127,16 +129,23 @@ export const sendEmailReply = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // In production: Send email reply via SendGrid/Mailgun
-    // Example: await sendEmailNotification(ticket.user.email, ticket.title, reply_text)
+    const senderName = req.user?.email || req.user?.id || 'Support Team';
+    const replyPreview = reply_text.length > 280 ? `${reply_text.slice(0, 277)}...` : reply_text;
+    const emailSent = await sendTicketReplyEmail(
+      ticket.user.email,
+      ticket.title,
+      senderName,
+      replyPreview
+    );
 
     res.json({
       success: true,
-      message: 'Reply sent and logged',
+      message: emailSent ? 'Reply sent, emailed, and logged' : 'Reply logged, but email delivery failed',
+      email_sent: emailSent,
       note
     });
-  } catch (error) {
-    console.error('Send Email Reply Error:', error);
+  } catch (error: any) {
+    logger.error('Send Email Reply Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to send email reply' });
   }
 };
@@ -180,8 +189,8 @@ export const getEmailTickets = async (req: AuthRequest, res: Response) => {
         channel: 'email'
       }))
     });
-  } catch (error) {
-    console.error('Get Email Tickets Error:', error);
+  } catch (error: any) {
+    logger.error('Get Email Tickets Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch email tickets' });
   }
 };
@@ -232,8 +241,8 @@ export const getEmailChannelStats = async (req: AuthRequest, res: Response) => {
     };
 
     res.json(stats);
-  } catch (error) {
-    console.error('Get Email Channel Stats Error:', error);
+  } catch (error: any) {
+    logger.error('Get Email Channel Stats Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch email channel statistics' });
   }
 };
