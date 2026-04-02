@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Database, Plus, MessageSquare, Files, ArrowRight, Trash2, Search, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import {
+  Database,
+  Plus,
+  MessageSquare,
+  Files,
+  ArrowRight,
+  Trash2,
+  Search,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Sparkles,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -10,15 +22,18 @@ const Dashboard = () => {
   const [newTitle, setNewTitle] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [tickets, setTickets] = useState<any[]>([]);
-  const [ticketStats, setTicketStats] = useState({ open: 0, inProgress: 0, resolved: 0 });
+  const [ticketStats, setTicketStats] = useState({
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+  });
 
   const fetchKBs = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/kb');
+      const res = await axios.get('http://localhost:8000/api/kb', { withCredentials: true });
       setKbs(res.data);
       setLoading(false);
     } catch (err) {
-
       console.error(err);
       setLoading(false);
     }
@@ -29,11 +44,11 @@ const Dashboard = () => {
       const res = await axios.get('http://localhost:8000/api/tickets/my', { withCredentials: true });
       if (res.data) {
         setTickets(res.data);
-        // Calculate stats
         const stats = {
           open: res.data.filter((t: any) => t.status === 'OPEN').length,
           inProgress: res.data.filter((t: any) => t.status === 'IN_PROGRESS').length,
-          resolved: res.data.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED').length
+          resolved: res.data.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED')
+            .length,
         };
         setTicketStats(stats);
       }
@@ -50,7 +65,7 @@ const Dashboard = () => {
   const handleCreate = async () => {
     if (!newTitle) return;
     try {
-      await axios.post('http://localhost:8000/api/kb', { title: newTitle });
+      await axios.post('http://localhost:8000/api/kb', { title: newTitle }, { withCredentials: true });
       setNewTitle('');
       setShowModal(false);
       fetchKBs();
@@ -62,192 +77,243 @@ const Dashboard = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this knowledge base?')) return;
     try {
-      await axios.delete(`http://localhost:8000/api/kb/${id}`);
+      await axios.delete(`http://localhost:8000/api/kb/${id}`, { withCredentials: true });
       fetchKBs();
     } catch (err) {
       console.error(err);
     }
   };
 
+  const filteredKbs = kbs.filter(
+    (kb) =>
+      kb.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      kb.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="dashboard-page fade-in">
-      <header className="dashboard-header">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1>User Dashboard</h1>
-          <p>Welcome back! You have {kbs.length} active knowledge bases.</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage {kbs.length} knowledge base{kbs.length !== 1 ? 's' : ''} and support tickets
+          </p>
         </div>
-        <button className="btn-glow flex items-center gap-2" onClick={() => setShowModal(true)}>
-          <Plus size={20} />
-          <span>New Knowledge Base</span>
+        <button
+          onClick={() => setShowModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition-colors w-full sm:w-auto justify-center sm:justify-start"
+        >
+          <Plus className="w-5 h-5" />
+          New KB
         </button>
-      </header>
-
-      {/* Ticket Summary Section */}
-      {tickets.length > 0 && (
-        <div className="ticket-summary-section">
-          <h3>Your Tickets</h3>
-          <div className="ticket-stats-grid">
-            <Link to="/tickets" className="ticket-stat-card glass open">
-              <div className="stat-icon">
-                <AlertCircle size={24} />
-              </div>
-              <div className="stat-content">
-                <div className="stat-number">{ticketStats.open}</div>
-                <div className="stat-label">Open</div>
-              </div>
-            </Link>
-            <Link to="/tickets" className="ticket-stat-card glass in-progress">
-              <div className="stat-icon">
-                <Clock size={24} />
-              </div>
-              <div className="stat-content">
-                <div className="stat-number">{ticketStats.inProgress}</div>
-                <div className="stat-label">In Progress</div>
-              </div>
-            </Link>
-            <Link to="/tickets" className="ticket-stat-card glass resolved">
-              <div className="stat-icon">
-                <CheckCircle size={24} />
-              </div>
-              <div className="stat-content">
-                <div className="stat-number">{ticketStats.resolved}</div>
-                <div className="stat-label">Resolved</div>
-              </div>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Search Bar */}
-      <div className="search-section">
-        <div className="search-input-wrap glass">
-          <Search size={18} color="var(--text-muted)" />
-          <input
-            type="text"
-            placeholder="Search knowledge bases..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
       </div>
 
-      {loading ? (
-        <div className="loading-grid">
-          {[1,2,3].map(i => <div key={i} className="skeleton glass" style={{height: '200px'}}></div>)}
-        </div>
-      ) : (
-        <div className="grid-main">
-          {kbs
-            .filter(kb => kb.title.toLowerCase().includes(searchTerm.toLowerCase()) || kb.description?.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map((kb) => (
-            <div key={kb.id} className="kb-card glass">
-              <div className="card-header">
-                <div className="icon-wrap">
-                  <Database size={24} color="#8a2be2" />
+      {/* Ticket Summary */}
+      {tickets.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-primary" />
+            Your Tickets
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Open Tickets Card */}
+            <Link
+              to="/tickets"
+              className="glass-elevated p-6 rounded-lg border border-border/50 hover:border-destructive/50 transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-lg bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
+                  <AlertCircle className="w-6 h-6 text-destructive" />
                 </div>
-                <button onClick={() => handleDelete(kb.id)} className="delete-btn">
-                  <Trash2 size={18} />
-                </button>
+                <span className="text-2xl font-bold text-destructive">{ticketStats.open}</span>
               </div>
+              <p className="text-sm text-muted-foreground">Open Tickets</p>
+              <div className="flex items-center gap-2 mt-3 text-xs text-destructive font-medium">
+                View all <ArrowRight className="w-3 h-3" />
+              </div>
+            </Link>
 
-              <h3>{kb.title}</h3>
-              <p>{kb.description || 'No description provided.'}</p>
-
-              <div className="card-stats">
-                <div className="stat">
-                  <Files size={16} />
-                  <span>{kb._count?.documents || 0} Docs</span>
+            {/* In Progress Tickets Card */}
+            <Link
+              to="/tickets"
+              className="glass-elevated p-6 rounded-lg border border-border/50 hover:border-amber-500/50 transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
+                  <Clock className="w-6 h-6 text-amber-500" />
                 </div>
-                <div className="stat">
-                  <MessageSquare size={16} />
-                  <span>{kb._count?.chats || 0} Chats</span>
+                <span className="text-2xl font-bold text-amber-500">{ticketStats.inProgress}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">In Progress</p>
+              <div className="flex items-center gap-2 mt-3 text-xs text-amber-500 font-medium">
+                View all <ArrowRight className="w-3 h-3" />
+              </div>
+            </Link>
+
+            {/* Resolved Tickets Card */}
+            <Link
+              to="/tickets"
+              className="glass-elevated p-6 rounded-lg border border-border/50 hover:border-emerald-500/50 transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                  <CheckCircle className="w-6 h-6 text-emerald-500" />
                 </div>
+                <span className="text-2xl font-bold text-emerald-500">{ticketStats.resolved}</span>
               </div>
-
-              <div className="card-actions">
-                <Link to={`/kb/${kb.id}`} className="secondary-btn">Manage Docs</Link>
-                <Link to={`/chat/new?kbId=${kb.id}`} className="primary-link">
-                  <span>Chat now</span>
-                  <ArrowRight size={16} />
-                </Link>
+              <p className="text-sm text-muted-foreground">Resolved</p>
+              <div className="flex items-center gap-2 mt-3 text-xs text-emerald-500 font-medium">
+                View all <ArrowRight className="w-3 h-3" />
               </div>
-            </div>
-          ))}
-          {kbs.filter(kb => kb.title.toLowerCase().includes(searchTerm.toLowerCase()) || kb.description?.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
-            <div className="empty-state">
-              <Database size={32} opacity={0.5} />
-              <p>No knowledge bases found.</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content glass fade-in">
-            <h2>Create Knowledge Base</h2>
-            <p>Give your knowledge base a name to start uploading documents.</p>
-            <input 
-              type="text" 
-              placeholder="e.g. My Website Docs" 
-              value={newTitle} 
-              onChange={(e) => setNewTitle(e.target.value)} 
-              autoFocus
-            />
-            <div className="modal-buttons">
-              <button onClick={() => setShowModal(false)} className="btn-cancel">Cancel</button>
-              <button onClick={handleCreate} className="btn-glow">Create KB</button>
-            </div>
+            </Link>
           </div>
         </div>
       )}
 
-      <style>{`
-        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 48px; border-bottom: 1px solid var(--glass-border); padding-bottom: 24px; }
+      {/* Knowledge Bases Section */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <Database className="w-5 h-5 text-primary" />
+            Knowledge Bases
+          </h2>
 
-        .ticket-summary-section { margin-bottom: 40px; }
-        .ticket-summary-section h3 { color: #fff; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600; }
-        .ticket-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-        .ticket-stat-card { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 16px; cursor: pointer; transition: 0.3s; text-decoration: none; border: 1px solid var(--glass-border); }
-        .ticket-stat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
-        .ticket-stat-card.open { border-left: 3px solid #ff6464; }
-        .ticket-stat-card.in-progress { border-left: 3px solid #ffa500; }
-        .ticket-stat-card.resolved { border-left: 3px solid #4ade80; }
-        .stat-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; }
-        .ticket-stat-card.open .stat-icon { color: #ff6464; }
-        .ticket-stat-card.in-progress .stat-icon { color: #ffa500; }
-        .ticket-stat-card.resolved .stat-icon { color: #4ade80; }
-        .stat-content { display: flex; flex-direction: column; gap: 4px; }
-        .stat-number { font-size: 1.8rem; font-weight: 700; color: #fff; }
-        .stat-label { font-size: 0.85rem; color: var(--text-muted); }
+          {/* Search Bar */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search KBs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input-base w-full pl-9"
+            />
+          </div>
+        </div>
 
-        .search-section { margin-bottom: 32px; }
-        .search-input-wrap { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 28px; border: 1px solid var(--glass-border); width: 100%; max-width: 400px; }
-        .search-input-wrap input { flex: 1; background: none; border: none; color: #fff; font-size: 1rem; outline: none; }
-        .search-input-wrap input::placeholder { color: var(--text-muted); }
+        {/* KB Grid */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="glass-elevated p-6 rounded-lg border border-border/50 h-64 animate-pulse"
+              >
+                <div className="h-4 bg-border/30 rounded w-3/4 mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-border/30 rounded w-full"></div>
+                  <div className="h-4 bg-border/30 rounded w-5/6"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredKbs.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredKbs.map((kb) => (
+              <div
+                key={kb.id}
+                className="glass-elevated border border-border/50 rounded-lg p-6 hover:border-primary/30 transition-colors flex flex-col group"
+              >
+                {/* Card Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <Database className="w-6 h-6 text-primary" />
+                  </div>
+                  <button
+                    onClick={() => handleDelete(kb.id)}
+                    className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
 
-        .kb-card { padding: 24px; display: flex; flex-direction: column; gap: 16px; min-height: 240px; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; }
-        .icon-wrap { width: 44px; height: 44px; background: rgba(138, 43, 226, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        .delete-btn { color: var(--text-muted); background: none; border: none; cursor: pointer; transition: color 0.2s; }
-        .delete-btn:hover { color: #ff4b4b; }
-        .card-stats { display: flex; gap: 16px; margin: 8px 0; }
-        .stat { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }
-        .card-actions { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid var(--glass-border); }
-        .primary-link { display: flex; align-items: center; gap: 8px; color: var(--accent-primary); text-decoration: none; font-weight: 600; }
-        .secondary-btn { font-size: 0.9rem; color: var(--text-muted); text-decoration: none; }
-        .secondary-btn:hover { color: #fff; }
+                {/* Title & Description */}
+                <h3 className="font-semibold text-foreground mb-1 line-clamp-2">{kb.title}</h3>
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-1">
+                  {kb.description || 'No description provided'}
+                </p>
 
-        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 60px 20px; color: var(--text-muted); text-align: center; }
+                {/* Stats */}
+                <div className="flex gap-4 mb-4 text-xs text-muted-foreground border-t border-border/30 pt-4">
+                  <div className="flex items-center gap-1.5">
+                    <Files className="w-4 h-4" />
+                    <span>{kb._count?.documents || 0} docs</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <MessageSquare className="w-4 h-4" />
+                    <span>{kb._count?.chats || 0} chats</span>
+                  </div>
+                </div>
 
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { max-width: 450px; width: 100%; padding: 32px; display: flex; flex-direction: column; gap: 16px; }
-        .modal-buttons { display: flex; justify-content: flex-end; gap: 16px; margin-top: 24px; }
-        .btn-cancel { background: none; border: none; color: var(--text-muted); cursor: pointer; font-weight: 600; }
-        .skeleton { width: 100%; height: 200px; border-radius: 16px; position: relative; overflow: hidden; background: rgba(255,255,255,0.02); }
-        .skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent); animation: loading 1.5s infinite; }
-        @keyframes loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-      `}</style>
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <Link
+                    to={`/kb/${kb.id}`}
+                    className="flex-1 px-3 py-2 rounded-lg border border-border/50 text-sm font-medium text-foreground hover:bg-card/50 transition-colors text-center"
+                  >
+                    Manage
+                  </Link>
+                  <Link
+                    to={`/chat/new?kbId=${kb.id}`}
+                    className="flex-1 px-3 py-2 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors text-center flex items-center justify-center gap-1"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Chat
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="glass-elevated border border-border/50 rounded-lg p-12 text-center">
+            <Database className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {searchTerm ? 'No knowledge bases match your search' : 'No knowledge bases yet'}
+            </p>
+            <p className="text-sm text-muted-foreground/70 mt-2">
+              {!searchTerm && 'Create your first knowledge base to get started'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Create KB Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-elevated border border-border/50 rounded-lg p-6 w-full max-w-sm">
+            <h2 className="text-2xl font-bold text-foreground mb-2">Create Knowledge Base</h2>
+            <p className="text-muted-foreground text-sm mb-6">
+              Enter a name for your new knowledge base
+            </p>
+
+            <input
+              type="text"
+              placeholder="e.g. Product Documentation"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleCreate()}
+              className="input-base w-full mb-6"
+              autoFocus
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-border/50 text-foreground font-medium hover:bg-card/50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
