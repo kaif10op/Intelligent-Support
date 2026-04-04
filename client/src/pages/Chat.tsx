@@ -1,18 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { Send, Bot, ChevronLeft, Loader2, Info, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, AlertTriangle, Paperclip, File, X, Copy, Trash2, Check } from 'lucide-react';
+import { Send, Bot, ChevronLeft, Loader2, Info, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, AlertTriangle, Paperclip, File, X, Copy, Trash2, Check, Zap, ArrowRightLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { useToast } from '../contexts/ToastContext';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuthStore } from '../store/useAuthStore';
 import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
 
 interface Message {
   id?: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'human' | 'system';
   content: string;
   sources?: any[];
   createdAt?: string;
+  senderName?: string;
+  senderRole?: string;
 }
 
 const Chat = () => {
@@ -22,6 +25,8 @@ const Chat = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const { subscribeTo, unsubscribeFrom, onChatMessage, sendChatMessage } = useSocket();
+  const user = useAuthStore((state: any) => state.user);
+  const isAgent = user?.role === 'SUPPORT_AGENT' || user?.role === 'ADMIN';
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -36,6 +41,10 @@ const Chat = () => {
   const [error, setError] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [kbName, setKbName] = useState<string>('');
+  const [sendingHuman, setSendingHuman] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [humanInput, setHumanInput] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,10 +88,12 @@ const Chat = () => {
         if (data.messages && Array.isArray(data.messages)) {
           const formatted = data.messages.map((m: any) => ({
             id: m.id,
-            role: m.role === 'ai' ? 'assistant' : 'user',
+            role: m.role === 'ai' ? 'assistant' : m.role,
             content: m.content,
             sources: m.sources,
-            createdAt: m.createdAt
+            createdAt: m.createdAt,
+            senderName: m.senderName,
+            senderRole: m.senderRole
           }));
           setMessages(formatted);
           const fb: Record<string, number> = {};
@@ -229,6 +240,82 @@ const Chat = () => {
     }
   };
 
+  const handleSendHumanMessage = async () => {
+    if (!humanInput.trim() || !id || id === 'new') return;
+
+    setSendingHuman(true);
+    try {
+      await axios.post(
+        apiUrl(`/api/chat/${id}/human-message`),
+        { message: humanInput },
+        axiosConfig
+      );
+
+      setMessages(prev => [...prev, {
+        role: 'human',
+        content: humanInput,
+        senderName: user?.name || 'Support Agent',
+        senderRole: user?.role
+      }]);
+
+      setHumanInput('');
+      addToast('Message sent to customer', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to send message', 'error');
+    } finally {
+      setSendingHuman(false);
+    }
+  };
+
+  const handleRequestAIAssistance = async () => {
+    if (!id || id === 'new') return;
+
+    try {
+      const res = await axios.post(
+        apiUrl(`/api/chat/${id}/assistant/suggest`),
+        { context: messages[messages.length - 1]?.content || '' },
+        axiosConfig
+      );
+
+      addToast('AI Suggestion: ' + res.data.suggestion, 'info');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to get AI assistance', 'error');
+    }
+  };
+
+  const handleTransferChat = async (targetAgentId: string) => {
+    if (!id || id === 'new') return;
+
+    try {
+      await axios.post(
+        apiUrl(`/api/chat/${id}/transfer/${targetAgentId}`),
+        { reason: 'Transferred by support agent' },
+        axiosConfig
+      );
+
+      setShowTransfer(false);
+      addToast('Chat transferred successfully', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to transfer chat', 'error');
+    }
+  };
+
+  // Fetch available agents for transfer
+  useEffect(() => {
+    if (isAgent && showTransfer) {
+      const fetchAgents = async () => {
+        try {
+          const res = await axios.get(apiUrl('/api/admin/users?role=SUPPORT_AGENT'), axiosConfig);
+          const agentList = res.data?.users || [];
+          setAgents(agentList.filter((a: any) => a.id !== user?.id));
+        } catch (err) {
+          console.error('Failed to fetch agents:', err);
+        }
+      };
+      fetchAgents();
+    }
+  }, [showTransfer, isAgent, user?.id]);
+
   // Auto-fetch suggestions when streaming completes
   useEffect(() => {
     if (!streaming && messages.length > 0) {
@@ -305,14 +392,25 @@ const Chat = () => {
           messages.map((m, i) => (
             <div
               key={i}
-              className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
+              className={`flex ${m.role === 'user' || m.role === 'human' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
             >
               <div className={`max-w-lg space-y-2`}>
+                {/* Sender Info for Human/System Messages */}
+                {(m.role === 'human' || m.role === 'system') && (
+                  <div className="text-xs text-muted-foreground px-4">
+                    {m.senderName} {m.senderRole && `(${m.senderRole})`}
+                  </div>
+                )}
+
                 {/* Message Bubble */}
                 <div
                   className={`rounded-2xl px-6 py-4 ${
                     m.role === 'user'
                       ? 'bg-primary/20 border border-primary/30 text-foreground'
+                      : m.role === 'human'
+                      ? 'bg-blue-500/20 border border-blue-500/30 text-foreground'
+                      : m.role === 'system'
+                      ? 'bg-gray-600/20 border border-gray-600/30 text-muted-foreground italic'
                       : 'glass-elevated border border-border/50'
                   }`}
                 >
@@ -448,6 +546,86 @@ const Chat = () => {
 
       {/* Input Area - Fixed */}
       <div className="flex-shrink-0 border-t border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 space-y-3">
+        {/* Support Agent Panel */}
+        {isAgent && id && id !== 'new' && (
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setShowTransfer(!showTransfer)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors text-sm font-medium"
+              title="Transfer to another agent"
+            >
+              <ArrowRightLeft size={16} />
+              Transfer
+            </button>
+
+            <button
+              onClick={handleRequestAIAssistance}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-sm font-medium"
+              title="Get AI suggestion for response"
+            >
+              <Zap size={16} />
+              AI Help
+            </button>
+          </div>
+        )}
+
+        {/* Transfer Agent Selector */}
+        {isAgent && showTransfer && agents.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {agents.map((agent: any) => (
+              <button
+                key={agent.id}
+                onClick={() => handleTransferChat(agent.id)}
+                className="px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+              >
+                {agent.name || agent.email}
+              </button>
+            ))}
+            <button
+              onClick={() => setShowTransfer(false)}
+              className="px-3 py-2 rounded-lg bg-card/50 text-muted-foreground hover:bg-card/80 transition-colors text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Human Message Input (for support agents/admins) */}
+        {isAgent && (
+          <div className="space-y-2 p-4 rounded-lg bg-card/50 border border-secondary/20">
+            <label className="text-xs font-medium text-secondary uppercase tracking-wide">
+              {user?.role === 'ADMIN' ? '👨‍💼 Admin Response' : '👤 Support Agent Response'}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={humanInput}
+                onChange={(e) => setHumanInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendHumanMessage();
+                  }
+                }}
+                placeholder="Type your response to send to customer..."
+                className="flex-1 px-3 py-2 rounded-lg bg-background/50 border border-border/50 focus:border-secondary focus:ring-1 focus:ring-secondary outline-none text-foreground placeholder:text-muted-foreground text-sm"
+                disabled={sendingHuman}
+              />
+              <button
+                onClick={handleSendHumanMessage}
+                disabled={sendingHuman || !humanInput.trim()}
+                className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/90 disabled:bg-secondary/50 text-secondary-foreground transition-colors disabled:cursor-not-allowed font-medium text-sm"
+              >
+                {sendingHuman ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Send size={16} />
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* File Preview */}
         {attachedFile && (
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/10 border border-secondary/20 w-fit">

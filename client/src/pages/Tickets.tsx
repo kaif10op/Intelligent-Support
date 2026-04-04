@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Ticket, Plus, Clock, AlertCircle, MessageSquare, CheckCircle, User, Loader2, RotateCcw } from 'lucide-react';
+import { Ticket, Plus, Clock, AlertCircle, CheckCircle, User, Loader2, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useToast } from '../contexts/ToastContext';
 import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
@@ -69,6 +69,7 @@ const Tickets = () => {
       addToast(errorMsg, 'error');
     }
   };
+
 
   // Calculate stats
   const ticketStats = {
@@ -179,7 +180,7 @@ const Tickets = () => {
         <div className="px-6 border-t border-surface-200">
           <NavigationTabs
             tabs={[
-              { id: 'all', label: 'All', icon: <MessageSquare className="w-4 h-4" /> },
+              { id: 'all', label: 'All', icon: <Ticket className="w-4 h-4" /> },
               { id: 'open', label: 'Open', icon: <AlertCircle className="w-4 h-4" /> },
               { id: 'in-progress', label: 'In Progress', icon: <Clock className="w-4 h-4" /> },
               { id: 'resolved', label: 'Resolved', icon: <CheckCircle className="w-4 h-4" /> }
@@ -195,7 +196,7 @@ const Tickets = () => {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <StatCard label="Total" value={ticketStats.total} icon={<MessageSquare className="w-6 h-6" />} />
+          <StatCard label="Total" value={ticketStats.total} icon={<Ticket className="w-6 h-6" />} />
           <StatCard label="Open" value={ticketStats.open} icon={<AlertCircle className="w-6 h-6" />} />
           <StatCard label="In Progress" value={ticketStats.inProgress} icon={<Clock className="w-6 h-6" />} />
           <StatCard label="Resolved" value={ticketStats.resolved} icon={<CheckCircle className="w-6 h-6" />} />
@@ -210,7 +211,7 @@ const Tickets = () => {
               placeholder="Search tickets..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<MessageSquare className="w-4 h-4" />}
+              icon={<Ticket className="w-4 h-4" />}
             />
             <Select
               value={filterStatus}
@@ -278,6 +279,12 @@ const Tickets = () => {
                       <Clock className="w-3.5 h-3.5" />
                       <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
                     </div>
+                    {ticket.assignedTo && (
+                      <div className="flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5" />
+                        <span className="truncate">{ticket.assignedTo.name}</span>
+                      </div>
+                    )}
                     {ticket.user && (
                       <div className="flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5" />
@@ -287,29 +294,31 @@ const Tickets = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2">
-                    {(user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT') && ticket.status === 'OPEN' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={<MessageSquare className="w-3.5 h-3.5" />}
-                        fullWidth
-                        onClick={() => handleUpdateStatus(ticket.id, 'IN_PROGRESS')}
-                      >
-                        Handle
-                      </Button>
-                    )}
-                    {(user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT') && ticket.status === 'IN_PROGRESS' && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        icon={<CheckCircle className="w-3.5 h-3.5" />}
-                        fullWidth
-                        onClick={() => handleUpdateStatus(ticket.id, 'RESOLVED')}
-                      >
-                        Resolve
-                      </Button>
-                    )}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      {(user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT') && ticket.status === 'OPEN' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={<Clock className="w-3.5 h-3.5" />}
+                          fullWidth
+                          onClick={() => handleUpdateStatus(ticket.id, 'IN_PROGRESS')}
+                        >
+                          Handle
+                        </Button>
+                      )}
+                      {(user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT') && ticket.status === 'IN_PROGRESS' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon={<CheckCircle className="w-3.5 h-3.5" />}
+                          fullWidth
+                          onClick={() => handleUpdateStatus(ticket.id, 'RESOLVED')}
+                        >
+                          Resolve
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
