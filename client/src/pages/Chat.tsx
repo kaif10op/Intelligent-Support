@@ -246,7 +246,7 @@ const Chat = () => {
     setSendingHuman(true);
     try {
       await axios.post(
-        apiUrl(`/api/chat/${id}/human-message`),
+        apiUrl(`/api/chat/human/${id}/message`),
         { message: humanInput },
         axiosConfig
       );
@@ -272,7 +272,7 @@ const Chat = () => {
 
     try {
       const res = await axios.post(
-        apiUrl(`/api/chat/${id}/assistant/suggest`),
+        apiUrl(`/api/chat/human/${id}/assistant/suggest`),
         { context: messages[messages.length - 1]?.content || '' },
         axiosConfig
       );
@@ -288,7 +288,7 @@ const Chat = () => {
 
     try {
       await axios.post(
-        apiUrl(`/api/chat/${id}/transfer/${targetAgentId}`),
+        apiUrl(`/api/chat/human/${id}/transfer/${targetAgentId}`),
         { reason: 'Transferred by support agent' },
         axiosConfig
       );
@@ -592,10 +592,30 @@ const Chat = () => {
 
         {/* Human Message Input (for support agents/admins) */}
         {isAgent && (
-          <div className="space-y-2 p-4 rounded-lg bg-card/50 border border-secondary/20">
-            <label className="text-xs font-medium text-secondary uppercase tracking-wide">
-              {user?.role === 'ADMIN' ? '👨‍💼 Admin Response' : '👤 Support Agent Response'}
-            </label>
+          <div className="space-y-3 p-4 rounded-lg bg-card/50 border border-secondary/20">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-secondary uppercase tracking-wide">
+                {user?.role === 'ADMIN' ? '👨‍💼 Admin Response' : '👤 Support Agent Response'}
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleRequestAIAssistance}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5"
+                  title="Get AI suggestion for response"
+                >
+                  <Zap size={14} />
+                  AI Suggest
+                </button>
+                <button
+                  onClick={() => setShowTransfer(!showTransfer)}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5"
+                  title="Transfer chat to another agent"
+                >
+                  <ArrowRightLeft size={14} />
+                  Transfer
+                </button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <input
                 type="text"

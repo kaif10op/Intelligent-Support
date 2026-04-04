@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Ticket, Plus, Clock, AlertCircle, CheckCircle, User, Loader2, RotateCcw } from 'lucide-react';
+import { Ticket, Plus, Clock, AlertCircle, CheckCircle, User, Loader2, RotateCcw, Zap, Users } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useToast } from '../contexts/ToastContext';
 import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
@@ -22,8 +22,18 @@ const Tickets = () => {
   const [filterPriority, setFilterPriority] = useState('ALL');
   const [sortBy, setSortBy] = useState<'recent' | 'urgent' | 'oldest'>('recent');
 
+  // Admin assignment state
+  const [supportAgents, setSupportAgents] = useState<any[]>([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedTicketForAssign, setSelectedTicketForAssign] = useState<any>(null);
+  const [selectedAgent, setSelectedAgent] = useState('');
+  const [autoAssigning, setAutoAssigning] = useState(false);
+
   useEffect(() => {
     fetchTickets();
+    if (user?.role === 'ADMIN') {
+      fetchSupportAgents();
+    }
   }, [user]);
 
   const fetchTickets = async () => {
@@ -67,6 +77,54 @@ const Tickets = () => {
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Failed to update ticket status';
       addToast(errorMsg, 'error');
+    }
+  };
+
+  const fetchSupportAgents = async () => {
+    try {
+      const res = await axios.get(apiUrl('/api/admin/users'), axiosConfig);
+      const agents = res.data.users.filter((u: any) => u.role === 'SUPPORT_AGENT' || u.role === 'ADMIN');
+      setSupportAgents(agents);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to load support agents';
+      addToast(errorMsg, 'error');
+    }
+  };
+
+  const handleAssignTicket = async () => {
+    if (!selectedTicketForAssign || !selectedAgent) {
+      addToast('Please select both ticket and agent', 'error');
+      return;
+    }
+
+    try {
+      await axios.put(
+        API_ENDPOINTS.TICKET_UPDATE(selectedTicketForAssign.id),
+        { assignedToId: selectedAgent, status: 'IN_PROGRESS' },
+        axiosConfig
+      );
+      addToast('Ticket assigned successfully!', 'success');
+      setShowAssignModal(false);
+      setSelectedAgent('');
+      setSelectedTicketForAssign(null);
+      fetchTickets();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to assign ticket';
+      addToast(errorMsg, 'error');
+    }
+  };
+
+  const handleAutoAssign = async () => {
+    try {
+      setAutoAssigning(true);
+      const res = await axios.post(apiUrl('/api/tickets/admin/auto-assign'), {}, axiosConfig);
+      addToast(res.data.message || 'Auto-assignment completed!', 'success');
+      fetchTickets();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to auto-assign tickets';
+      addToast(errorMsg, 'error');
+    } finally {
+      setAutoAssigning(false);
     }
   };
 
@@ -155,6 +213,18 @@ const Tickets = () => {
             </div>
           </div>
           <div className="flex gap-3">
+            {user?.role === 'ADMIN' && (
+              <Button
+                variant="outline"
+                size="md"
+                icon={<Zap className="w-4 h-4" />}
+                onClick={handleAutoAssign}
+                loading={autoAssigning}
+                disabled={autoAssigning}
+              >
+                Auto-Assign
+              </Button>
+            )}
             <Button
               variant="outline"
               size="md"
@@ -296,6 +366,20 @@ const Tickets = () => {
                   {/* Actions */}
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-2">
+                      {user?.role === 'ADMIN' && !ticket.assignedTo && ticket.status === 'OPEN' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={<Users className="w-3.5 h-3.5" />}
+                          fullWidth
+                          onClick={() => {
+                            setSelectedTicketForAssign(ticket);
+                            setShowAssignModal(true);
+                          }}
+                        >
+                          Assign Agent
+                        </Button>
+                      )}
                       {(user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT') && ticket.status === 'OPEN' && (
                         <Button
                           variant="secondary"
@@ -395,6 +479,60 @@ const Tickets = () => {
               ]}
             />
           </form>
+        </div>
+      </Modal>
+
+      {/* Assign Ticket Modal */}
+      <Modal
+        isOpen={showAssignModal}
+        onClose={() => {
+          setShowAssignModal(false);
+          setSelectedAgent('');
+          setSelectedTicketForAssign(null);
+        }}
+        title="Assign Ticket"
+        size="md"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowAssignModal(false);
+                setSelectedAgent('');
+                setSelectedTicketForAssign(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleAssignTicket}
+            >
+              Assign
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-surface-600 text-sm">Select a support agent to assign this ticket</p>
+          {selectedTicketForAssign && (
+            <div className="p-3 bg-surface-50 rounded-lg border border-surface-200">
+              <p className="text-xs text-surface-600 font-medium uppercase tracking-wide mb-1">Ticket</p>
+              <p className="font-semibold text-surface-900">{selectedTicketForAssign.title}</p>
+            </div>
+          )}
+          <Select
+            label="Support Agent"
+            value={selectedAgent}
+            onChange={(e) => setSelectedAgent(e.target.value)}
+            options={[
+              { value: '', label: 'Select an agent...' },
+              ...supportAgents.map((agent) => ({
+                value: agent.id,
+                label: agent.name || agent.email
+              }))
+            ]}
+          />
         </div>
       </Modal>
     </div>
