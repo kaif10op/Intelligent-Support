@@ -6,7 +6,7 @@ services:
     plan: free # Use the free tier (spins down after 15m of inactivity)
     region: singapore # Adjust as needed
     buildCommand: npm install --prefix server --legacy-peer-deps --include=dev && npm run build --prefix server && npx prisma generate --schema=server/prisma/schema.prisma
-    startCommand: chmod +x server/start.sh && ./server/start.sh
+    startCommand: chmod +x server/start.sh && cd server && ./start.sh
     envVars:
       - key: NODE_VERSION
         value: 22.12.0
@@ -16,6 +16,7 @@ services:
         value: 8000
 
       # Database: Supabase or PostgreSQL
+      # IMPORTANT: Leave empty by default - set in dashboard only once configured
       - key: DATABASE_URL
         sync: false
 
@@ -62,6 +63,10 @@ services:
         value: "https://customer-support-client.onrender.com,http://localhost:3000"
 
     healthCheckPath: /healthz
+    # Force rebuild by invalidating cache
+    buildFilter:
+      paths:
+        - server/
 
   # Frontend Client (React + Vite)
   - type: web
@@ -84,5 +89,6 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+
 
 
