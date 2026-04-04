@@ -242,9 +242,9 @@ const Chat = () => {
   }, [streaming, messages, id]);
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
+    <div className="flex flex-col w-full h-screen bg-background overflow-hidden">
       {/* Header - Fixed */}
-      <header className="sticky top-0 z-40 flex items-center justify-between gap-4 px-6 py-4 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-40 flex items-center justify-between gap-4 px-6 py-4 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors font-medium"
@@ -274,7 +274,7 @@ const Chat = () => {
 
       {/* Error Banner */}
       {error && (
-        <div className="flex items-center gap-3 px-6 py-3 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm animate-fadeIn">
+        <div className="flex-shrink-0 flex items-center gap-3 px-6 py-3 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm animate-fadeIn">
           <AlertTriangle size={16} className="flex-shrink-0" />
           <span className="flex-1">{error}</span>
           <button
@@ -289,7 +289,7 @@ const Chat = () => {
       {/* Messages Container - Scrollable */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-6 py-6 space-y-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
+        className="flex-1 overflow-y-auto min-h-0 px-6 py-6 space-y-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 py-12">

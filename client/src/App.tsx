@@ -38,6 +38,18 @@ const ProtectedRoute = ({ children, adminOnly = false, supportAgentOnly = false 
   return <>{children}</>;
 };
 
+// Role-based home redirect
+const RoleBasedHome = () => {
+  const { user, loading } = useAuthStore();
+
+  if (loading) return <div className="loading-container">Loading...</div>;
+  if (!user) return <Navigate to="/login" />;
+
+  if (user.role === 'ADMIN') return <Navigate to="/admin/dashboard" />;
+  if (user.role === 'SUPPORT_AGENT') return <Navigate to="/support-queue" />;
+  return <Navigate to="/dashboard" />;
+};
+
 
 
 
@@ -59,7 +71,9 @@ function App() {
             <Routes>
             <Route path="/login" element={<Login />} />
 
-            <Route path="/" element={
+            <Route path="/" element={<RoleBasedHome />} />
+
+            <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Layout><Dashboard /></Layout>
               </ProtectedRoute>
