@@ -6,7 +6,7 @@ services:
     plan: free # Use the free tier (spins down after 15m of inactivity)
     region: singapore # Adjust as needed
     buildCommand: npm install --prefix server --legacy-peer-deps --include=dev && npm run build --prefix server && npx prisma generate --schema=server/prisma/schema.prisma
-    startCommand: npx prisma db push --schema=server/prisma/schema.prisma --accept-data-loss && npm start --prefix server
+    startCommand: chmod +x server/start.sh && ./server/start.sh
     envVars:
       - key: NODE_VERSION
         value: 22.12.0
@@ -14,11 +14,11 @@ services:
         value: production
       - key: PORT
         value: 8000
-      
-      # Database: Supabase
+
+      # Database: Supabase or PostgreSQL
       - key: DATABASE_URL
         sync: false
-      
+
       # Cache: Upstash Redis
       - key: REDIS_URL
         sync: false
@@ -26,13 +26,13 @@ services:
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
         sync: false
-      
+
       # Security
       - key: JWT_SECRET
         sync: false
       - key: JWT_EXPIRY
         value: "7d"
-      
+
       # Auth/OAuth (Vite Client will connect to this)
       - key: GOOGLE_CLIENT_ID
         sync: false
@@ -46,7 +46,7 @@ services:
         value: "https://customer-support-server.onrender.com"
       - key: FRONTEND_URL
         value: "https://customer-support-client.onrender.com"
-      
+
       # AI Providers
       - key: GROQ_API_KEY
         sync: false
@@ -56,13 +56,13 @@ services:
         sync: false
       - key: JINA_API_KEY
         sync: false
-      
+
       # CORS
       - key: CORS_ORIGIN
         value: "https://customer-support-client.onrender.com,http://localhost:3000"
-    
+
     healthCheckPath: /healthz
-  
+
   # Frontend Client (React + Vite)
   - type: web
     name: customer-support-client
@@ -78,9 +78,11 @@ services:
         sync: false
       - key: VITE_CLERK_PUBLISHABLE_KEY
         sync: false
-    
+
     # Static sites handle SPAs (Single Page Apps) through fallback
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+
+
