@@ -3,6 +3,7 @@ import { Server, Socket } from 'socket.io';
 import type { AuthRequest } from './middlewares/auth.js';
 import { prisma } from './prisma.js';
 import { logger } from './utils/logger.js';
+import { AIService } from './services/aiService.js';
 
 interface SocketUser {
   userId: string;
@@ -109,7 +110,30 @@ export const initializeSocket = (httpServer: HTTPServer) => {
       socket.leave(`chat-${chatId}`);
     });
 
-    // Chat message received
+    // Chat message sent (client initiates new message via socket)
+    socket.on('send-chat-message', async (data: { chatId?: string; kbId: string; message: string }) => {
+      const { chatId, kbId, message } = data;
+      
+      // Notify client AI started thinking
+      io.to(`chat-${chatId}`).emit('ai-typing', { chatId });
+
+      await AIService.processMessage(message, {
+        userId: user.userId,
+        kbId,
+        chatId,
+        onToken: (token, realizedChatId) => {
+          socket.emit('ai-token', { chatId: realizedChatId, token });
+        },
+        onComplete: (fullAnswer, finalChatId) => {
+          socket.emit('ai-complete', { chatId: finalChatId, fullAnswer });
+        },
+        onError: (error) => {
+          socket.emit('ai-error', { message: error.message });
+        }
+      });
+    });
+
+    // Chat message received (notifications)
     socket.on('chat-message-received', (data: { chatId: string; message: string; sender: string; timestamp: Date }) => {
       io.to(`chat-${data.chatId}`).emit('new-chat-message', data);
     });

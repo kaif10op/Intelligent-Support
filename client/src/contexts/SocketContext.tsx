@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/useAuthStore';
 import { WS_BASE_URL } from '../config/api';
@@ -8,8 +8,9 @@ interface SocketContextType {
   isConnected: boolean;
   emitTicketUpdate: (ticketId: string, event: string, data: any) => void;
   emitChatMessage: (chatId: string, message: string) => void;
+  sendChatMessage: (data: { chatId?: string; kbId: string; message: string }) => void;
   onTicketUpdate: (ticketId: string, callback: (data: any) => void) => void;
-  onChatMessage: (chatId: string, callback: (data: any) => void) => void;
+  onChatMessage: (chatId: string, callback: (data: any) => void) => () => void;
   subscribeTo: (resourceType: 'ticket' | 'chat', resourceId: string) => void;
   unsubscribeFrom: (resourceType: 'ticket' | 'chat', resourceId: string) => void;
 }
@@ -20,11 +21,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuthStore();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  
+  // Storage for active chat callbacks to handle routing without multiple listeners
+  const chatCallbacks = useRef<Map<string, (data: any) => void>>(new Map());
 
   useEffect(() => {
     if (!user) return;
 
-    // Create socket connection
     const newSocket = io(WS_BASE_URL, {
       auth: {
         userId: user.id,
@@ -33,129 +36,92 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       },
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
       reconnectionAttempts: 5
     });
 
-    // Connection events
     newSocket.on('connect', () => {
-      console.log('✓ WebSocket connected');
+      console.log('✓ Socket connected');
       setIsConnected(true);
     });
 
     newSocket.on('disconnect', () => {
-      console.log('✗ WebSocket disconnected');
       setIsConnected(false);
     });
 
-    newSocket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
+    // Centralized listeners for AI stream events
+    newSocket.on('ai-typing', (data) => {
+      const cb = chatCallbacks.current.get(data.chatId) || chatCallbacks.current.get('new');
+      if (cb) cb({ type: 'ai-typing', ...data });
     });
 
-    // Heartbeat to keep connection alive
-    const heartbeatInterval = setInterval(() => {
-      if (newSocket.connected) {
-        newSocket.emit('heartbeat');
-      }
-    }, 25000); // Every 25 seconds
+    newSocket.on('ai-token', (data) => {
+      // Route to specific chat OR 'new' if we are starting a fresh chat
+      const cb = chatCallbacks.current.get(data.chatId) || chatCallbacks.current.get('new');
+      if (cb) cb({ type: 'ai-token', token: data.token, chatId: data.chatId });
+    });
+
+    newSocket.on('ai-complete', (data) => {
+      const cb = chatCallbacks.current.get(data.chatId) || chatCallbacks.current.get('new');
+      if (cb) cb({ type: 'ai-complete', ...data });
+    });
+
+    newSocket.on('ai-error', (data) => {
+      // Errors are usually broadcast to the sender
+      const cb = Array.from(chatCallbacks.current.values())[0];
+      if (cb) cb({ type: 'ai-error', ...data });
+    });
+
+    newSocket.on('new-chat-message', (data) => {
+      const cb = chatCallbacks.current.get(data.chatId);
+      if (cb) cb(data);
+    });
 
     setSocket(newSocket);
 
     return () => {
-      clearInterval(heartbeatInterval);
       newSocket.disconnect();
     };
   }, [user]);
 
   const emitTicketUpdate = (ticketId: string, event: string, data: any) => {
-    if (socket?.connected) {
-      socket.emit(event, { ticketId, ...data });
-    }
+    if (socket?.connected) socket.emit(event, { ticketId, ...data });
   };
 
   const emitChatMessage = (chatId: string, message: string) => {
     if (socket?.connected) {
-      socket.emit('chat-message-received', {
-        chatId,
-        message,
-        sender: user?.name,
-        timestamp: new Date()
-      });
+      socket.emit('chat-message-received', { chatId, message, sender: user?.name, timestamp: new Date() });
     }
+  };
+
+  const sendChatMessage = (data: { chatId?: string; kbId: string; message: string }) => {
+    if (socket?.connected) socket.emit('send-chat-message', data);
   };
 
   const onTicketUpdate = (ticketId: string, callback: (data: any) => void) => {
     if (!socket) return;
-
-    // Listen to ticket-specific events
-    socket.on('ticket-status-changed', (data) => {
-      if (data.ticketId === ticketId) {
-        callback(data);
-      }
-    });
-
-    socket.on('new-ticket-message', (data) => {
-      if (data.ticketId === ticketId) {
-        callback(data);
-      }
-    });
-
-    socket.on('ticket-assigned-notification', (data) => {
-      if (data.ticketId === ticketId) {
-        callback(data);
-      }
-    });
-
-    socket.on('user-typing', (data) => {
-      if (data.ticketId === ticketId) {
-        callback({ type: 'typing', data });
-      }
-    });
+    socket.on('ticket-status-changed', (data) => data.ticketId === ticketId && callback(data));
+    socket.on('new-ticket-message', (data) => data.ticketId === ticketId && callback(data));
   };
 
   const onChatMessage = (chatId: string, callback: (data: any) => void) => {
-    if (!socket) return;
-
-    socket.on('new-chat-message', (data) => {
-      if (data.chatId === chatId) {
-        callback(data);
-      }
-    });
-
-    socket.on('ai-typing', (data) => {
-      if (data.chatId === chatId) {
-        callback({ type: 'ai-typing' });
-      }
-    });
-
-    socket.on('ai-response-received', (data) => {
-      if (data.chatId === chatId) {
-        callback(data);
-      }
-    });
-
-    socket.on('user-typing', (data) => {
-      callback({ type: 'typing', data });
-    });
+    // Save callback to registry
+    chatCallbacks.current.set(chatId, callback);
+    
+    // Return cleanup function to remove from registry
+    return () => {
+      chatCallbacks.current.delete(chatId);
+    };
   };
 
   const subscribeTo = (resourceType: 'ticket' | 'chat', resourceId: string) => {
-    if (!socket?.connected) return;
-
-    if (resourceType === 'ticket') {
-      socket.emit('subscribe-ticket', resourceId);
-    } else if (resourceType === 'chat') {
-      socket.emit('subscribe-chat', resourceId);
+    if (socket?.connected) {
+      socket.emit(`subscribe-${resourceType}`, resourceId);
     }
   };
 
   const unsubscribeFrom = (resourceType: 'ticket' | 'chat', resourceId: string) => {
-    if (!socket?.connected) return;
-
-    if (resourceType === 'ticket') {
-      socket.emit('unsubscribe-ticket', resourceId);
-    } else if (resourceType === 'chat') {
-      socket.emit('unsubscribe-chat', resourceId);
+    if (socket?.connected) {
+      socket.emit(`unsubscribe-${resourceType}`, resourceId);
     }
   };
 
@@ -166,6 +132,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         isConnected,
         emitTicketUpdate,
         emitChatMessage,
+        sendChatMessage,
         onTicketUpdate,
         onChatMessage,
         subscribeTo,
@@ -179,8 +146,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
-  if (!context) {
-    throw new Error('useSocket must be used within SocketProvider');
-  }
+  if (!context) throw new Error('useSocket must be used within SocketProvider');
   return context;
 };

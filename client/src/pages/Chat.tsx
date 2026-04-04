@@ -21,7 +21,7 @@ const Chat = () => {
   const kbId = searchParams.get('kbId');
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const { subscribeTo, unsubscribeFrom, onChatMessage } = useSocket();
+  const { subscribeTo, unsubscribeFrom, onChatMessage, sendChatMessage } = useSocket();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -42,16 +42,40 @@ const Chat = () => {
 
   // Fetch chat history and KB info
   useEffect(() => {
+    const cleanupChat = onChatMessage(id || 'new', (data: any) => {
+      if (data.type === 'ai-token') {
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const lastIndex = newMessages.length - 1;
+          
+          if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+            newMessages[lastIndex] = {
+              ...newMessages[lastIndex],
+              content: newMessages[lastIndex].content + data.token
+            };
+            return newMessages;
+          } else {
+            // Fallback: If no assistant message exists yet, create one
+            return [...prev, { role: 'assistant', content: data.token }];
+          }
+        });
+      } else if (data.type === 'ai-complete') {
+        setStreaming(false);
+        if (data.chatId && id === 'new') {
+          navigate(`/chat/${data.chatId}?kbId=${kbId}`, { replace: true });
+        }
+      } else if (data.type === 'ai-error') {
+        setStreaming(false);
+        setError(data.message || 'AI generation failed');
+      }
+    });
+
     const fetchHistory = async () => {
       if (!id || id === 'new') return;
       try {
         const res = await axios.get(API_ENDPOINTS.CHAT_DETAIL(id), axiosConfig);
         const data = res.data;
-
-        // Set KB name
         if (data.kb?.title) setKbName(data.kb.title);
-
-        // Load messages
         if (data.messages && Array.isArray(data.messages)) {
           const formatted = data.messages.map((m: any) => ({
             id: m.id,
@@ -61,33 +85,27 @@ const Chat = () => {
             createdAt: m.createdAt
           }));
           setMessages(formatted);
-
-          // Load feedback
           const fb: Record<string, number> = {};
           data.messages.forEach((m: any) => {
             if (m.rating) fb[m.id] = m.rating;
           });
           setFeedbackGiven(fb);
         }
-
         subscribeTo('chat', id);
-        onChatMessage(id, (data: any) => {
-          if (data.message) {
-            setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
-          }
-        });
       } catch (err) {
         console.error('Failed to load chat history:', err);
       }
     };
 
     fetchHistory();
+
     return () => {
+      cleanupChat();
       if (id && id !== 'new') {
         unsubscribeFrom('chat', id);
       }
     };
-  }, [id, kbId, subscribeTo, unsubscribeFrom, onChatMessage]);
+  }, [id, kbId, subscribeTo, unsubscribeFrom, onChatMessage, navigate]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -145,54 +163,16 @@ const Chat = () => {
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      const response = await fetch(API_ENDPOINTS.CHAT_CREATE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          message: userMessage,
-          kbId,
-          chatId: id !== 'new' ? id : undefined
-        })
+      sendChatMessage({
+        message: userMessage,
+        kbId: kbId || '',
+        chatId: id !== 'new' ? id : undefined
       });
-
-      if (!response.body) throw new Error('No response body');
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let finished = false;
-
-      while (!finished) {
-        const { value, done } = await reader.read();
-        finished = done;
-        const chunk = decoder.decode(value, { stream: true });
-
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.token) {
-                setMessages(prev => {
-                  const last = { ...prev[prev.length - 1] };
-                  last.content = last.content + data.token;
-                  return [...prev.slice(0, -1), last];
-                });
-              } else if (data.event === 'done') {
-                if (data.chatId && id === 'new') {
-                  navigate(`/chat/${data.chatId}?kbId=${kbId}`, { replace: true });
-                }
-              }
-            } catch (e) {}
-          }
-        }
-      }
     } catch (err: any) {
       console.error('Chat error:', err);
       setError('Failed to send message. Please try again.');
       addToast('Failed to send message', 'error');
       setMessages(prev => prev.slice(0, -1));
-    } finally {
       setStreaming(false);
     }
   };
