@@ -65,14 +65,17 @@ export const getAdminStats = async (req: AuthRequest, res: Response) => {
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
     const users = await prisma.user.findMany({
-      include: {
-        _count: {
-          select: { knowledgeBases: true, chats: true },
-        },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        picture: true,
+        role: true,
+        createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
     });
-    res.json(users);
+    res.json({ users });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch users' });
   }
