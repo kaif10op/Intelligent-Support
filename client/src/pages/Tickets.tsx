@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Ticket, Plus, Clock, AlertCircle, CheckCircle, User, Loader2, RotateCcw, Zap, Users } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
@@ -11,6 +12,7 @@ type TicketTab = 'all' | 'open' | 'in-progress' | 'resolved';
 const Tickets = () => {
   const { user } = useAuthStore();
   const { addToast } = useToast();
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -321,7 +323,7 @@ const Tickets = () => {
         {filteredTickets.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTickets.map(ticket => (
-              <Card elevated className="p-6 flex flex-col hover:shadow-md transition-shadow" key={ticket.id}>
+              <Card elevated className="p-6 flex flex-col hover:shadow-md transition-shadow cursor-pointer" key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)}>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                   <Badge variant={getPriorityVariant(ticket.priority)}>

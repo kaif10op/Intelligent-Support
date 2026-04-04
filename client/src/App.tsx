@@ -24,6 +24,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const UserPreferences = lazy(() => import('./pages/UserPreferences'));
 const Help = lazy(() => import('./pages/Help'));
 const Tickets = lazy(() => import('./pages/Tickets'));
+const TicketDetails = lazy(() => import('./pages/TicketDetails'));
 const Search = lazy(() => import('./pages/Search'));
 const SupportAgentDashboard = lazy(() => import('./pages/SupportAgentDashboard'));
 
@@ -118,6 +119,12 @@ function App() {
             <Route path="/tickets" element={
               <ProtectedRoute>
                 <Layout><Tickets /></Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/ticket/:id" element={
+              <ProtectedRoute>
+                <Layout><TicketDetails /></Layout>
               </ProtectedRoute>
             } />
 
