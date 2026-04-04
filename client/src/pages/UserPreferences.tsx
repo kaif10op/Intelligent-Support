@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Settings, Bell, Mic, Save, Loader2 } from 'lucide-react';
+import { Settings, Bell, Mic, Loader2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { Card, Select, Button, NavigationTabs } from '../components/ui';
 
 interface UserPreferences {
   language: string;
@@ -40,8 +41,6 @@ const UserPreferences = () => {
 
   const loadPreferences = async () => {
     try {
-      // In production, fetch from API: GET /api/user/preferences
-      // For now, use localStorage
       const stored = localStorage.getItem('userPreferences');
       if (stored) {
         setPreferences(JSON.parse(stored));
@@ -56,12 +55,7 @@ const UserPreferences = () => {
   const savePreferences = async () => {
     try {
       setSaving(true);
-      // Save to localStorage (in production, POST to API)
       localStorage.setItem('userPreferences', JSON.stringify(preferences));
-
-      // In production, uncomment and import { API_ENDPOINTS, axiosConfig } from '../config/api':
-      // await axios.post(API_ENDPOINTS.PREFERENCES, preferences, axiosConfig);
-
       addToast('Preferences saved successfully', 'success');
     } catch (error) {
       console.error('Failed to save preferences:', error);
@@ -80,124 +74,103 @@ const UserPreferences = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96 gap-3">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading preferences...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+        <p className="text-surface-600">Loading preferences...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="glass-elevated border border-primary/30 rounded-lg p-6 space-y-3">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Settings className="w-6 h-6 text-primary" />
+      <div className="border-b border-surface-200 bg-surface-50">
+        <div className="px-6 py-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
+              <Settings className="w-6 h-6 text-primary-600" />
+            </div>
+            <div>
+              <h1 className="heading-1">User Preferences</h1>
+              <p className="text-surface-600 mt-1">Customize your experience and settings</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground">User Preferences</h1>
-            <p className="text-muted-foreground mt-1">Customize your experience and settings</p>
+
+          {/* Tabs */}
+          <div className="mt-6">
+            <NavigationTabs
+              tabs={[
+                { id: 'general', label: 'General', icon: <Settings className="w-4 h-4" /> },
+                { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
+                { id: 'voice', label: 'Voice', icon: <Mic className="w-4 h-4" /> }
+              ]}
+              activeTab={activeTab}
+              onTabChange={(tab) => setActiveTab(tab as any)}
+            />
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-border/30 overflow-x-auto">
-        {[
-          { id: 'general', label: 'General', icon: Settings },
-          { id: 'notifications', label: 'Notifications', icon: Bell },
-          { id: 'voice', label: 'Voice', icon: Mic }
-        ].map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all ${
-                activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Content */}
+      <div className="px-6 py-6">
+        <div className="max-w-3xl space-y-8">
+          {/* General Tab */}
+          {activeTab === 'general' && (
+            <Card elevated className="p-6 space-y-6">
+              <h3 className="heading-4">Display Settings</h3>
 
-      {/* Tab Content */}
-      <div className="space-y-6">
-        {/* General Tab */}
-        {activeTab === 'general' && (
-          <div className="space-y-6">
-            <div className="glass-elevated border border-border/50 rounded-lg p-6 space-y-6">
-              <h3 className="text-lg font-semibold text-foreground">Display Settings</h3>
+              <Select
+                label="Theme"
+                value={preferences.theme}
+                onChange={(e) => handleChange('theme', e.target.value)}
+                options={[
+                  { value: 'dark', label: 'Dark Mode' },
+                  { value: 'light', label: 'Light Mode' }
+                ]}
+                helperText="Choose your preferred color scheme"
+              />
 
-              {/* Theme */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Theme</label>
-                <select
-                  value={preferences.theme}
-                  onChange={(e) => handleChange('theme', e.target.value)}
-                  className="input-base w-full"
-                >
-                  <option value="dark">Dark Mode</option>
-                  <option value="light">Light Mode</option>
-                </select>
-                <p className="text-xs text-muted-foreground">Choose your preferred color scheme</p>
-              </div>
+              <Select
+                label="Language"
+                value={preferences.language}
+                onChange={(e) => handleChange('language', e.target.value)}
+                options={[
+                  { value: 'en', label: 'English' },
+                  { value: 'es', label: 'Español' },
+                  { value: 'fr', label: 'Français' },
+                  { value: 'de', label: 'Deutsch' }
+                ]}
+                helperText="Select your preferred language"
+              />
 
-              {/* Language */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Language</label>
-                <select
-                  value={preferences.language}
-                  onChange={(e) => handleChange('language', e.target.value)}
-                  className="input-base w-full"
-                >
-                  <option value="en">English</option>
-                  <option value="es">Español</option>
-                  <option value="fr">Français</option>
-                  <option value="de">Deutsch</option>
-                </select>
-                <p className="text-xs text-muted-foreground">Select your preferred language</p>
-              </div>
+              <Select
+                label="Timezone"
+                value={preferences.timezone}
+                onChange={(e) => handleChange('timezone', e.target.value)}
+                options={[
+                  { value: 'UTC', label: 'UTC' },
+                  { value: 'EST', label: 'Eastern Time' },
+                  { value: 'CST', label: 'Central Time' },
+                  { value: 'MST', label: 'Mountain Time' },
+                  { value: 'PST', label: 'Pacific Time' },
+                  { value: 'IST', label: 'India Standard Time' },
+                  { value: 'CET', label: 'Central European Time' }
+                ]}
+                helperText="Select your timezone for accurate times"
+              />
+            </Card>
+          )}
 
-              {/* Timezone */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Timezone</label>
-                <select
-                  value={preferences.timezone}
-                  onChange={(e) => handleChange('timezone', e.target.value)}
-                  className="input-base w-full"
-                >
-                  <option value="UTC">UTC</option>
-                  <option value="EST">Eastern Time</option>
-                  <option value="CST">Central Time</option>
-                  <option value="MST">Mountain Time</option>
-                  <option value="PST">Pacific Time</option>
-                  <option value="IST">India Standard Time</option>
-                  <option value="CET">Central European Time</option>
-                </select>
-                <p className="text-xs text-muted-foreground">Select your timezone for accurate times</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Notifications Tab */}
-        {activeTab === 'notifications' && (
-          <div className="space-y-6">
-            <div className="glass-elevated border border-border/50 rounded-lg p-6 space-y-6">
-              <h3 className="text-lg font-semibold text-foreground">Notification Preferences</h3>
+          {/* Notifications Tab */}
+          {activeTab === 'notifications' && (
+            <Card elevated className="p-6 space-y-6">
+              <h3 className="heading-4">Notification Preferences</h3>
 
               {/* Email Notifications */}
-              <div className="flex items-center justify-between pb-4 border-b border-border/30">
+              <div className="flex items-center justify-between pb-4 border-b border-surface-200">
                 <div className="space-y-1 flex-1">
-                  <p className="font-medium text-foreground">Email Notifications</p>
-                  <p className="text-xs text-muted-foreground">Receive email for important updates</p>
+                  <p className="font-medium text-surface-900">Email Notifications</p>
+                  <p className="text-xs text-surface-600">Receive email for important updates</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer ml-4">
                   <input
@@ -206,15 +179,15 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('emailNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-card/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:transition-all peer-checked:bg-primary"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
 
               {/* Chat Notifications */}
-              <div className="flex items-center justify-between pb-4 border-b border-border/30">
+              <div className="flex items-center justify-between pb-4 border-b border-surface-200">
                 <div className="space-y-1 flex-1">
-                  <p className="font-medium text-foreground">Chat Notifications</p>
-                  <p className="text-xs text-muted-foreground">Get notified about new chat messages</p>
+                  <p className="font-medium text-surface-900">Chat Notifications</p>
+                  <p className="text-xs text-surface-600">Get notified about new chat messages</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer ml-4">
                   <input
@@ -223,15 +196,15 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('chatNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-card/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:transition-all peer-checked:bg-primary"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
 
               {/* Ticket Notifications */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1 flex-1">
-                  <p className="font-medium text-foreground">Ticket Notifications</p>
-                  <p className="text-xs text-muted-foreground">Receive updates on your tickets</p>
+                  <p className="font-medium text-surface-900">Ticket Notifications</p>
+                  <p className="text-xs text-surface-600">Receive updates on your tickets</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer ml-4">
                   <input
@@ -240,38 +213,33 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('ticketNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-card/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:transition-all peer-checked:bg-primary"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
-            </div>
-          </div>
-        )}
+            </Card>
+          )}
 
-        {/* Voice Tab */}
-        {activeTab === 'voice' && (
-          <div className="space-y-6">
-            <div className="glass-elevated border border-border/50 rounded-lg p-6 space-y-6">
-              <h3 className="text-lg font-semibold text-foreground">Voice Settings</h3>
+          {/* Voice Tab */}
+          {activeTab === 'voice' && (
+            <Card elevated className="p-6 space-y-6">
+              <h3 className="heading-4">Voice Settings</h3>
 
-              {/* Voice Gender */}
-              <div className="space-y-2 pb-4 border-b border-border/30">
-                <label className="text-sm font-medium text-foreground">Voice Gender</label>
-                <select
-                  value={preferences.voice}
-                  onChange={(e) => handleChange('voice', e.target.value)}
-                  className="input-base w-full"
-                >
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                </select>
-                <p className="text-xs text-muted-foreground">Choose preferred voice for text-to-speech</p>
-              </div>
+              <Select
+                label="Voice Gender"
+                value={preferences.voice}
+                onChange={(e) => handleChange('voice', e.target.value)}
+                options={[
+                  { value: 'female', label: 'Female' },
+                  { value: 'male', label: 'Male' }
+                ]}
+                helperText="Choose preferred voice for text-to-speech"
+              />
 
               {/* Speech-to-Text */}
-              <div className="flex items-center justify-between pb-4 border-b border-border/30">
+              <div className="flex items-center justify-between pb-4 border-b border-surface-200">
                 <div className="space-y-1 flex-1">
-                  <p className="font-medium text-foreground">Speech-to-Text (STT)</p>
-                  <p className="text-xs text-muted-foreground">Enable microphone input for easier chatting</p>
+                  <p className="font-medium text-surface-900">Speech-to-Text (STT)</p>
+                  <p className="text-xs text-surface-600">Enable microphone input for easier chatting</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer ml-4">
                   <input
@@ -280,15 +248,15 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('sttEnabled', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-card/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:transition-all peer-checked:bg-primary"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
 
               {/* Text-to-Speech */}
-              <div className="flex items-center justify-between pb-4 border-b border-border/30">
+              <div className="flex items-center justify-between pb-4 border-b border-surface-200">
                 <div className="space-y-1 flex-1">
-                  <p className="font-medium text-foreground">Text-to-Speech (TTS)</p>
-                  <p className="text-xs text-muted-foreground">Hear responses read aloud</p>
+                  <p className="font-medium text-surface-900">Text-to-Speech (TTS)</p>
+                  <p className="text-xs text-surface-600">Hear responses read aloud</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer ml-4">
                   <input
@@ -297,16 +265,16 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('ttsEnabled', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-card/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:transition-all peer-checked:bg-primary"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
 
-              {/* Auto-play (Conditional) */}
+              {/* Auto-play */}
               {preferences.ttsEnabled && (
                 <div className="flex items-center justify-between">
                   <div className="space-y-1 flex-1">
-                    <p className="font-medium text-foreground">Auto-play Voice Responses</p>
-                    <p className="text-xs text-muted-foreground">Automatically play text-to-speech without clicking</p>
+                    <p className="font-medium text-surface-900">Auto-play Voice Responses</p>
+                    <p className="text-xs text-surface-600">Automatically play text-to-speech without clicking</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer ml-4">
                     <input
@@ -315,38 +283,26 @@ const UserPreferences = () => {
                       onChange={(e) => handleChange('autoplay', e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-card/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:transition-all peer-checked:bg-primary"></div>
+                    <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                   </label>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-center pt-6 border-t border-border/30">
-        <button
-          onClick={savePreferences}
-          disabled={saving}
-          className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium transition-all ${
-            saving
-              ? 'bg-primary/50 text-primary-foreground cursor-not-allowed'
-              : 'bg-primary text-primary-foreground hover:bg-primary/90'
-          }`}
-        >
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              Save Preferences
-            </>
+            </Card>
           )}
-        </button>
+
+          {/* Save Button */}
+          <div className="flex justify-center pt-6 border-t border-surface-200">
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={savePreferences}
+              loading={saving}
+              disabled={saving}
+            >
+              Save Preferences
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
