@@ -35,7 +35,8 @@ const SupportAgentDashboard = () => {
     try {
       setRefreshing(true);
       const response = await axiosInstance.get(API_ENDPOINTS.TICKETS_LIST);
-      const allTickets = response.data.tickets || [];
+      // Handle both response formats: { data, pagination } and direct array
+      const allTickets = response.data?.data || response.data?.tickets || response.data || [];
       setTickets(Array.isArray(allTickets) ? allTickets : []);
       setError(null);
     } catch (err: any) {

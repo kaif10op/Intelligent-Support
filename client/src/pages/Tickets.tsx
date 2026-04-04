@@ -29,9 +29,10 @@ const Tickets = () => {
   const fetchTickets = async () => {
     try {
       setRefreshing(true);
-      const endpoint = user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT' ? apiUrl('/api/tickets/all') : apiUrl('/api/tickets/my');
+      // Use /api/tickets/all only for admins, else use /api/tickets
+      const endpoint = user?.role === 'ADMIN' ? apiUrl('/api/tickets/all') : apiUrl('/api/tickets');
       const res = await axios.get(endpoint, axiosConfig);
-      const data = Array.isArray(res.data) ? res.data : res.data.tickets || res.data.data || [];
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || res.data?.tickets || [];
       setTickets(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (err: any) {

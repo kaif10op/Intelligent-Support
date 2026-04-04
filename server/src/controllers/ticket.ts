@@ -63,16 +63,40 @@ export const getMyTickets = async (req: AuthRequest, res: Response) => {
   try {
     const { page, limit } = parsePaginationParams(req.query);
     const { skip, take } = calculateSkipTake(page, limit);
+    const userRole = req.user!.role;
+    const userId = req.user!.id;
+
+    // Build where clause based on user role
+    let whereClause: any;
+
+    if (userRole === 'SUPPORT_AGENT') {
+      // Support agents see: tickets assigned to them + tickets they created
+      whereClause = {
+        OR: [
+          { assignedToId: userId },      // Assigned to this agent
+          { userId: userId }              // Created by this agent
+        ]
+      };
+    } else if (userRole === 'ADMIN') {
+      // Admins see all tickets (no filter)
+      whereClause = {};
+    } else {
+      // Regular users see only tickets they created
+      whereClause = { userId: userId };
+    }
 
     const [tickets, total] = await Promise.all([
       prisma.ticket.findMany({
-        where: { userId: req.user!.id },
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
-        include: { assignedTo: { select: { name: true, email: true } } },
+        include: {
+          user: { select: { name: true, email: true } },
+          assignedTo: { select: { name: true, email: true } }
+        },
         skip,
         take
       }),
-      prisma.ticket.count({ where: { userId: req.user!.id } })
+      prisma.ticket.count({ where: whereClause })
     ]);
 
     res.json(formatPaginatedResponse(tickets, total, page, limit));
