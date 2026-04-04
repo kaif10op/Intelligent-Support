@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { logger } from './utils/logger.js';
 import { initRedis } from './utils/cache.js';
 import express from 'express';
+import { prisma } from './prisma.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { createServer as createHTTPServer } from 'http';
@@ -38,8 +39,10 @@ async function startServer() {
     logger.info('Socket.io initialized');
 
     // Middleware
+    const corsOrigins = config.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
+
     app.use(cors({
-      origin: config.CORS_ORIGIN,
+      origin: corsOrigins,
       credentials: true,
     }));
 
@@ -51,8 +54,19 @@ async function startServer() {
 
     logger.info('Core middleware initialized');
 
-    // Test route
     app.get('/ping', (req, res) => res.send('pong'));
+
+    // Health check route
+    app.get('/healthz', async (req, res) => {
+      try {
+        // Test database connection
+        await prisma.$queryRaw`SELECT 1`;
+        res.json({ status: 'healthy', database: 'connected', timestamp: new Date() });
+      } catch (err: any) {
+        logger.error('Health Check Failed', { error: err.message });
+        res.status(503).json({ status: 'unhealthy', database: 'disconnected', error: err.message });
+      }
+    });
 
     // Routes
     app.use('/api/auth', authRoutes);
@@ -104,4 +118,3 @@ async function startServer() {
 }
 
 startServer();
-

@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore.js';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ToastProvider } from './contexts/ToastContext';
 import { SocketProvider } from './contexts/SocketContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -51,10 +50,9 @@ function App() {
     <ErrorBoundary>
       <ToastProvider>
         <SocketProvider>
-          <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-            <BrowserRouter>
-              <ConnectionStatus />
-              <ToastContainer />
+          <BrowserRouter>
+            <ConnectionStatus />
+            <ToastContainer />
             <Suspense fallback={<div className="loading-container">Loading...</div>}>
             <Routes>
             <Route path="/login" element={<Login />} />
@@ -140,8 +138,7 @@ function App() {
 
           </Routes>
             </Suspense>
-            </BrowserRouter>
-          </GoogleOAuthProvider>
+          </BrowserRouter>
         </SocketProvider>
       </ToastProvider>
     </ErrorBoundary>

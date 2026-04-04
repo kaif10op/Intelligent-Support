@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "dev:watch": "node --watch dist/index.js & tsc --watch",
     "postinstall": "npx prisma generate",
+    "db:bootstrap": "npx prisma db execute --file scripts/bootstrap-prisma.sql",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

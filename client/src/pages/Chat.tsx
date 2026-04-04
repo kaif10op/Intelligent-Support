@@ -249,6 +249,18 @@ const Chat = () => {
     }
   };
 
+  // Auto-fetch suggestions when streaming completes
+  useEffect(() => {
+    if (!streaming && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      // Only fetch suggestions for assistant messages that just finished
+      if (lastMessage.role === 'assistant' && lastMessage.content.length > 0) {
+        // Auto-fetch suggestions for the last message
+        getSuggestions(messages.length - 1);
+      }
+    }
+  }, [streaming, messages, id]);
+
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Header - Fixed */}
@@ -374,29 +386,22 @@ const Chat = () => {
                       <ThumbsDown size={16} />
                     </button>
 
-                    {/* Suggestions Button */}
-                    {i === messages.length - 1 && !streaming && (
+                    {/* Suggestions toggle - only show if we have suggestions */}
+                    {i === messages.length - 1 && !streaming && showSuggestionsFor === i && suggestions.length > 0 && (
                       <button
-                        onClick={() => getSuggestions(i)}
+                        onClick={() => setShowSuggestionsFor(null)}
                         className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium text-secondary hover:bg-card/50 transition-colors"
                       >
-                        {showSuggestionsFor === i ? (
-                          <>
-                            <ChevronUp size={14} /> Hide
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown size={14} /> Suggest
-                          </>
-                        )}
+                        <ChevronUp size={14} /> Hide suggestions
                       </button>
                     )}
                   </div>
                 )}
 
-                {/* Follow-Up Suggestions */}
+                {/* Follow-Up Suggestions - Auto-displayed */}
                 {showSuggestionsFor === i && suggestions.length > 0 && (
-                  <div className="space-y-2 mt-3">
+                  <div className="space-y-2 mt-3 pt-3 border-t border-border/30">
+                    <p className="text-xs font-medium text-secondary px-4">💡 Follow-up suggestions:</p>
                     {suggestions.map((s, si) => (
                       <button
                         key={si}

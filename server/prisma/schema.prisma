@@ -12,7 +12,7 @@ model User {
   email           String          @unique
   name            String
   picture         String?
-  role            Role            @default(USER)
+  role            String          @default("USER")
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   auditLogs       AuditLog[]      @relation("AdminLogs")
@@ -24,15 +24,31 @@ model User {
 }
 
 model KnowledgeBase {
-  id          String     @id @default(uuid())
+  id          String       @id @default(uuid())
   title       String
   description String?
   userId      String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   chats       Chat[]
   documents   Document[]
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions    KBVersion[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model KBVersion {
+  id            String        @id @default(uuid())
+  kbId          String
+  versionNumber Int
+  title         String
+  description   String
+  docCount      Int
+  docIds        String[]
+  changelog     String        @default("")
+  createdAt     DateTime      @default(now())
+  kb            KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
+
+  @@unique([kbId, versionNumber])
 }
 
 model Document {
@@ -123,11 +139,6 @@ model AuditLog {
   admin        User     @relation("AdminLogs", fields: [adminId], references: [id], onDelete: Cascade)
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 enum TicketStatus {
   OPEN
   IN_PROGRESS
@@ -140,4 +151,17 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model Plugin {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  displayName String
+  version     String
+  description String?
+  enabled     Boolean  @default(false)
+  webhookUrl  String?
+  config      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

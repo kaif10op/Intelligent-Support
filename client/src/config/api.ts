@@ -1,16 +1,25 @@
 // API Configuration
 // Centralized configuration for all API endpoints
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-export const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
+const normalizeBaseUrl = (rawUrl: string) => {
+  const trimmed = rawUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+};
+
+const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const rawWsBaseUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
+
+export const API_BASE_URL = normalizeBaseUrl(rawApiBaseUrl);
+export const WS_BASE_URL = normalizeBaseUrl(rawWsBaseUrl);
 
 // Helper to construct API URLs
-export const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
+export const apiUrl = (path: string) => `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 
 // Common API endpoints
 export const API_ENDPOINTS = {
   // Auth
   AUTH_GOOGLE: apiUrl('/api/auth/google'),
+  AUTH_CLERK: apiUrl('/api/auth/clerk'),
   AUTH_CALLBACK: apiUrl('/api/auth/google/callback'),
   AUTH_ME: apiUrl('/api/auth/me'),
   AUTH_LOGOUT: apiUrl('/api/auth/logout'),

@@ -18,7 +18,8 @@ export const createKB = async (req: AuthRequest, res: Response) => {
     });
 
     res.json(kb);
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Create KB Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to create knowledge base' });
   }
 };
@@ -35,7 +36,8 @@ export const getMyKBs = async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(kbs);
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Fetch My KBs Error', { error: error.message, stack: error.stack, userId: req.user!.id });
     res.status(500).json({ error: 'Failed to fetch knowledge bases' });
   }
 };
@@ -55,7 +57,8 @@ export const getKBDetails = async (req: AuthRequest, res: Response) => {
 
     if (!kb) return res.status(404).json({ error: 'Knowledge base not found' });
     res.json(kb);
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Fetch KB Details Error', { error: error.message, stack: error.stack, kbId: req.params.id });
     res.status(500).json({ error: 'Failed to fetch knowledge base details' });
   }
 };
@@ -67,7 +70,8 @@ export const deleteKB = async (req: AuthRequest, res: Response) => {
       where: { id: id as string, userId: req.user!.id },
     });
     res.json({ message: 'Knowledge base deleted' });
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Delete KB Error', { error: error.message, stack: error.stack, kbId: req.params.id });
     res.status(500).json({ error: 'Failed to delete knowledge base' });
   }
 };
@@ -218,10 +222,10 @@ export const createKBVersion = async (req: AuthRequest, res: Response) => {
  * GET /api/kb/:id/versions
  */
 export const getKBVersions = async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+  const { id } = req.params;
+  const { page = 1, limit = 10 } = req.query;
 
+  try {
     // Verify KB ownership
     const kb = await prisma.knowledgeBase.findFirst({
       where: { id: id as string, userId: req.user!.id }
@@ -252,7 +256,7 @@ export const getKBVersions = async (req: AuthRequest, res: Response) => {
       }
     });
   } catch (error: any) {
-    logger.error('Get KB Versions Error', { error: error.message, stack: error.stack });
+    logger.error('Get KB Versions Error', { error: error.message, stack: error.stack, kbId: id });
     res.status(500).json({ error: 'Failed to fetch KB versions' });
   }
 };

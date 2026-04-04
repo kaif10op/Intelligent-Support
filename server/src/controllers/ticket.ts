@@ -54,7 +54,19 @@ export const getMyTickets = async (req: AuthRequest, res: Response) => {
     ]);
 
     res.json(formatPaginatedResponse(tickets, total, page, limit));
-  } catch (error) {
+  } catch (error: any) {
+    const msg = typeof error?.message === 'string' ? error.message : '';
+    const missingSchema =
+      msg.includes('does not exist') ||
+      msg.includes('relation') ||
+      msg.includes('The table');
+
+    if (missingSchema) {
+      const { page, limit } = parsePaginationParams(req.query);
+      return res.json(formatPaginatedResponse([], 0, page, limit));
+    }
+
+    logger.error('Fetch My Tickets Error', { error: error.message, userId: req.user!.id, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch your tickets' });
   }
 };
@@ -79,16 +91,28 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
     ]);
 
     res.json(formatPaginatedResponse(tickets, total, page, limit));
-  } catch (error) {
+  } catch (error: any) {
+    const msg = typeof error?.message === 'string' ? error.message : '';
+    const missingSchema =
+      msg.includes('does not exist') ||
+      msg.includes('relation') ||
+      msg.includes('The table');
+
+    if (missingSchema) {
+      const { page, limit } = parsePaginationParams(req.query);
+      return res.json(formatPaginatedResponse([], 0, page, limit));
+    }
+
+    logger.error('Fetch All Tickets Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch all tickets' });
   }
 };
 
 export const updateTicket = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { status, priority, assignedToId } = req.body;
+  
   try {
-    const { id } = req.params;
-    const { status, priority, assignedToId } = req.body;
-
     // Check if ticket is overdue
     const ticket = await prisma.ticket.findUnique({
       where: { id: id as string },
@@ -129,16 +153,22 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
     }
 
     res.json(updatedTicket);
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Update Ticket Error', { 
+      error: error.message, 
+      stack: error.stack,
+      ticketId: id,
+      update: { status, priority, assignedToId }
+    });
     res.status(500).json({ error: 'Failed to update ticket' });
   }
 };
 
 export const addTicketNote = async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { content } = req.body;
+  const { id } = req.params;
+  const { content } = req.body;
 
+  try {
     if (!content) return res.status(400).json({ error: 'Note content is required' });
 
     // Check ticket ownership or admin status
@@ -179,7 +209,8 @@ export const addTicketNote = async (req: AuthRequest, res: Response) => {
     }
 
     res.json(note);
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Add Ticket Note Error', { error: error.message, stack: error.stack, ticketId: id });
     res.status(500).json({ error: 'Failed to add message' });
   }
 };
@@ -189,9 +220,8 @@ export const addTicketNote = async (req: AuthRequest, res: Response) => {
  * GET /api/tickets/:id/messages
  */
 export const getTicketMessages = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-
     // Verify user has access to this ticket
     const ticket = await prisma.ticket.findUnique({
       where: { id: id as string }
@@ -213,7 +243,8 @@ export const getTicketMessages = async (req: AuthRequest, res: Response) => {
     });
 
     res.json(messages);
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Fetch Ticket Messages Error', { error: error.message, stack: error.stack, ticketId: id });
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
 };
@@ -223,9 +254,8 @@ export const getTicketMessages = async (req: AuthRequest, res: Response) => {
  * DELETE /api/tickets/:id/messages/:noteId
  */
 export const deleteTicketMessage = async (req: AuthRequest, res: Response) => {
+  const { id, noteId } = req.params;
   try {
-    const { id, noteId } = req.params;
-
     // Get the message
     const message = await prisma.ticketNote.findUnique({
       where: { id: noteId as string }
@@ -245,7 +275,8 @@ export const deleteTicketMessage = async (req: AuthRequest, res: Response) => {
     await prisma.ticketNote.delete({ where: { id: noteId as string } });
 
     res.json({ success: true, message: 'Message deleted' });
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Delete Ticket Message Error', { error: error.message, stack: error.stack, noteId });
     res.status(500).json({ error: 'Failed to delete message' });
   }
 };

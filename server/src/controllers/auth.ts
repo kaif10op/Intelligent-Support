@@ -22,6 +22,21 @@ const getOAuthClient = () => {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
 
+const setSessionCookie = (res: Response, user: { id: string; role: string; email: string }) => {
+  const sessionToken = jwt.sign(
+    { id: user.id, role: user.role, email: user.email },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  res.cookie('token', sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+};
+
 export const googleAuth = async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
@@ -50,25 +65,54 @@ export const googleAuth = async (req: Request, res: Response) => {
       });
     }
 
-    // Generate our JWT
-    const sessionToken = jwt.sign(
-      { id: user.id, role: user.role, email: user.email },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.cookie('token', sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setSessionCookie(res, user);
 
     res.json({ user });
   } catch (err: any) {
     logger.error('Google verification failed', {
         error: err.message,
         stack: err.stack
+    });
+    res.status(401).json({ error: 'Authentication failed', details: err.message });
+  }
+};
+
+export const clerkAuth = async (req: Request, res: Response) => {
+  try {
+    const { clerkId, email, name, picture } = req.body as {
+      clerkId?: string;
+      email?: string;
+      name?: string;
+      picture?: string;
+    };
+
+    if (!clerkId || !email) {
+      return res.status(400).json({ error: 'clerkId and email are required' });
+    }
+
+    const userCount = await prisma.user.count();
+    const firstUserRole: 'USER' | 'ADMIN' = userCount === 0 ? 'ADMIN' : 'USER';
+
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          googleId: `clerk_${clerkId}`,
+          email,
+          name: name || 'User',
+          picture: picture ?? null,
+          role: firstUserRole,
+        },
+      });
+    }
+
+    setSessionCookie(res, user);
+    res.json({ user });
+  } catch (err: any) {
+    logger.error('Clerk authentication failed', {
+      error: err.message,
+      stack: err.stack,
     });
     res.status(401).json({ error: 'Authentication failed', details: err.message });
   }

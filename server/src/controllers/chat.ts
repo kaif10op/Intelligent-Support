@@ -13,48 +13,79 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { logger } from '../utils/logger.js';
 
-// 1. LLM Definitions with Fallbacks
-const llmGroq = new ChatGroq({
-  apiKey: process.env.GROQ_API_KEY!,
-  model: 'llama-3.1-8b-instant',
-  temperature: 0,
-});
+// Helper to safely create LLM instances with fallbacks
+const createLLMInstances = () => {
+  const instances: any[] = [];
 
-const llmCerebras = new ChatOpenAI({
-  apiKey: process.env.CEREBRAS_API_KEY!,
-  model: 'llama3.1-8b',
-  configuration: { baseURL: 'https://api.cerebras.ai/v1' },
-  temperature: 0,
-});
+  // Groq - Primary
+  if (process.env.GROQ_API_KEY) {
+    instances.push(new ChatGroq({
+      apiKey: process.env.GROQ_API_KEY,
+      model: 'llama-3.1-8b-instant',
+      temperature: 0,
+    }));
+  }
 
-const llmOpenRouter = new ChatOpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-  model: 'meta-llama/llama-3.1-8b-instruct',
-  configuration: { baseURL: 'https://openrouter.ai/api/v1' },
-  temperature: 0,
-});
+  // Cerebras
+  if (process.env.CEREBRAS_API_KEY) {
+    instances.push(new ChatOpenAI({
+      apiKey: process.env.CEREBRAS_API_KEY,
+      model: 'llama3.1-8b',
+      configuration: { baseURL: 'https://api.cerebras.ai/v1' },
+      temperature: 0,
+    }));
+  }
 
-const llmGemini = new ChatGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_AI_KEY!,
-  model: 'gemini-1.5-flash',
-  temperature: 0,
-});
+  // OpenRouter
+  if (process.env.OPENROUTER_API_KEY) {
+    instances.push(new ChatOpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      model: 'meta-llama/llama-3.1-8b-instruct',
+      configuration: { baseURL: 'https://openrouter.ai/api/v1' },
+      temperature: 0,
+    }));
+  }
 
-const llmXAI = new ChatOpenAI({
-  apiKey: process.env.XAI_API_KEY!,
-  model: 'grok-2-latest',
-  configuration: { baseURL: 'https://api.x.ai/v1' },
-  temperature: 0,
-});
+  // Gemini
+  if (process.env.GOOGLE_AI_KEY || process.env.GOOGLE_GENAI_API_KEY) {
+    instances.push(new ChatGoogleGenerativeAI({
+      apiKey: (process.env.GOOGLE_AI_KEY || process.env.GOOGLE_GENAI_API_KEY)!,
+      model: 'gemini-1.5-flash',
+      temperature: 0,
+    }));
+  }
 
-// Primary: Groq, Fallbacks: Cerebras -> OpenRouter -> Gemini -> xAI
-const llmProviders = [
-  { name: 'Groq', llm: llmGroq },
-  { name: 'Cerebras', llm: llmCerebras },
-  { name: 'OpenRouter', llm: llmOpenRouter },
-  { name: 'Gemini', llm: llmGemini },
-  { name: 'xAI', llm: llmXAI }
-];
+  // xAI
+  if (process.env.XAI_API_KEY) {
+    instances.push(new ChatOpenAI({
+      apiKey: process.env.XAI_API_KEY,
+      model: 'grok-2-latest',
+      configuration: { baseURL: 'https://api.x.ai/v1' },
+      temperature: 0,
+    }));
+  }
+
+  return instances;
+};
+
+let llmInstances: any[] = [];
+try {
+  llmInstances = createLLMInstances();
+  if (llmInstances.length === 0) {
+    logger.warn('No LLM API keys configured. Using stub responses.');
+  }
+} catch (error) {
+  logger.error('Error initializing LLM instances:', error);
+  llmInstances = [];
+}
+
+// Get the first available LLM, or use a stub if none configured
+const getLLM = () => {
+  if (llmInstances.length === 0) {
+    return null; // Will use stub fallback in chatWithAgent
+  }
+  return llmInstances[0];
+};
 
 // 2. Chat Controller
 export const chatWithAgent = async (req: AuthRequest, res: Response) => {
@@ -149,9 +180,21 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
     let result = null;
     let lastError = null;
 
-    for (const provider of llmProviders) {
+    // Use available LLM or fallback to stub response
+    const providersToTry = llmInstances.length > 0 ? llmInstances : [null];
+
+    for (const provider of providersToTry) {
       try {
-        logger.debug('Attempting with provider', { provider: provider.name });
+        if (!provider) {
+          logger.warn('No LLM provider available, returning stub response');
+          result = {
+            content: 'I\'m currently unavailable. Please configure an LLM API key (Groq, Gemini, etc.) to use this feature.',
+            sources: [],
+          };
+          break;
+        }
+
+        logger.debug('Attempting with LLM provider');
 
         // Rewrite step with current provider
         let searchSource = message;
@@ -160,15 +203,15 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
           Maintain all technical terms and specific requests.
           Query: ${message}
           Search Query:`;
-          const rewrittenQueryRes = await provider.llm.invoke(rewritePrompt);
+          const rewrittenQueryRes = await provider.invoke(rewritePrompt);
           searchSource = rewrittenQueryRes.content?.toString() || message;
         } catch (e: any) {
-          logger.warn('Provider rewriter failed, using original', { provider: provider.name, error: e.message });
+          logger.warn('Provider rewriter failed, using original', { error: e.message });
         }
 
         // Agent step with current provider
         const agent = createReactAgent({
-          llm: provider.llm as any,
+          llm: provider as any,
           tools,
           messageModifier: agentModifier
         });
@@ -207,12 +250,12 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
         });
 
         if (result) {
-          logger.info('Success with provider', { provider: provider.name });
+          logger.info('Success with LLM provider');
           break;
         }
       } catch (err: any) {
         logger.error('Provider failed', { 
-          provider: provider.name, 
+          message: 'LLM operation failed', 
           error: err.message,
           stack: err.stack 
         });
@@ -221,7 +264,17 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    if (!result) throw lastError || new Error('All generation attempts failed.');
+    if (!result) {
+      // All providers exhausted - return helpful error message
+      const error = lastError || new Error('All generation attempts failed');
+      const is401 = error.message?.includes('401') || error.message?.includes('Invalid API Key');
+      if (is401) {
+        return res.status(502).json({ 
+          error: 'LLM service not configured. Please set a valid API key (GROQ_API_KEY, GOOGLE_GENAI_API_KEY, etc.).' 
+        });
+      }
+      throw error;
+    }
 
 
     // History and SSE setup
@@ -292,7 +345,20 @@ export const getChats = async (req: AuthRequest, res: Response) => {
     ]);
 
     res.json(formatPaginatedResponse(chats, total, page, limit));
-  } catch (error) { res.status(500).json({ error: 'Failed to fetch chats' }); }
+  } catch (error: any) {
+    const msg = typeof error?.message === 'string' ? error.message : '';
+    const missingSchema =
+      msg.includes('does not exist') ||
+      msg.includes('relation') ||
+      msg.includes('The table');
+
+    if (missingSchema) {
+      const { page, limit } = parsePaginationParams(req.query);
+      return res.json(formatPaginatedResponse([], 0, page, limit));
+    }
+
+    res.status(500).json({ error: 'Failed to fetch chats' });
+  }
 };
 
 export const getChatDetails = async (req: AuthRequest, res: Response) => {

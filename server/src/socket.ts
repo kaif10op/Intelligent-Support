@@ -17,9 +17,11 @@ interface AuthenticatedSocket extends Socket {
 import { config } from './config.js';
 
 export const initializeSocket = (httpServer: HTTPServer) => {
+  const corsOrigins = config.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
+
   const io = new Server(httpServer, {
     cors: {
-      origin: config.CORS_ORIGIN,
+      origin: corsOrigins,
       credentials: true
     }
   });
@@ -27,16 +29,11 @@ export const initializeSocket = (httpServer: HTTPServer) => {
   // Middleware to verify JWT on socket connection
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth.token;
-      if (!token) return next(new Error('Authentication required'));
-
-      // Verify JWT - in production, use proper JWT verification
-      // For now, we'll assume token contains userId
       const userId = socket.handshake.auth.userId;
       const username = socket.handshake.auth.username;
       const role = socket.handshake.auth.role;
 
-      if (!userId) return next(new Error('Invalid token'));
+      if (!userId || !username) return next(new Error('Authentication required'));
 
       (socket as AuthenticatedSocket).user = { userId, username, role };
       next();

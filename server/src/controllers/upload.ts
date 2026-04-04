@@ -61,6 +61,14 @@ export const uploadDocument = async (req: AuthRequest, res: Response) => {
 
     if (!rawText.trim()) return res.status(400).json({ error: 'File is empty' });
 
+    // Sanitize text: remove null bytes and invalid UTF-8 sequences
+    rawText = rawText
+      .replace(/\0/g, '') // Remove null bytes
+      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters except \n, \r, \t
+      .trim();
+
+    if (!rawText.trim()) return res.status(400).json({ error: 'File is empty after sanitization' });
+
     // Create Document record
     const document = await prisma.document.create({
       data: {
@@ -103,6 +111,17 @@ export const uploadDocument = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Document uploaded and processed successfully', document });
   } catch (error: any) {
     logger.error('Upload Error', { error: error.message, stack: error.stack });
+    const isEmbeddingFailure =
+      typeof error?.message === 'string' &&
+      (error.message.includes('Failed to generate embeddings') ||
+        error.message.includes('JINA_API_KEY'));
+
+    if (isEmbeddingFailure) {
+      return res.status(502).json({
+        error: 'Embedding service configuration is invalid. Please verify JINA_API_KEY and try again.'
+      });
+    }
+
     res.status(500).json({ error: 'Failed to process document' });
   }
 };

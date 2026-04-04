@@ -11,7 +11,12 @@ const Sidebar = () => {
     const fetchRecent = async () => {
       try {
         const res = await axios.get(API_ENDPOINTS.CHAT_LIST, axiosConfig);
-        setRecentChats(res.data.slice(0, 5));
+        const chats = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : [];
+        setRecentChats(chats.slice(0, 5));
       } catch (err) {
         console.error('Sidebar fetch error:', err);
       }

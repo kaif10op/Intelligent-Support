@@ -1,33 +1,46 @@
-import { GoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
-import { useAuthStore } from '../store/useAuthStore.js';
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
+import { useUser } from '@clerk/react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { Bot, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
 import { API_ENDPOINTS, axiosConfig } from '../config/api';
+import { useAuthStore } from '../store/useAuthStore';
 
 const Login = () => {
-  const { setUser } = useAuthStore();
+  const { isSignedIn, user } = useUser();
   const navigate = useNavigate();
+  const { setUser } = useAuthStore();
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
-  const handleSuccess = async (response: any) => {
-    try {
-      const { credential } = response;
-      const res = await axios.post(API_ENDPOINTS.AUTH_GOOGLE,
-        { token: credential },
-        axiosConfig
-      );
-      setUser(res.data.user);
-      navigate('/');
-    } catch (err: any) {
-      console.error('Google login failed', err);
-      alert(err.response?.data?.error || 'Authentication with backend failed. Please try again.');
-    }
-  };
+  useEffect(() => {
+    const syncSession = async () => {
+      if (!isSignedIn || !user || syncing) return;
 
-  const handleFailure = () => {
-    console.error('Google Login Failed to initialize');
-    alert(`Google Login failed to initialize. Please check your browser's third-party cookie settings.`);
-  };
+      try {
+        setSyncing(true);
+        setSyncError(null);
+
+        const payload = {
+          clerkId: user.id,
+          email: user.primaryEmailAddress?.emailAddress,
+          name: user.fullName || user.username || 'User',
+          picture: user.imageUrl,
+        };
+
+        const res = await axios.post(API_ENDPOINTS.AUTH_CLERK, payload, axiosConfig);
+        setUser(res.data.user);
+        navigate('/');
+      } catch (err: any) {
+        setSyncError(err.response?.data?.error || 'Failed to create platform session');
+      } finally {
+        setSyncing(false);
+      }
+    };
+
+    syncSession();
+  }, [isSignedIn, user, syncing, navigate, setUser]);
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 py-12">
@@ -112,19 +125,26 @@ const Login = () => {
                 {/* Heading */}
                 <div className="space-y-2 text-center">
                   <h2 className="text-2xl font-bold text-foreground">Get Started</h2>
-                  <p className="text-sm text-muted-foreground">Sign in with your Google account to unlock the full potential of AI-powered support.</p>
+                  <p className="text-sm text-muted-foreground">Sign in or create an account to continue.</p>
+                  {syncing && <p className="text-xs text-primary">Setting up your platform access...</p>}
+                  {syncError && <p className="text-xs text-destructive">{syncError}</p>}
                 </div>
 
-                {/* Google Sign In */}
+                {/* Clerk Auth Actions */}
                 <div className="space-y-4">
-                  <div className="flex justify-center">
-                    <GoogleLogin
-                      onSuccess={handleSuccess}
-                      onError={handleFailure}
-                      theme="filled_black"
-                      shape="pill"
-                    />
-                  </div>
+                  <Show when="signed-out">
+                    <div className="flex items-center justify-center gap-3">
+                      <SignInButton />
+                      <SignUpButton />
+                    </div>
+                  </Show>
+
+                  <Show when="signed-in">
+                    <div className="flex flex-col items-center gap-3">
+                      <UserButton />
+                      <p className="text-xs text-muted-foreground">You are signed in.</p>
+                    </div>
+                  </Show>
 
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
