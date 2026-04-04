@@ -4,6 +4,7 @@ import axiosInstance from '../config/api';
 import { Ticket, AlertCircle, CheckCircle, Clock, Plus, RotateCcw, Loader2, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button, Card, Input, StatCard, NavigationTabs, Badge } from '../components/ui';
+import { cacheService, CACHE_KEYS, CACHE_TTL } from '../services/cacheService';
 
 type AgentTab = 'all' | 'open' | 'in-progress' | 'resolved';
 
@@ -28,16 +29,28 @@ const SupportAgentDashboard = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTickets();
+    fetchTickets(true);
   }, []);
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (isInitial = false) => {
     try {
+      if (isInitial) setLoading(true);
       setRefreshing(true);
+
+      // Load from cache first for initial load
+      if (isInitial) {
+        const cached = cacheService.get(CACHE_KEYS.TICKETS_LIST);
+        if (cached && Array.isArray(cached)) {
+          setTickets(cached);
+        }
+      }
+
       const response = await axiosInstance.get(API_ENDPOINTS.TICKETS_LIST);
       // Handle both response formats: { data, pagination } and direct array
       const allTickets = response.data?.data || response.data?.tickets || response.data || [];
-      setTickets(Array.isArray(allTickets) ? allTickets : []);
+      const ticketArray = Array.isArray(allTickets) ? allTickets : [];
+      setTickets(ticketArray);
+      cacheService.set(CACHE_KEYS.TICKETS_LIST, ticketArray, CACHE_TTL.MEDIUM);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch tickets');
@@ -131,7 +144,7 @@ const SupportAgentDashboard = () => {
               variant="outline"
               size="md"
               icon={<RotateCcw className="w-4 h-4" />}
-              onClick={fetchTickets}
+              onClick={() => fetchTickets(false)}
               loading={refreshing}
               disabled={refreshing}
             >
