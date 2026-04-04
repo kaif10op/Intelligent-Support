@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { API_ENDPOINTS } from '../config/api';
 import axiosInstance from '../config/api';
-import { Ticket, AlertCircle, CheckCircle, Clock, Plus, Eye } from 'lucide-react';
+import { Ticket, AlertCircle, CheckCircle, Clock, Plus, RotateCcw, Loader2, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Button, Card, Input, StatCard, NavigationTabs, Badge } from '../components/ui';
+
+type AgentTab = 'all' | 'open' | 'in-progress' | 'resolved';
 
 interface TicketData {
   id: string;
@@ -13,34 +16,33 @@ interface TicketData {
   createdAt: string;
   userId: string;
   assignedToId?: string;
+  user?: { id: string; name: string; email: string };
 }
 
 const SupportAgentDashboard = () => {
   const [tickets, setTickets] = useState<TicketData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved'>('all');
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<AgentTab>('all');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTickets();
-  }, [filter]);
+  }, []);
 
   const fetchTickets = async () => {
     try {
-      setLoading(true);
+      setRefreshing(true);
       const response = await axiosInstance.get(API_ENDPOINTS.TICKETS_LIST);
-      let filtered = response.data.tickets || [];
-
-      if (filter !== 'all') {
-        filtered = filtered.filter((t: TicketData) => t.status === filter.toUpperCase());
-      }
-
-      setTickets(filtered);
+      const allTickets = response.data.tickets || [];
+      setTickets(Array.isArray(allTickets) ? allTickets : []);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch tickets');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -51,7 +53,6 @@ const SupportAgentDashboard = () => {
       case 'IN_PROGRESS':
         return <Clock className="w-4 h-4" />;
       case 'RESOLVED':
-        return <CheckCircle className="w-4 h-4" />;
       case 'CLOSED':
         return <CheckCircle className="w-4 h-4" />;
       default:
@@ -59,159 +60,206 @@ const SupportAgentDashboard = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return 'bg-red-100 text-red-800';
-      case 'IN_PROGRESS':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'RESOLVED':
-        return 'bg-green-100 text-green-800';
-      case 'CLOSED':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
+  const getPriorityVariant = (priority: string): 'default' | 'success' | 'warning' | 'error' | 'info' => {
     switch (priority) {
-      case 'URGENT':
-        return 'text-red-600 bg-red-50';
-      case 'HIGH':
-        return 'text-orange-600 bg-orange-50';
-      case 'MEDIUM':
-        return 'text-yellow-600 bg-yellow-50';
-      case 'LOW':
-        return 'text-green-600 bg-green-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
+      case 'URGENT': return 'error';
+      case 'HIGH': return 'warning';
+      case 'MEDIUM': return 'info';
+      case 'LOW': return 'success';
+      default: return 'default';
     }
   };
 
+  // Calculate stats
   const stats = {
     total: tickets.length,
     open: tickets.filter(t => t.status === 'OPEN').length,
     inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
-    resolved: tickets.filter(t => t.status === 'RESOLVED').length,
+    resolved: tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
   };
 
+  // Filter and search
+  const getFilteredTickets = () => {
+    let filtered = tickets;
+
+    // Apply tab filter
+    if (activeTab === 'open') filtered = filtered.filter(t => t.status === 'OPEN');
+    else if (activeTab === 'in-progress') filtered = filtered.filter(t => t.status === 'IN_PROGRESS');
+    else if (activeTab === 'resolved') filtered = filtered.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
+
+    // Apply search
+    if (searchTerm) {
+      filtered = filtered.filter(t =>
+        t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.id.includes(searchTerm)
+      );
+    }
+
+    // Sort by most recent
+    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  };
+
+  const filteredTickets = getFilteredTickets();
+
+  if (loading) {
+    return (
+      <div className="space-y-6 min-h-screen flex flex-col items-center justify-center gap-4 py-12">
+        <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
+        <p className="text-surface-600">Loading support queue...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Ticket className="w-6 h-6" />
-            Support Queue
-          </h2>
-          <p className="text-muted-foreground mt-1">Manage and track support tickets</p>
-        </div>
-        <Link
-          to="/tickets"
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          New Ticket
-        </Link>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-card/50 border border-border/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Total Tickets</p>
-          <p className="text-2xl font-bold text-foreground mt-2">{stats.total}</p>
-        </div>
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700 font-medium">Open</p>
-          <p className="text-2xl font-bold text-red-600 mt-2">{stats.open}</p>
-        </div>
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-700 font-medium">In Progress</p>
-          <p className="text-2xl font-bold text-yellow-600 mt-2">{stats.inProgress}</p>
-        </div>
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-700 font-medium">Resolved</p>
-          <p className="text-2xl font-bold text-green-600 mt-2">{stats.resolved}</p>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex gap-2 border-b border-border/50">
-        {(['all', 'open', 'in_progress', 'resolved'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 border-b-2 transition-colors ${
-              filter === f
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {f === 'in_progress' ? 'In Progress' : f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* Loading State */}
-      {loading && (
-        <div className="flex items-center justify-center p-8">
-          <div className="text-muted-foreground">Loading tickets...</div>
-        </div>
-      )}
-
-      {/* Tickets List */}
-      {!loading && tickets.length === 0 && (
-        <div className="p-8 text-center border border-dashed border-border/50 rounded-lg">
-          <Ticket className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-          <p className="text-muted-foreground">No tickets found</p>
-        </div>
-      )}
-
-      {!loading && tickets.length > 0 && (
-        <div className="space-y-2">
-          {tickets.map((ticket) => (
-            <Link
-              key={ticket.id}
-              to={`/tickets/${ticket.id}`}
-              className="p-4 border border-border/50 rounded-lg hover:bg-card/50 transition-colors group"
+      <div className="border-b border-surface-200 bg-surface-50 sticky top-0 z-40">
+        <div className="px-6 py-6 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-primary-100 rounded-lg">
+              <Ticket className="w-6 h-6 text-primary-500" />
+            </div>
+            <div>
+              <h1 className="heading-1">Support Queue</h1>
+              <p className="text-surface-600 mt-1">Manage {stats.total} ticket{stats.total !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              size="md"
+              icon={<RotateCcw className="w-4 h-4" />}
+              onClick={fetchTickets}
+              loading={refreshing}
+              disabled={refreshing}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                      {getStatusIcon(ticket.status)}
-                      {ticket.status}
-                    </span>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
-                      {ticket.priority}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-semibold text-foreground group-hover:text-primary truncate transition-colors">
-                    {ticket.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {ticket.description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground shrink-0">
-                  <Eye className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="text-xs whitespace-nowrap">
-                    {new Date(ticket.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+              Refresh
+            </Button>
+            <Link to="/tickets">
+              <Button
+                variant="primary"
+                size="md"
+                icon={<Plus className="w-5 h-5" />}
+              >
+                New Ticket
+              </Button>
             </Link>
-          ))}
+          </div>
         </div>
-      )}
+
+        {/* Tab Navigation */}
+        <div className="px-6 border-t border-surface-200">
+          <NavigationTabs
+            tabs={[
+              { id: 'all', label: 'All', icon: <Ticket className="w-4 h-4" /> },
+              { id: 'open', label: 'Open', icon: <AlertCircle className="w-4 h-4" /> },
+              { id: 'in-progress', label: 'In Progress', icon: <Clock className="w-4 h-4" /> },
+              { id: 'resolved', label: 'Resolved', icon: <CheckCircle className="w-4 h-4" /> }
+            ]}
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab as any)}
+          />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-6 py-6 space-y-6">
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard label="Total" value={stats.total} icon={<Ticket className="w-6 h-6" />} />
+          <StatCard label="Open" value={stats.open} icon={<AlertCircle className="w-6 h-6" />} />
+          <StatCard label="In Progress" value={stats.inProgress} icon={<Clock className="w-6 h-6" />} />
+          <StatCard label="Resolved" value={stats.resolved} icon={<CheckCircle className="w-6 h-6" />} />
+        </div>
+
+        {/* Search */}
+        <Card elevated className="p-4">
+          <Input
+            type="text"
+            placeholder="Search tickets by title, description, or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            icon={<Search className="w-4 h-4" />}
+          />
+        </Card>
+
+        {/* Error Message */}
+        {error && (
+          <Card className="p-4 border-red-200 bg-red-50">
+            <p className="text-sm text-red-700">{error}</p>
+          </Card>
+        )}
+
+        {/* Tickets List */}
+        {filteredTickets.length === 0 ? (
+          <Card elevated className="p-12 text-center">
+            <Ticket className="w-12 h-12 text-surface-300 mx-auto mb-4" />
+            <p className="text-surface-600 font-medium">
+              {searchTerm ? 'No tickets match your search' : `No ${activeTab === 'all' ? '' : activeTab} tickets`}
+            </p>
+            <p className="text-sm text-surface-500 mt-2">
+              {searchTerm
+                ? 'Try adjusting your search terms'
+                : activeTab === 'all'
+                ? 'Create a new ticket to get started'
+                : 'No tickets in this category'}
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {filteredTickets.map((ticket) => (
+              <Link key={ticket.id} to={`/tickets?id=${ticket.id}`}>
+                <Card elevated className="p-4 hover:shadow-md hover:border-primary-300 transition-all cursor-pointer">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Badges */}
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <Badge variant={getPriorityVariant(ticket.priority)}>
+                          {ticket.priority}
+                        </Badge>
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-100 text-xs font-medium text-surface-700">
+                          {getStatusIcon(ticket.status)}
+                          <span>{ticket.status}</span>
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="text-base font-semibold text-surface-900 group-hover:text-primary-500 truncate">
+                        {ticket.title}
+                      </h3>
+
+                      {/* Description */}
+                      <p className="text-sm text-surface-600 mt-1 line-clamp-2">
+                        {ticket.description}
+                      </p>
+
+                      {/* Meta */}
+                      <div className="text-xs text-surface-500 mt-2 flex gap-3 flex-wrap">
+                        <span>ID: {ticket.id.slice(0, 8)}...</span>
+                        <span>•</span>
+                        <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                        {ticket.user && (
+                          <>
+                            <span>•</span>
+                            <span>{ticket.user.name}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Indicator */}
+                    <div className="text-primary-500 flex-shrink-0">
+                      →
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
