@@ -62,12 +62,16 @@ services:
         value: "https://customer-support-client.onrender.com,http://localhost:3000"
     
     healthCheckPath: /healthz
+    
+    # Zero-Config: Automatically sync database schema and generate Prisma client
+    preDeployCommand: npx prisma generate && npx prisma db push --accept-data-loss
   
   # Frontend Client (React + Vite)
-  - type: static
+  - type: web
     name: customer-support-client
+    runtime: static
     buildCommand: npm install --prefix client && npm run build --prefix client
-    publishPath: client/dist
+    staticPublishPath: client/dist
     envVars:
       - key: VITE_API_URL
         value: "https://customer-support-server.onrender.com"
