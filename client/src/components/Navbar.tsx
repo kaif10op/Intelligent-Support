@@ -1,11 +1,33 @@
 import { useAuthStore } from '../store/useAuthStore.js';
+import { useClerk } from '@clerk/react';
 import { LogOut, User, Shield, Menu, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 const Navbar = () => {
   const { user, logout } = useAuthStore();
+  const { signOut } = useClerk();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      // 1. Sign out from Clerk first
+      await signOut();
+    } catch (err) {
+      console.error('Clerk signOut error:', err);
+    }
+
+    try {
+      // 2. Logout from backend (clear session)
+      await logout();
+    } catch (err) {
+      console.error('Backend logout error:', err);
+    }
+
+    // 3. Redirect to login page
+    navigate('/login');
+  };
 
   return (
     <nav className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -59,7 +81,7 @@ const Navbar = () => {
 
             {/* Logout Button */}
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
               title="Logout"
             >
