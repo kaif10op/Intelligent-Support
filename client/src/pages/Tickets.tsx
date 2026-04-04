@@ -1,21 +1,26 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Ticket, Plus, Clock, AlertCircle, MessageSquare, CheckCircle, User } from 'lucide-react';
+import { Ticket, Plus, Clock, AlertCircle, MessageSquare, CheckCircle, User, Loader2, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useToast } from '../contexts/ToastContext';
 import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
-import { Button, Card, Input, Select, Badge, Modal } from '../components/ui';
+import { Button, Card, Input, Select, Badge, Modal, StatCard, NavigationTabs } from '../components/ui';
+
+type TicketTab = 'all' | 'open' | 'in-progress' | 'resolved';
 
 const Tickets = () => {
   const { user } = useAuthStore();
   const { addToast } = useToast();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<TicketTab>('all');
   const [newTicket, setNewTicket] = useState({ title: '', description: '', priority: 'MEDIUM' });
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState('ALL');
+  const [sortBy, setSortBy] = useState<'recent' | 'urgent' | 'oldest'>('recent');
 
   useEffect(() => {
     fetchTickets();
@@ -23,6 +28,7 @@ const Tickets = () => {
 
   const fetchTickets = async () => {
     try {
+      setRefreshing(true);
       const endpoint = user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT' ? apiUrl('/api/tickets/all') : apiUrl('/api/tickets/my');
       const res = await axios.get(endpoint, axiosConfig);
       const data = Array.isArray(res.data) ? res.data : res.data.tickets || res.data.data || [];
@@ -33,6 +39,8 @@ const Tickets = () => {
       addToast(errorMsg, 'error');
       setTickets([]);
       setLoading(false);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -61,15 +69,46 @@ const Tickets = () => {
     }
   };
 
-  const filteredTickets = tickets.filter(t => {
-    const statusMatch = filterStatus === 'ALL' || t.status === filterStatus;
-    const priorityMatch = filterPriority === 'ALL' || t.priority === filterPriority;
-    const searchMatch = searchTerm === '' ||
-      t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.id.includes(searchTerm);
-    return statusMatch && priorityMatch && searchMatch;
-  });
+  // Calculate stats
+  const ticketStats = {
+    total: tickets.length,
+    open: tickets.filter(t => t.status === 'OPEN').length,
+    inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
+    resolved: tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
+    urgent: tickets.filter(t => t.priority === 'URGENT').length,
+  };
+
+  const getSortedAndFilteredTickets = () => {
+    let filtered = tickets.filter(t => {
+      const statusMatch = filterStatus === 'ALL' || t.status === filterStatus;
+      const priorityMatch = filterPriority === 'ALL' || t.priority === filterPriority;
+      const searchMatch = searchTerm === '' ||
+        t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.id.includes(searchTerm);
+      return statusMatch && priorityMatch && searchMatch;
+    });
+
+    // Apply tab filter
+    if (activeTab === 'open') filtered = filtered.filter(t => t.status === 'OPEN');
+    else if (activeTab === 'in-progress') filtered = filtered.filter(t => t.status === 'IN_PROGRESS');
+    else if (activeTab === 'resolved') filtered = filtered.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
+
+    // Apply sorting
+    const sorted = [...filtered];
+    if (sortBy === 'urgent') {
+      const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+      sorted.sort((a, b) => (priorityOrder[a.priority as keyof typeof priorityOrder] || 4) - (priorityOrder[b.priority as keyof typeof priorityOrder] || 4));
+    } else if (sortBy === 'oldest') {
+      sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    } else {
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    return sorted;
+  };
+
+  const filteredTickets = getSortedAndFilteredTickets();
 
   const getPriorityVariant = (priority: string): 'default' | 'success' | 'warning' | 'error' | 'info' => {
     switch (priority) {
@@ -92,26 +131,9 @@ const Tickets = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="border-b border-surface-200 bg-surface-50">
-          <div className="px-6 py-6">
-            <div className="h-8 bg-surface-200 rounded w-1/3 mb-2 animate-pulse"></div>
-            <div className="h-4 bg-surface-200 rounded w-2/3 animate-pulse"></div>
-          </div>
-        </div>
-        <div className="px-6 py-6 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="p-6 h-48 animate-pulse">
-                <div className="space-y-4">
-                  <div className="h-4 bg-surface-200 rounded w-2/3"></div>
-                  <div className="h-4 bg-surface-200 rounded w-full"></div>
-                  <div className="h-4 bg-surface-200 rounded w-4/5"></div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
+        <p className="text-surface-600">Loading tickets...</p>
       </div>
     );
   }
@@ -119,7 +141,7 @@ const Tickets = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50">
+      <div className="border-b border-surface-200 bg-surface-50 sticky top-0 z-40">
         <div className="px-6 py-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-primary-100 rounded-lg">
@@ -127,24 +149,61 @@ const Tickets = () => {
             </div>
             <div>
               <h1 className="heading-1">Support Tickets</h1>
-              <p className="text-surface-600 mt-1">Manage and track your inquiries and escalations</p>
+              <p className="text-surface-600 mt-1">Manage {ticketStats.total} ticket{ticketStats.total !== 1 ? 's' : ''}</p>
             </div>
           </div>
-          <Button
-            variant="primary"
-            icon={<Plus className="w-5 h-5" />}
-            onClick={() => setShowCreateModal(true)}
-          >
-            New Ticket
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              size="md"
+              icon={<RotateCcw className="w-4 h-4" />}
+              onClick={fetchTickets}
+              loading={refreshing}
+              disabled={refreshing}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-5 h-5" />}
+              onClick={() => setShowCreateModal(true)}
+            >
+              New Ticket
+            </Button>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="px-6 border-t border-surface-200">
+          <NavigationTabs
+            tabs={[
+              { id: 'all', label: 'All', icon: <MessageSquare className="w-4 h-4" /> },
+              { id: 'open', label: 'Open', icon: <AlertCircle className="w-4 h-4" /> },
+              { id: 'in-progress', label: 'In Progress', icon: <Clock className="w-4 h-4" /> },
+              { id: 'resolved', label: 'Resolved', icon: <CheckCircle className="w-4 h-4" /> }
+            ]}
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab as any)}
+          />
         </div>
       </div>
 
       {/* Content */}
       <div className="px-6 py-6 space-y-6">
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <StatCard label="Total" value={ticketStats.total} icon={<MessageSquare className="w-6 h-6" />} />
+          <StatCard label="Open" value={ticketStats.open} icon={<AlertCircle className="w-6 h-6" />} />
+          <StatCard label="In Progress" value={ticketStats.inProgress} icon={<Clock className="w-6 h-6" />} />
+          <StatCard label="Resolved" value={ticketStats.resolved} icon={<CheckCircle className="w-6 h-6" />} />
+          <StatCard label="Urgent" value={ticketStats.urgent} icon={<AlertCircle className="w-6 h-6" />} />
+        </div>
+
         {/* Filters */}
-        <Card elevated className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card elevated className="p-4 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <Input
               type="text"
               placeholder="Search tickets..."
@@ -162,7 +221,6 @@ const Tickets = () => {
                 { value: 'RESOLVED', label: 'Resolved' },
                 { value: 'CLOSED', label: 'Closed' },
               ]}
-              label="Status"
             />
             <Select
               value={filterPriority}
@@ -174,8 +232,16 @@ const Tickets = () => {
                 { value: 'HIGH', label: 'High' },
                 { value: 'URGENT', label: 'Urgent' },
               ]}
-              label="Priority"
             />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-3 py-2 border border-surface-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
+            >
+              <option value="recent">Sort: Recent</option>
+              <option value="urgent">Sort: Urgent</option>
+              <option value="oldest">Sort: Oldest</option>
+            </select>
           </div>
         </Card>
 
@@ -183,7 +249,7 @@ const Tickets = () => {
         {filteredTickets.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTickets.map(ticket => (
-              <Card elevated interactive key={ticket.id} className="p-6 flex flex-col">
+              <Card elevated className="p-6 flex flex-col hover:shadow-md transition-shadow" key={ticket.id}>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                   <Badge variant={getPriorityVariant(ticket.priority)}>
@@ -207,12 +273,12 @@ const Tickets = () => {
                 <div className="space-y-3 border-t border-surface-200 pt-4">
                   {/* Meta Info */}
                   <div className="flex items-center justify-between text-xs text-surface-600">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
                       <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
                     </div>
                     {ticket.user && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5" />
                         <span className="truncate max-w-[100px]">{ticket.user.name}</span>
                       </div>

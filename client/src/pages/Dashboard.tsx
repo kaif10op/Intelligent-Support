@@ -9,62 +9,73 @@ import {
   Search,
   AlertCircle,
   CheckCircle,
-  Clock,
   Sparkles,
+  Loader2,
+  RotateCcw,
+  TrendingUp,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
-import { Button, Card, Input, Modal, StatCard } from '../components/ui';
+import { Button, Card, Input, Modal, StatCard, NavigationTabs } from '../components/ui';
+
+type DashboardTab = 'overview' | 'knowledge-bases' | 'activity';
 
 const Dashboard = () => {
   const { addToast } = useToast();
   const [kbs, setKbs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'recent' | 'docs'>('recent');
   const [tickets, setTickets] = useState<any[]>([]);
+  const [recentChats, setRecentChats] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
   const [ticketStats, setTicketStats] = useState({
     open: 0,
     inProgress: 0,
     resolved: 0,
   });
 
-  const fetchKBs = async () => {
+  const fetchData = async () => {
     try {
-      const res = await axios.get(API_ENDPOINTS.KB_LIST, axiosConfig);
-      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
-      setKbs(Array.isArray(data) ? data : []);
-      setLoading(false);
-    } catch (err) {
-      console.error(err);
-      addToast('Failed to load knowledge bases', 'error');
-      setLoading(false);
-    }
-  };
+      setRefreshing(true);
+      const [kbRes, ticketRes, chatRes] = await Promise.all([
+        axios.get(API_ENDPOINTS.KB_LIST, axiosConfig).catch(() => ({ data: [] })),
+        axios.get(apiUrl('/api/tickets/my'), axiosConfig).catch(() => ({ data: [] })),
+        axios.get(apiUrl('/api/chats/recent'), axiosConfig).catch(() => ({ data: [] }))
+      ]);
 
-  const fetchTickets = async () => {
-    try {
-      const res = await axios.get(apiUrl('/api/tickets/my'), axiosConfig);
-      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
-      if (data.length > 0) {
-        setTickets(data);
-        const stats = {
-          open: data.filter((t: any) => t.status === 'OPEN').length,
-          inProgress: data.filter((t: any) => t.status === 'IN_PROGRESS').length,
-          resolved: data.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
-        };
-        setTicketStats(stats);
+      const kbData = Array.isArray(kbRes.data) ? kbRes.data : kbRes.data.data || [];
+      setKbs(Array.isArray(kbData) ? kbData : []);
+
+      const ticketData = Array.isArray(ticketRes.data) ? ticketRes.data : ticketRes.data.data || [];
+      if (ticketData.length > 0) {
+        setTickets(ticketData);
+        setTicketStats({
+          open: ticketData.filter((t: any) => t.status === 'OPEN').length,
+          inProgress: ticketData.filter((t: any) => t.status === 'IN_PROGRESS').length,
+          resolved: ticketData.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
+        });
       }
+
+      const chatData = Array.isArray(chatRes.data) ? chatRes.data : chatRes.data.chats || [];
+      setRecentChats(Array.isArray(chatData) ? chatData.slice(0, 5) : []);
+
+      setLoading(false);
     } catch (err) {
-      console.error('Failed to fetch tickets:', err);
+      console.error('Failed to fetch dashboard data:', err);
+      addToast('Failed to load dashboard data', 'error');
+      setLoading(false);
+    } finally {
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchKBs();
-    fetchTickets();
+    fetchData();
   }, []);
 
   const handleCreate = async () => {
@@ -77,7 +88,7 @@ const Dashboard = () => {
       addToast('Knowledge base created successfully!', 'success');
       setNewTitle('');
       setShowModal(false);
-      fetchKBs();
+      fetchData();
     } catch (err: any) {
       console.error(err);
       addToast(err.response?.data?.error || 'Failed to create KB', 'error');
@@ -89,172 +100,322 @@ const Dashboard = () => {
     try {
       await axios.delete(API_ENDPOINTS.KB_DELETE(id), axiosConfig);
       addToast('Knowledge base deleted', 'success');
-      fetchKBs();
+      fetchData();
     } catch (err: any) {
       console.error(err);
       addToast('Failed to delete KB', 'error');
     }
   };
 
-  const filteredKbs = kbs.filter(
+  const getSortedKbs = () => {
+    let sorted = [...kbs];
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'docs') {
+      sorted.sort((a, b) => (b._count?.documents || 0) - (a._count?.documents || 0));
+    }
+    return sorted;
+  };
+
+  const filteredKbs = getSortedKbs().filter(
     (kb) =>
       kb.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       kb.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
+        <p className="text-surface-600">Loading dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Page Header */}
-      <div className="border-b border-surface-200 bg-surface-50">
-        <div className="px-6 py-6 flex items-center justify-between gap-4">
+      <div className="border-b border-surface-200 bg-surface-50 sticky top-0 z-40">
+        <div className="px-6 py-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="heading-1">Dashboard</h1>
-            <p className="text-surface-600 mt-1">
-              Manage {kbs.length} knowledge base{kbs.length !== 1 ? 's' : ''} and support tickets
-            </p>
+            <p className="text-surface-600 mt-1">Manage {kbs.length} knowledge base{kbs.length !== 1 ? 's' : ''} and stay updated</p>
           </div>
-          <Button
-            variant="primary"
-            icon={<Plus className="w-5 h-5" />}
-            onClick={() => setShowModal(true)}
-          >
-            New KB
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              size="md"
+              icon={<RotateCcw className="w-4 h-4" />}
+              onClick={fetchData}
+              loading={refreshing}
+              disabled={refreshing}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-5 h-5" />}
+              onClick={() => setShowModal(true)}
+            >
+              New KB
+            </Button>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="px-6 border-t border-surface-200">
+          <NavigationTabs
+            tabs={[
+              { id: 'overview', label: 'Overview', icon: <TrendingUp className="w-4 h-4" /> },
+              { id: 'knowledge-bases', label: 'Knowledge Bases', icon: <Database className="w-4 h-4" /> },
+              { id: 'activity', label: 'Activity', icon: <MessageSquare className="w-4 h-4" /> }
+            ]}
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab as any)}
+          />
         </div>
       </div>
 
       {/* Page Content */}
       <div className="px-6 py-6 space-y-8">
 
-        {/* Ticket Summary */}
-        {tickets.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="heading-3 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-accent-500" />
-              Your Tickets
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link to="/tickets">
-                <StatCard
-                  label="Open Tickets"
-                  value={ticketStats.open}
-                  icon={<AlertCircle className="w-8 h-8" />}
-                  trend={ticketStats.open > 0 ? { direction: 'down', value: 5 } : undefined}
-                />
-              </Link>
-              <Link to="/tickets">
-                <StatCard
-                  label="In Progress"
-                  value={ticketStats.inProgress}
-                  icon={<Clock className="w-8 h-8" />}
-                  trend={ticketStats.inProgress > 0 ? { direction: 'up', value: 2 } : undefined}
-                />
-              </Link>
-              <Link to="/tickets">
-                <StatCard
-                  label="Resolved"
-                  value={ticketStats.resolved}
-                  icon={<CheckCircle className="w-8 h-8" />}
-                  trend={ticketStats.resolved > 0 ? { direction: 'up', value: 12 } : undefined}
-                />
-              </Link>
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatCard
+                label="Total KBs"
+                value={kbs.length}
+                icon={<Database className="w-8 h-8" />}
+              />
+              <StatCard
+                label="Total Chats"
+                value={recentChats.length}
+                icon={<MessageSquare className="w-8 h-8" />}
+              />
+              <StatCard
+                label="Open Tickets"
+                value={ticketStats.open}
+                icon={<AlertCircle className="w-8 h-8" />}
+              />
+              <StatCard
+                label="Resolved"
+                value={ticketStats.resolved}
+                icon={<CheckCircle className="w-8 h-8" />}
+              />
             </div>
+
+            {/* Ticket Status Cards */}
+            {tickets.length > 0 && (
+              <Card elevated className="p-6 space-y-4">
+                <h3 className="heading-4">Ticket Status</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <Link to="/tickets?status=open">
+                    <div className="p-4 border border-surface-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all cursor-pointer">
+                      <p className="text-xs text-surface-600">Open</p>
+                      <p className="text-2xl font-bold text-surface-900">{ticketStats.open}</p>
+                    </div>
+                  </Link>
+                  <Link to="/tickets?status=in-progress">
+                    <div className="p-4 border border-surface-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all cursor-pointer">
+                      <p className="text-xs text-surface-600">In Progress</p>
+                      <p className="text-2xl font-bold text-surface-900">{ticketStats.inProgress}</p>
+                    </div>
+                  </Link>
+                  <Link to="/tickets?status=resolved">
+                    <div className="p-4 border border-surface-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all cursor-pointer">
+                      <p className="text-xs text-surface-600">Resolved</p>
+                      <p className="text-2xl font-bold text-surface-900">{ticketStats.resolved}</p>
+                    </div>
+                  </Link>
+                </div>
+              </Card>
+            )}
+
+            {/* Quick Actions */}
+            <Card elevated className="p-6 space-y-4">
+              <h3 className="heading-4">Quick Actions</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Button
+                  variant="outline"
+                  fullWidth
+                  icon={<Plus className="w-4 h-4" />}
+                  onClick={() => setShowModal(true)}
+                >
+                  New KB
+                </Button>
+                <Link to="/chat/new" className="block">
+                  <Button variant="outline" fullWidth icon={<MessageSquare className="w-4 h-4" />}>
+                    New Chat
+                  </Button>
+                </Link>
+                <Link to="/tickets" className="block">
+                  <Button variant="outline" fullWidth icon={<AlertCircle className="w-4 h-4" />}>
+                    View Tickets
+                  </Button>
+                </Link>
+                <Link to="/search" className="block">
+                  <Button variant="outline" fullWidth icon={<Search className="w-4 h-4" />}>
+                    Search
+                  </Button>
+                </Link>
+              </div>
+            </Card>
           </div>
         )}
 
-        {/* Knowledge Bases Section */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="heading-3 flex items-center gap-2">
-              <Database className="w-5 h-5 text-primary-500" />
-              Knowledge Bases
-            </h2>
-            <Input
-              type="text"
-              placeholder="Search knowledge bases..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<Search className="w-4 h-4" />}
-              className="w-full sm:w-64"
-            />
-          </div>
-
-          {/* KB Grid */}
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="p-6 h-64 animate-pulse">
-                  <div className="h-4 bg-surface-200 rounded w-3/4 mb-4"></div>
-                  <div className="space-y-3">
-                    <div className="h-4 bg-surface-200 rounded w-full"></div>
-                    <div className="h-4 bg-surface-200 rounded w-5/6"></div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : filteredKbs.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredKbs.map((kb) => (
-                <Card elevated key={kb.id} interactive className="p-6 flex flex-col">
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center">
-                      <Database className="w-6 h-6 text-primary-500" />
-                    </div>
-                    <button
-                      onClick={() => handleDelete(kb.id)}
-                      className="p-2 hover:bg-red-50 rounded-lg transition-colors text-surface-400 hover:text-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Title & Description */}
-                  <h3 className="font-semibold text-surface-900 mb-1 line-clamp-2">{kb.title}</h3>
-                  <p className="text-sm text-surface-600 mb-4 line-clamp-2 flex-1">
-                    {kb.description || 'No description provided'}
-                  </p>
-
-                  {/* Stats */}
-                  <div className="flex gap-4 mb-4 text-xs text-surface-600 border-t border-surface-200 pt-4">
-                    <div className="flex items-center gap-1.5">
-                      <Files className="w-4 h-4" />
-                      <span>{kb._count?.documents || 0} docs</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <MessageSquare className="w-4 h-4" />
-                      <span>{kb._count?.chats || 0} chats</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Link to={`/kb/${kb.id}`} className="flex-1">
-                      <Button variant="outline" fullWidth size="sm">
-                        Manage
-                      </Button>
-                    </Link>
-                    <Link to={`/chat/new?kbId=${kb.id}`} className="flex-1">
-                      <Button variant="primary" icon={<Sparkles className="w-4 h-4" />} fullWidth size="sm">
-                        Chat
-                      </Button>
-                    </Link>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card elevated className="p-12 text-center">
-              <Database className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-              <p className="text-surface-600">
-                {searchTerm ? 'No knowledge bases match your search' : 'No knowledge bases yet'}
-              </p>
-              <p className="text-sm text-surface-500 mt-2">
-                {!searchTerm && 'Create your first knowledge base to get started'}
-              </p>
+        {/* Knowledge Bases Tab */}
+        {activeTab === 'knowledge-bases' && (
+          <div className="space-y-6">
+            {/* Controls */}
+            <Card elevated className="p-6 space-y-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <Input
+                  type="text"
+                  placeholder="Search knowledge bases..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  icon={<Search className="w-4 h-4" />}
+                  className="flex-1"
+                />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="px-3 py-2 border border-surface-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
+                >
+                  <option value="recent">Sort: Recent</option>
+                  <option value="name">Sort: Name</option>
+                  <option value="docs">Sort: Documents</option>
+                </select>
+              </div>
             </Card>
-          )}
-        </div>
+
+            {/* KB Grid */}
+            {filteredKbs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredKbs.map((kb) => (
+                  <Card elevated key={kb.id} className="p-6 flex flex-col hover:shadow-md transition-shadow">
+                    {/* Card Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center">
+                        <Database className="w-6 h-6 text-primary-500" />
+                      </div>
+                      <button
+                        onClick={() => handleDelete(kb.id)}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors text-surface-400 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Title & Description */}
+                    <h3 className="font-semibold text-surface-900 mb-1 line-clamp-2">{kb.title}</h3>
+                    <p className="text-sm text-surface-600 mb-4 line-clamp-2 flex-1">
+                      {kb.description || 'No description'}
+                    </p>
+
+                    {/* Stats */}
+                    <div className="flex gap-4 mb-4 text-xs text-surface-600 border-t border-surface-200 pt-4">
+                      <div className="flex items-center gap-1.5">
+                        <Files className="w-4 h-4" />
+                        <span>{kb._count?.documents || 0} documents</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4" />
+                        <span>{kb._count?.chats || 0} chats</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Link to={`/kb/${kb.id}`} className="flex-1">
+                        <Button variant="outline" fullWidth size="sm">Manage</Button>
+                      </Link>
+                      <Link to={`/chat/new?kbId=${kb.id}`} className="flex-1">
+                        <Button variant="primary" icon={<Sparkles className="w-4 h-4" />} fullWidth size="sm">
+                          Chat
+                        </Button>
+                      </Link>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card elevated className="p-12 text-center">
+                <Database className="w-12 h-12 text-surface-300 mx-auto mb-4" />
+                <p className="text-surface-600 font-medium">
+                  {searchTerm ? 'No knowledge bases match your search' : 'No knowledge bases yet'}
+                </p>
+                <p className="text-sm text-surface-500 mt-2">
+                  {!searchTerm && 'Click "New KB" to create your first knowledge base'}
+                </p>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Activity Tab */}
+        {activeTab === 'activity' && (
+          <div className="space-y-6">
+            {/* Recent Chats */}
+            {recentChats.length > 0 ? (
+              <Card elevated className="p-6 space-y-4">
+                <h3 className="heading-4">Recent Conversations</h3>
+                <div className="space-y-3">
+                  {recentChats.map((chat, idx) => (
+                    <Link key={idx} to={`/chat/${chat.id}`}>
+                      <div className="p-4 border border-surface-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all cursor-pointer flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-surface-900 truncate">{chat.title || 'Untitled Chat'}</p>
+                          <p className="text-xs text-surface-600 mt-1">{chat.kb?.title}</p>
+                        </div>
+                        <MessageSquare className="w-4 h-4 text-primary-500 flex-shrink-0 ml-4" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <Link to="/chats" className="block">
+                  <Button variant="outline" fullWidth>View All Conversations</Button>
+                </Link>
+              </Card>
+            ) : (
+              <Card elevated className="p-8 text-center">
+                <MessageSquare className="w-12 h-12 text-surface-300 mx-auto mb-4" />
+                <p className="text-surface-600">No recent conversations</p>
+              </Card>
+            )}
+
+            {/* Top Tickets */}
+            {tickets.length > 0 && (
+              <Card elevated className="p-6 space-y-4">
+                <h3 className="heading-4">Recent Support Tickets</h3>
+                <div className="space-y-3">
+                  {tickets.slice(0, 5).map((ticket) => (
+                    <Link key={ticket.id} to={`/tickets?id=${ticket.id}`}>
+                      <div className="p-4 border border-surface-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-all cursor-pointer flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-surface-900 truncate">{ticket.title}</p>
+                          <p className="text-xs text-surface-600 mt-1 flex gap-2">
+                            <span>{ticket.status}</span>
+                            {ticket.priority && <span>•</span>}
+                            <span>{ticket.priority} priority</span>
+                          </p>
+                        </div>
+                        <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 ml-4" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <Link to="/tickets" className="block">
+                  <Button variant="outline" fullWidth>View All Tickets</Button>
+                </Link>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Create KB Modal */}
