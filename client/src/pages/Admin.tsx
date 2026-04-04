@@ -28,7 +28,7 @@ const Admin = () => {
         axiosInstance.get(API_ENDPOINTS.ADMIN_USERS)
       ]);
       setStats(statsRes.data);
-      setUsers(usersRes.data);
+      setUsers(usersRes.data.users || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -79,7 +79,12 @@ const Admin = () => {
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = userFilter === 'all' || u.role === userFilter;
+
+    let matchesFilter = true;
+    if (userFilter === 'admin') matchesFilter = u.role === 'ADMIN';
+    else if (userFilter === 'support') matchesFilter = u.role === 'SUPPORT_AGENT';
+    else if (userFilter === 'user') matchesFilter = u.role === 'USER';
+
     return matchesSearch && matchesFilter;
   });
 
