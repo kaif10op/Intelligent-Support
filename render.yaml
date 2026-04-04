@@ -4,19 +4,22 @@ services:
     name: customer-support-server
     runtime: node
     plan: standard
+    region: singapore # Adjust as needed
     buildCommand: npm install --prefix server && npm run build --prefix server
     startCommand: npm start --prefix server
     envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: "${PORT:-8000}"
+        value: 8000
       
-      # Database: Supabase (managed externally)
+      # Database: Supabase
       - key: DATABASE_URL
         sync: false
       
-      # Cache: Upstash Redis (managed externally)
+      # Cache: Upstash Redis
       - key: REDIS_URL
         sync: false
       - key: UPSTASH_REDIS_REST_URL
@@ -29,10 +32,8 @@ services:
         sync: false
       - key: JWT_EXPIRY
         value: "7d"
-      - key: NEXTAUTH_SECRET
-        sync: false
       
-      # OAuth Providers
+      # Auth/OAuth (Vite Client will connect to this)
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -41,73 +42,32 @@ services:
         sync: false
       - key: GITHUB_CLIENT_SECRET
         sync: false
-      - key: LINKEDIN_CLIENT_ID
-        sync: false
-      - key: LINKEDIN_CLIENT_SECRET
-        sync: false
       - key: OAUTH_REDIRECT_BASE
         value: "https://customer-support-server.onrender.com"
       - key: FRONTEND_URL
         value: "https://customer-support-client.onrender.com"
       
-      # AI/LLM Providers
+      # AI Providers
       - key: GROQ_API_KEY
-        sync: false
-      - key: OPENROUTER_API_KEY
         sync: false
       - key: GOOGLE_AI_KEY
         sync: false
-      - key: XAI_API_KEY
-        sync: false
-      - key: CEREBRAS_API_KEY
-        sync: false
-      
-      # Embeddings & RAG
-      - key: JINA_API_KEY
-        sync: false
-      
-      # Web Scraping
-      - key: FIRECRAWL_API_KEY
-        sync: false
-      - key: SPIDER_API_KEY
-        sync: false
       - key: TAVILY_API_KEY
         sync: false
-      
-      # Supabase Backend
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
+      - key: JINA_API_KEY
         sync: false
       
       # CORS
       - key: CORS_ORIGIN
         value: "https://customer-support-client.onrender.com,http://localhost:3000"
-      
-      - key: DOCKER_BUILDKIT
-        value: "1"
     
     healthCheckPath: /healthz
-    healthCheckInterval: 30
-    healthCheckTimeout: 10
-    
-    # No migrations: Prisma schema already pushed to Supabase
-    # No database init: Using Supabase (schema already exists)
-    # No preDeployCommand needed
-    
-    routes:
-      - path: /api
-        destination: /api
-      - path: /socket.io
-        destination: /socket.io
-
+  
   # Frontend Client (React + Vite)
-  - type: web
+  - type: static
     name: customer-support-client
-    runtime: node
-    plan: standard
     buildCommand: npm install --prefix client && npm run build --prefix client
-    startCommand: npx serve -s client/dist -l 3000
+    publishPath: client/dist
     envVars:
       - key: VITE_API_URL
         value: "https://customer-support-server.onrender.com"
@@ -118,13 +78,8 @@ services:
       - key: VITE_CLERK_PUBLISHABLE_KEY
         sync: false
     
-    healthCheckPath: /index.html
-    healthCheckInterval: 30
-    healthCheckTimeout: 10
-    
+    # Static sites handle SPAs (Single Page Apps) through fallback
     routes:
-      - path: /
-        destination: /
-
-# Production environment
-env: production
+      - type: rewrite
+        source: /*
+        destination: /index.html
