@@ -67,7 +67,6 @@ services:
   - type: web
     name: customer-support-client
     runtime: static
-    plan: free # Static sites are free by default
     buildCommand: npm install --prefix client && npm run build --prefix client
     staticPublishPath: client/dist
     envVars:
