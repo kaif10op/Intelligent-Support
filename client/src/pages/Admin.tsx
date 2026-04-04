@@ -74,11 +74,17 @@ const Admin = () => {
     if (!selectedUser) return;
     try {
       setUpdatingRole(true);
-      await axiosInstance.put(
+      console.log('Updating role:', { userId: selectedUser.id, newRole });
+
+      const response = await axiosInstance.put(
         `${API_ENDPOINTS.ADMIN_USERS}/${selectedUser.id}/role`,
         { role: newRole }
       );
+
+      console.log('Role update response:', response.data);
+
       setUsers(users.map(u => u.id === selectedUser.id ? { ...u, role: newRole } : u));
+      cacheService.delete(CACHE_KEYS.ADMIN_USERS); // Invalidate cache
       setShowRoleModal(false);
       setSelectedUser(null);
       addToast(`User role updated to ${newRole}`, 'success');
