@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
 import { Button, Card, Input, Modal, StatCard, NavigationTabs } from '../components/ui';
+import { cacheService, CACHE_KEYS, CACHE_TTL } from '../services/cacheService';
 
 type DashboardTab = 'overview' | 'knowledge-bases' | 'activity';
 
@@ -39,9 +40,25 @@ const Dashboard = () => {
     resolved: 0,
   });
 
-  const fetchData = async () => {
+  const fetchData = async (isInitial = false) => {
     try {
+      if (isInitial) setLoading(true);
       setRefreshing(true);
+
+      // Load from cache first for initial load
+      if (isInitial) {
+        const cachedKbs = cacheService.get(CACHE_KEYS.KB_LIST);
+        const cachedChats = cacheService.get(CACHE_KEYS.CHAT_RECENT);
+
+        if (cachedKbs) {
+          setKbs(Array.isArray(cachedKbs) ? cachedKbs : []);
+        }
+        if (cachedChats) {
+          setRecentChats(Array.isArray(cachedChats) ? cachedChats : []);
+        }
+      }
+
+      // Fetch fresh data
       const [kbRes, ticketRes, chatRes] = await Promise.all([
         axios.get(API_ENDPOINTS.KB_LIST, axiosConfig).catch(() => ({ data: [] })),
         axios.get(apiUrl('/api/tickets/my'), axiosConfig).catch(() => ({ data: [] })),
@@ -49,7 +66,9 @@ const Dashboard = () => {
       ]);
 
       const kbData = Array.isArray(kbRes.data) ? kbRes.data : kbRes.data.data || [];
-      setKbs(Array.isArray(kbData) ? kbData : []);
+      const kbArray = Array.isArray(kbData) ? kbData : [];
+      setKbs(kbArray);
+      cacheService.set(CACHE_KEYS.KB_LIST, kbArray, CACHE_TTL.MEDIUM);
 
       const ticketData = Array.isArray(ticketRes.data) ? ticketRes.data : ticketRes.data.data || [];
       if (ticketData.length > 0) {
@@ -62,7 +81,9 @@ const Dashboard = () => {
       }
 
       const chatData = chatRes.data.chats || [];
-      setRecentChats(Array.isArray(chatData) ? chatData : []);
+      const chatArray = Array.isArray(chatData) ? chatData : [];
+      setRecentChats(chatArray);
+      cacheService.set(CACHE_KEYS.CHAT_RECENT, chatArray, CACHE_TTL.MEDIUM);
 
       setLoading(false);
     } catch (err) {
@@ -75,7 +96,7 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, []);
 
   const handleCreate = async () => {
@@ -146,7 +167,7 @@ const Dashboard = () => {
               variant="outline"
               size="md"
               icon={<RotateCcw className="w-4 h-4" />}
-              onClick={fetchData}
+              onClick={() => fetchData(false)}
               loading={refreshing}
               disabled={refreshing}
             >

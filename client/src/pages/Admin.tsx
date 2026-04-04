@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 import axiosInstance, { API_ENDPOINTS } from '../config/api';
 import UserManagement from '../components/UserManagement';
 import { Button, Card, Input, Modal, StatCard, NavigationTabs, Badge, Section } from '../components/ui';
+import { cacheService, CACHE_KEYS, CACHE_TTL } from '../services/cacheService';
 
 type AdminTab = 'overview' | 'users' | 'activity';
 
@@ -24,25 +25,49 @@ const Admin = () => {
   const [newRole, setNewRole] = useState<'USER' | 'ADMIN' | 'SUPPORT_AGENT'>('USER');
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
-  const fetchAdminData = async () => {
+  const fetchAdminData = async (isInitial = false) => {
     try {
+      if (isInitial) setLoading(true);
       setRefreshing(true);
+
+      // Load from cache first for initial load
+      if (isInitial) {
+        const cachedStats = cacheService.get(CACHE_KEYS.ADMIN_STATS);
+        const cachedUsers = cacheService.get(CACHE_KEYS.ADMIN_USERS);
+
+        if (cachedStats) {
+          setStats(cachedStats);
+        }
+        if (cachedUsers && Array.isArray(cachedUsers)) {
+          setUsers(cachedUsers);
+        }
+      }
+
+      // Fetch fresh data
       const [statsRes, usersRes] = await Promise.all([
         axiosInstance.get(API_ENDPOINTS.ADMIN_STATS),
         axiosInstance.get(API_ENDPOINTS.ADMIN_USERS)
       ]);
+
       setStats(statsRes.data);
-      setUsers(usersRes.data.users || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
+      cacheService.set(CACHE_KEYS.ADMIN_STATS, statsRes.data, CACHE_TTL.MEDIUM);
+
+      const usersData = usersRes.data.users || [];
+      setUsers(usersData);
+      cacheService.set(CACHE_KEYS.ADMIN_USERS, usersData, CACHE_TTL.MEDIUM);
+
       setLoading(false);
+    } catch (err) {
+      console.error('Error fetching admin data:', err);
+      addToast('Failed to load admin data', 'error');
+      setLoading(false);
+    } finally {
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchAdminData();
+    fetchAdminData(true);
   }, []);
 
   const handleChangeRole = async () => {
@@ -140,7 +165,7 @@ const Admin = () => {
             <Button
               variant="outline"
               size="md"
-              onClick={() => fetchAdminData()}
+              onClick={() => fetchAdminData(false)}
               loading={refreshing}
               icon={<RefreshCw className="w-4 h-4" />}
             >
