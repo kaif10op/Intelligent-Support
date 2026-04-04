@@ -3,7 +3,7 @@ services:
   - type: web
     name: customer-support-server
     runtime: node
-    plan: standard
+    plan: free # Use the free tier (spins down after 15m of inactivity)
     region: singapore # Adjust as needed
     buildCommand: npm install --prefix server && npm run build --prefix server
     startCommand: npm start --prefix server
@@ -70,6 +70,7 @@ services:
   - type: web
     name: customer-support-client
     runtime: static
+    plan: free # Static sites are free by default
     buildCommand: npm install --prefix client && npm run build --prefix client
     staticPublishPath: client/dist
     envVars:
