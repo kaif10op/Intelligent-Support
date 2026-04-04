@@ -6,7 +6,8 @@ const router = Router();
 
 // User Routes
 router.post('/', requireAuth, createTicket);
-router.get('/my', requireAuth, getMyTickets);
+router.get('/', requireAuth, getMyTickets); // GET /api/tickets - get user's tickets
+router.get('/my', requireAuth, getMyTickets); // Alternative endpoint
 router.get('/export/csv', requireAuth, exportMyTicketsAsCSV); // Export user's tickets
 
 // Ticket Message Routes (bidirectional - both users and admins can add messages)
