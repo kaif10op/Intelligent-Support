@@ -222,13 +222,13 @@ export const changeUserRole = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!['USER', 'ADMIN'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+    if (!['USER', 'SUPPORT_AGENT', 'ADMIN'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be USER, SUPPORT_AGENT, or ADMIN' });
     }
 
     // Prevent removing all admins
     const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
-    if (role === 'USER' && id === req.user!.id && adminCount === 1) {
+    if (role !== 'ADMIN' && id === req.user!.id && adminCount === 1) {
       return res.status(400).json({ error: 'Cannot remove the last admin' });
     }
 

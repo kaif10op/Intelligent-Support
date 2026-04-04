@@ -34,9 +34,9 @@ const setSessionCookie = (res: Response, user: { id: string; role: string; email
   res.cookie('token', sessionToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax', // Use 'none' for cross-domain in production
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    domain: isProduction ? undefined : 'localhost', // Don't set domain for prod (subdomain handling)
+    domain: isProduction ? undefined : 'localhost',
     path: '/',
   });
 
@@ -60,11 +60,9 @@ export const googleAuth = async (req: Request, res: Response) => {
 
     const { email, name, sub: googleId, picture } = payload;
 
-    // Determine admin based on exact match perhaps? Just mark first user as Admin
     const userCount = await prisma.user.count();
-    let role: 'USER' | 'ADMIN' = userCount === 0 ? 'ADMIN' : 'USER';
+    let role: 'ADMIN' | 'SUPPORT_AGENT' | 'USER' = userCount === 0 ? 'ADMIN' : 'USER';
 
-    // Find or create
     let user = await prisma.user.findUnique({ where: { googleId } });
     if (!user) {
       user = await prisma.user.create({
@@ -98,7 +96,7 @@ export const clerkAuth = async (req: Request, res: Response) => {
     }
 
     const userCount = await prisma.user.count();
-    const firstUserRole: 'USER' | 'ADMIN' = userCount === 0 ? 'ADMIN' : 'USER';
+    const firstUserRole: 'ADMIN' | 'SUPPORT_AGENT' | 'USER' = userCount === 0 ? 'ADMIN' : 'USER';
 
     let user = await prisma.user.findUnique({ where: { email } });
 

@@ -25,13 +25,15 @@ const UserPreferences = lazy(() => import('./pages/UserPreferences'));
 const Help = lazy(() => import('./pages/Help'));
 const Tickets = lazy(() => import('./pages/Tickets'));
 const Search = lazy(() => import('./pages/Search'));
+const SupportAgentDashboard = lazy(() => import('./pages/SupportAgentDashboard'));
 
-const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
+const ProtectedRoute = ({ children, adminOnly = false, supportAgentOnly = false }: { children: React.ReactNode, adminOnly?: boolean, supportAgentOnly?: boolean }) => {
   const { user, loading } = useAuthStore();
 
   if (loading) return <div className="loading-container">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (adminOnly && user.role !== 'ADMIN') return <Navigate to="/" />;
+  if (supportAgentOnly && user.role !== 'SUPPORT_AGENT' && user.role !== 'ADMIN') return <Navigate to="/" />;
 
   return <>{children}</>;
 };
@@ -121,6 +123,12 @@ function App() {
             <Route path="/analytics" element={
               <ProtectedRoute adminOnly>
                 <Layout><AnalyticsDashboard /></Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/support-queue" element={
+              <ProtectedRoute supportAgentOnly>
+                <Layout><SupportAgentDashboard /></Layout>
               </ProtectedRoute>
             } />
 

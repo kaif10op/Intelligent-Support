@@ -3,6 +3,9 @@ import { Users, Database, Shield, Zap, TrendingUp, Search, BarChart as BarIcon, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { Link } from 'react-router-dom';
 import axiosInstance, { API_ENDPOINTS } from '../config/api';
+import UserManagement from '../components/UserManagement';
+
+type AdminTab = 'overview' | 'users';
 
 const Admin = () => {
   const [stats, setStats] = useState<any>(null);
@@ -15,6 +18,7 @@ const Admin = () => {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [updatingRole, setUpdatingRole] = useState(false);
   const [newRole, setNewRole] = useState<'USER' | 'ADMIN'>('USER');
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
   const fetchAdminData = async () => {
     try {
@@ -114,7 +118,37 @@ const Admin = () => {
         <p className="text-muted-foreground">Global platform overview and user management.</p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-border/50 pb-4">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'overview'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'users'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          User Management
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'users' ? (
+        <UserManagement />
+      ) : (
+        <>
+          {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Users */}
         <div className="glass-elevated border border-border/50 rounded-xl p-8 flex items-center gap-6 group relative">
@@ -535,6 +569,8 @@ const Admin = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

@@ -83,3 +83,36 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
   }
 };
 
+export const requireSupportAgent = (req: AuthRequest, res: Response, next: NextFunction) => {
+  // Allow ADMIN and SUPPORT_AGENT
+  let token = req.cookies.token;
+
+  if (!token && req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    if (authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+  }
+
+  if (!token && req.headers['x-token']) {
+    token = Array.isArray(req.headers['x-token'])
+      ? req.headers['x-token'][0]
+      : (req.headers['x-token'] as string);
+  }
+
+  if (!token) {
+    return res.status(401).json({ error: 'Not authorized, no token' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (decoded.role === 'ADMIN' || decoded.role === 'SUPPORT_AGENT') {
+      req.user = decoded;
+      next();
+    } else {
+      res.status(403).json({ error: 'Forbidden: Support Agent or Admin access required' });
+    }
+  } catch (err) {
+    res.status(401).json({ error: 'Not authorized, token failed' });
+  }
+};
