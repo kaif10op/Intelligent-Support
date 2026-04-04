@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon, User, ChevronRight } from 'lucide-react';
+import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon, User, ChevronRight, BarChart3, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS, axiosConfig } from '../config/api';
+import { useAuthStore } from '../store/useAuthStore';
 
 const Sidebar = () => {
+  const { user } = useAuthStore();
   const [recentChats, setRecentChats] = useState<any[]>([]);
 
   useEffect(() => {
@@ -63,6 +65,38 @@ const Sidebar = () => {
           <SearchIcon className="w-5 h-5 flex-shrink-0" />
           <span>Search</span>
         </NavLink>
+
+        {/* Admin Section */}
+        {user?.role === 'ADMIN' && (
+          <>
+            <div className="mt-8 pt-6 border-t border-border/30">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">
+                Admin
+              </h3>
+              <NavLink to="/admin/dashboard" className={navItemClass}>
+                <BarChart3 className="w-5 h-5 flex-shrink-0" />
+                <span>Dashboard</span>
+              </NavLink>
+              <NavLink to="/admin" className={navItemClass}>
+                <Users className="w-5 h-5 flex-shrink-0" />
+                <span>Portal</span>
+              </NavLink>
+            </div>
+          </>
+        )}
+
+        {/* Support Agent Section */}
+        {user?.role === 'SUPPORT_AGENT' && (
+          <div className="mt-8 pt-6 border-t border-border/30">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">
+              Support
+            </h3>
+            <NavLink to="/support-queue" className={navItemClass}>
+              <Ticket className="w-5 h-5 flex-shrink-0" />
+              <span>Support Queue</span>
+            </NavLink>
+          </div>
+        )}
 
         {/* Recently Active Section */}
         {recentChats.length > 0 && (

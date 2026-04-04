@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Users, Database, Shield, Zap, BarChart as BarIcon, Activity, Loader2, MessageSquare, Edit2, User, TrendingUp, ArrowUpRight, Filter, Download, RefreshCw, Lock } from 'lucide-react';
+import { Users, Database, Shield, Zap, BarChart as BarIcon, Activity, Loader2, MessageSquare, Edit2, User, TrendingUp, ArrowUpRight, Filter, Download, RefreshCw, Lock, Plus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 import axiosInstance, { API_ENDPOINTS } from '../config/api';
 import UserManagement from '../components/UserManagement';
 import { Button, Card, Input, Modal, StatCard, NavigationTabs, Badge, Section } from '../components/ui';
@@ -8,6 +10,8 @@ import { Button, Card, Input, Modal, StatCard, NavigationTabs, Badge, Section } 
 type AdminTab = 'overview' | 'users' | 'activity';
 
 const Admin = () => {
+  const navigate = useNavigate();
+  const { addToast } = useToast();
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,8 +56,11 @@ const Admin = () => {
       setUsers(users.map(u => u.id === selectedUser.id ? { ...u, role: newRole } : u));
       setShowRoleModal(false);
       setSelectedUser(null);
+      addToast(`User role updated to ${newRole}`, 'success');
     } catch (err: any) {
       console.error('Error updating role:', err);
+      const errorMessage = err.response?.data?.error || 'Failed to update user role';
+      addToast(errorMessage, 'error');
     } finally {
       setUpdatingRole(false);
     }
@@ -195,16 +202,24 @@ const Admin = () => {
             {/* Quick Actions */}
             <Section title="Quick Actions" subtitle="Common admin tasks">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Button variant="secondary" fullWidth icon={<User className="w-4 h-4" />}>
+                <Button variant="secondary" fullWidth icon={<Plus className="w-4 h-4" />} onClick={() => {
+                  addToast('User creation coming soon', 'info');
+                }}>
                   Add New User
                 </Button>
-                <Button variant="secondary" fullWidth icon={<Lock className="w-4 h-4" />}>
+                <Button variant="secondary" fullWidth icon={<Lock className="w-4 h-4" />} onClick={() => {
+                  setActiveTab('users');
+                }}>
                   Manage Roles
                 </Button>
-                <Button variant="secondary" fullWidth icon={<Download className="w-4 h-4" />}>
+                <Button variant="secondary" fullWidth icon={<Download className="w-4 h-4" />} onClick={() => {
+                  addToast('Export feature coming soon', 'info');
+                }}>
                   Export Report
                 </Button>
-                <Button variant="secondary" fullWidth icon={<Filter className="w-4 h-4" />}>
+                <Button variant="secondary" fullWidth icon={<Filter className="w-4 h-4" />} onClick={() => {
+                  navigate('/help');
+                }}>
                   View Logs
                 </Button>
               </div>
