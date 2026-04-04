@@ -70,13 +70,9 @@ export const getMyTickets = async (req: AuthRequest, res: Response) => {
     let whereClause: any;
 
     if (userRole === 'SUPPORT_AGENT') {
-      // Support agents see: tickets assigned to them + tickets they created
-      whereClause = {
-        OR: [
-          { assignedToId: userId },      // Assigned to this agent
-          { userId: userId }              // Created by this agent
-        ]
-      };
+      // Support agents see ALL tickets (not just assigned or created)
+      // They can work on any ticket
+      whereClause = {};
     } else if (userRole === 'ADMIN') {
       // Admins see all tickets (no filter)
       whereClause = {};
@@ -457,5 +453,68 @@ export const exportAllTicketsAsCSV = async (req: AuthRequest, res: Response) => 
   } catch (error: any) {
     logger.error('Export all tickets error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to export tickets' });
+  }
+};
+
+/**
+ * Assign ticket to support agent (admin only)
+ * PUT /api/tickets/:id/assign
+ */
+export const assignTicket = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { assignedToId } = req.body;
+
+    // Only admins can assign tickets
+    if (req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (!assignedToId) {
+      return res.status(400).json({ error: 'assignedToId is required' });
+    }
+
+    // Verify ticket exists
+    const ticket = await prisma.ticket.findUnique({ where: { id: id as string } });
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    // Verify assigned agent exists and is support agent or admin
+    const agent = await prisma.user.findUnique({
+      where: { id: assignedToId as string }
+    });
+
+    if (!agent) {
+      return res.status(404).json({ error: 'Support agent not found' });
+    }
+
+    if (agent.role !== 'SUPPORT_AGENT' && agent.role !== 'ADMIN') {
+      return res.status(400).json({ error: 'Can only assign to support agents or admins' });
+    }
+
+    // Assign ticket
+    const updatedTicket = await prisma.ticket.update({
+      where: { id: id as string },
+      data: {
+        assignedToId: assignedToId as string,
+        status: 'IN_PROGRESS' // Automatically mark as in progress when assigned
+      },
+      include: {
+        user: { select: { name: true, email: true } },
+        assignedTo: { select: { name: true, email: true } }
+      }
+    });
+
+    logger.info('Ticket assigned', {
+      ticketId: id,
+      assignedTo: assignedToId,
+      adminId: req.user!.id
+    });
+
+    res.json({ ticket: updatedTicket, success: true });
+  } catch (error: any) {
+    logger.error('Assign ticket error', { error: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to assign ticket' });
   }
 };

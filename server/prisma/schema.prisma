@@ -13,20 +13,22 @@ enum UserRole {
 }
 
 model User {
-  id              String          @id @default(uuid())
-  googleId        String          @unique
-  email           String          @unique
-  name            String
-  picture         String?
-  role            UserRole        @default(USER)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  auditLogs       AuditLog[]      @relation("AdminLogs")
-  chats           Chat[]
-  knowledgeBases  KnowledgeBase[]
-  assignedTickets Ticket[]        @relation("AdminTickets")
-  tickets         Ticket[]        @relation("UserTickets")
-  ticketMessages  TicketNote[]
+  id                  String          @id @default(uuid())
+  googleId            String          @unique
+  email               String          @unique
+  name                String
+  picture             String?
+  role                UserRole        @default(USER)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  auditLogs           AuditLog[]      @relation("AdminLogs")
+  chats               Chat[]
+  knowledgeBases      KnowledgeBase[]
+  assignedTickets     Ticket[]        @relation("AdminTickets")
+  tickets             Ticket[]        @relation("UserTickets")
+  ticketMessages      TicketNote[]
+  sentMessages        Message[]       @relation("MessageSenders")
+  assignedChats       Chat[]          @relation("ChatAssignments")
 }
 
 model KnowledgeBase {
@@ -77,40 +79,55 @@ model DocumentChunk {
 }
 
 model Chat {
-  id        String              @id @default(uuid())
-  title     String
-  userId    String
-  kbId      String
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-  kb        KnowledgeBase       @relation(fields: [kbId], references: [id], onDelete: Cascade)
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  Message[]
-  tickets   Ticket[]
-  tags      ConversationTag[]   @relation("ChatTags")
+  id               String              @id @default(uuid())
+  title            String
+  userId           String
+  kbId             String
+  assignedAgentId  String?             // Support agent assigned to this chat
+  isClosed         Boolean             @default(false)
+  closedAt         DateTime?
+  closedBy         String?
+  metadata         Json?               // Stores summary, rating, etc.
+  tags             String[]            @default([])
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  kb               KnowledgeBase       @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedAgent    User?               @relation("ChatAssignments", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  messages         Message[]
+  tickets          Ticket[]
+  conversationTags ConversationTag[]   @relation("ChatTags")
 
   @@index([userId])
   @@index([kbId])
+  @@index([assignedAgentId])
+  @@index([isClosed])
   @@index([userId, createdAt(sort: Desc)])
   @@index([kbId, createdAt(sort: Desc)])
 }
 
 model Message {
   id         String              @id @default(uuid())
-  role       String
+  role       String              // 'user', 'assistant', 'human', 'system'
   content    String
   sources    Json?
   confidence Float?
   rating     Int?
   feedback   String?
   chatId     String
+  userId     String?             // For human/agent messages - who sent it
+  senderName String?             // Display name of message sender
+  senderRole String?             // Role of sender (ADMIN, SUPPORT_AGENT, USER)
   createdAt  DateTime            @default(now())
   chat       Chat                @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender     User?               @relation("MessageSenders", fields: [userId], references: [id], onDelete: SetNull)
   tags       ConversationTag[]   @relation("MessageTags")
 
   @@index([chatId])
   @@index([chatId, createdAt(sort: Asc)])
   @@index([role])
+  @@index([userId])
+  @@index([senderRole])
   @@index([confidence])
 }
 

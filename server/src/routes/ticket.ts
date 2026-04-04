@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../middlewares/auth.js';
-import { createTicket, getMyTickets, getAllTickets, updateTicket, addTicketNote, getTicketMessages, deleteTicketMessage, suggestReply, exportMyTicketsAsCSV, exportAllTicketsAsCSV } from '../controllers/ticket.js';
+import { createTicket, getMyTickets, getAllTickets, updateTicket, addTicketNote, getTicketMessages, deleteTicketMessage, suggestReply, exportMyTicketsAsCSV, exportAllTicketsAsCSV, assignTicket } from '../controllers/ticket.js';
 
 const router = Router();
 
@@ -19,6 +19,7 @@ router.delete('/:id/messages/:noteId', requireAuth, deleteTicketMessage); // Use
 router.get('/all', requireAuth, requireAdmin, getAllTickets);
 router.get('/export/all/csv', requireAuth, requireAdmin, exportAllTicketsAsCSV); // Export all tickets
 router.put('/:id', requireAuth, requireAdmin, updateTicket);
+router.put('/:id/assign', requireAuth, requireAdmin, assignTicket); // Assign ticket to support agent
 router.post('/:id/suggest-reply', requireAuth, requireAdmin, suggestReply); // AI suggestion for admin replies
 
 // Legacy note endpoint (kept for compatibility, but users should use /messages)
