@@ -49,6 +49,18 @@ async function startServer() {
     app.use(express.json());
     app.use(cookieParser());
 
+    // Performance monitoring middleware
+    app.use((req, res, next) => {
+      const start = Date.now();
+      res.on('finish', () => {
+        const duration = Date.now() - start;
+        if (duration > 500) {
+          logger.warn(`Slow Request: ${req.method} ${req.originalUrl}`, { duration: `${duration}ms` });
+        }
+      });
+      next();
+    });
+
     // Store io instance in app for use in controllers
     app.set('io', io);
 

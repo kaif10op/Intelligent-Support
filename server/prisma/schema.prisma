@@ -81,6 +81,9 @@ model Chat {
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  Message[]
   tickets   Ticket[]
+
+  @@index([userId])
+  @@index([kbId])
 }
 
 model Message {
@@ -94,6 +97,8 @@ model Message {
   chatId     String
   createdAt  DateTime @default(now())
   chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
 }
 
 model Ticket {
@@ -113,6 +118,10 @@ model Ticket {
   chat         Chat?        @relation(fields: [chatId], references: [id])
   user         User         @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
   notes        TicketNote[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([assignedToId])
 }
 
 model TicketNote {
@@ -125,6 +134,8 @@ model TicketNote {
   createdAt DateTime @default(now())
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
 }
 
 model AuditLog {
@@ -137,6 +148,8 @@ model AuditLog {
   description  String?
   createdAt    DateTime @default(now())
   admin        User     @relation("AdminLogs", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
 }
 
 enum TicketStatus {

@@ -1,9 +1,9 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app/client
 
-# Copy package files
+# Copy package files and configs
 COPY client/package*.json ./
 COPY client/tsconfig*.json ./
 COPY client/vite.config.ts ./
@@ -11,7 +11,7 @@ COPY client/tailwind.config.ts ./
 COPY client/postcss.config.js ./
 COPY client/eslint.config.js ./
 
-# Install dependencies
+# Install dependencies (using install instead of ci for better compatibility)
 RUN npm install
 
 # Build arguments for Vite

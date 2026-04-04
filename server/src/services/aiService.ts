@@ -63,28 +63,20 @@ export class AIService {
           if (!queryEmbeddings || !queryEmbeddings[0]) return 'Failed to generate search embeddings.';
           const qVec = queryEmbeddings[0];
 
-          const allChunks = await prisma.documentChunk.findMany({
-            where: { document: { kbId } },
-            include: { document: { select: { filename: true } } }
-          });
+          // Use PostgreSQL vector similarity search (<=> is cosine distance)
+          // We cast the Float[] embedding to vector for the search
+          const topChunks: any[] = await prisma.$queryRaw`
+            SELECT 
+              dc.content, 
+              d.filename,
+              1 - (dc.embedding::vector <=> ${qVec}::vector) as similarity
+            FROM "DocumentChunk" dc
+            JOIN "Document" d ON dc."docId" = d.id
+            WHERE d."kbId" = ${kbId}
+            ORDER BY dc.embedding::vector <=> ${qVec}::vector
+            LIMIT 5
+          `;
 
-          const cosineSimilarity = (vecA: number[], vecB: number[]) => {
-            let dotProduct = 0, normA = 0, normB = 0;
-            for (let i = 0; i < vecA.length; i++) {
-              dotProduct += (vecA[i] || 0) * (vecB[i] || 0);
-              normA += (vecA[i] || 0) ** 2;
-              normB += (vecB[i] || 0) ** 2;
-            }
-            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-          };
-
-          const scoredChunks = allChunks.map(chunk => ({
-            content: chunk.content,
-            filename: chunk.document.filename,
-            similarity: cosineSimilarity(qVec, chunk.embedding as number[])
-          }));
-
-          const topChunks = scoredChunks.sort((a, b) => b.similarity - a.similarity).slice(0, 5);
           if (topChunks.length === 0) return 'No relevant info found.';
           return topChunks.map(c => `File: ${c.filename}\nContent: ${c.content}`).join('\n\n');
         }
@@ -105,8 +97,8 @@ export class AIService {
 
       const agentModifier = `You are a professional customer support agent. Be concise and helpful.`;
 
-      // 2. Execute Agent
-      const provider = this.llmInstances[0]; // Simplification for the example
+      // 2. Execute Agent with Streaming
+      const provider = this.llmInstances[0]; 
       if (!provider) throw new Error('No LLM providers configured');
 
       const agent = createReactAgent({
@@ -129,11 +121,7 @@ export class AIService {
       }
       messageHistory.push(new HumanMessage(message));
 
-      const result = await agent.invoke({ messages: messageHistory });
-      const lastMsg = result.messages[result.messages.length - 1];
-      const fullAnswer = typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content);
-
-      // Save user message
+      // Save user message and create chat if needed
       let currentChatId = chatId;
       if (!currentChatId) {
         const chat = await prisma.chat.create({
@@ -143,11 +131,23 @@ export class AIService {
       }
       await prisma.message.create({ data: { role: 'user', content: message, chatId: currentChatId } });
 
-      // Stream to client
-      const tokens = fullAnswer.split(' ');
-      for (const token of tokens) {
-        onToken(token + ' ', currentChatId);
-        await new Promise(r => setTimeout(r, 20)); // Subtle delay for streaming effect
+      // Stream responses
+      let fullAnswer = '';
+      const stream = await agent.stream(
+        { messages: messageHistory },
+        { streamMode: 'messages' }
+      );
+
+      for await (const [message, metadata] of stream) {
+        // Robust check for AI message content
+        const isAI = message instanceof AIMessage || (message as any)._getType?.() === 'ai';
+        const hasContent = typeof message.content === 'string' && message.content.length > 0;
+        
+        if (isAI && hasContent) {
+          const content = message.content as string;
+          fullAnswer += content;
+          onToken(content, currentChatId);
+        }
       }
 
       // Save AI message
