@@ -12,6 +12,7 @@ import { initializeSocket } from './socket.js';
 import authRoutes from './routes/auth.js';
 import kbRoutes from './routes/kb.js';
 import chatRoutes from './routes/chat.js';
+import chatHumanRoutes from './routes/chatHuman.js';
 import adminRoutes from './routes/admin.js';
 import ticketRoutes from './routes/ticket.js';
 import searchRoutes from './routes/search.js';
@@ -92,6 +93,7 @@ async function startServer() {
     app.use('/api/auth', authRoutes);
     app.use('/api/kb', kbRoutes);
     app.use('/api/chat', chatRoutes);
+    app.use('/api/chat/human', chatHumanRoutes); // Human-in-loop chat endpoints
     app.use('/api/admin', adminRoutes);
     app.use('/api/admin-chat', adminChatRoutes);
     app.use('/api/search', searchRoutes);

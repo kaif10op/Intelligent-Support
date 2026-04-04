@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 export interface AuthRequest extends Request {
   cookies: Record<string, string>;
-  user?: { id: string; role: string; email: string };
+  user?: { id: string; role: string; email: string; name?: string };
 }
 
 export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
