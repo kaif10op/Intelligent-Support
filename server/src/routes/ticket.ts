@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../middlewares/auth.js';
-import { createTicket, getMyTickets, getAllTickets, updateTicket, addTicketNote, getTicketMessages, deleteTicketMessage, suggestReply, exportMyTicketsAsCSV, exportAllTicketsAsCSV, assignTicket } from '../controllers/ticket.js';
+import { createTicket, getMyTickets, getAllTickets, updateTicket, addTicketNote, getTicketMessages, deleteTicketMessage, suggestReply, exportMyTicketsAsCSV, exportAllTicketsAsCSV, assignTicket, getAssignmentMetrics, autoAssignTickets, rebalanceTickets, optimizeTicketAssignment } from '../controllers/ticket.js';
 
 const router = Router();
 
@@ -16,6 +16,10 @@ router.post('/:id/messages', requireAuth, addTicketNote); // Users and admins ca
 router.delete('/:id/messages/:noteId', requireAuth, deleteTicketMessage); // Users can delete own, admins can delete any
 
 // Admin Routes
+router.get('/admin/assignment-metrics', requireAuth, requireAdmin, getAssignmentMetrics);
+router.post('/admin/auto-assign', requireAuth, requireAdmin, autoAssignTickets);
+router.post('/admin/rebalance', requireAuth, requireAdmin, rebalanceTickets);
+router.post('/admin/optimize', requireAuth, requireAdmin, optimizeTicketAssignment);
 router.get('/all', requireAuth, requireAdmin, getAllTickets);
 router.get('/export/all/csv', requireAuth, requireAdmin, exportAllTicketsAsCSV); // Export all tickets
 router.put('/:id', requireAuth, requireAdmin, updateTicket);

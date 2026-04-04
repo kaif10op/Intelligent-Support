@@ -8,6 +8,7 @@ import { exportTicketsToCSV, getExportFilename } from '../utils/export.js';
 import { sendTicketReplyEmail, sendTicketStatusChangedEmail, sendTicketAssignedEmail } from '../utils/email.js';
 import { WebhookService } from '../services/webhookService.js';
 import { TagService } from '../services/tagService.js';
+import { TicketAssignmentService } from '../services/ticketAssignmentService.js';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
@@ -516,5 +517,107 @@ export const assignTicket = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     logger.error('Assign ticket error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to assign ticket' });
+  }
+};
+
+/**
+ * Get ticket assignment metrics (admin only)
+ * GET /api/tickets/admin/assignment-metrics
+ */
+export const getAssignmentMetrics = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const stats = await TicketAssignmentService.getAssignmentStats();
+    res.json(stats);
+  } catch (error: any) {
+    logger.error('Get assignment metrics error', { error: error.message });
+    res.status(500).json({ error: 'Failed to get assignment metrics' });
+  }
+};
+
+/**
+ * Auto-assign all unassigned tickets (admin only)
+ * POST /api/tickets/admin/auto-assign
+ */
+export const autoAssignTickets = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const result = await TicketAssignmentService.autoAssignUnassignedTickets();
+
+    logger.info('Auto-assign completed', result);
+
+    res.json({
+      success: true,
+      assigned: result.assigned,
+      failed: result.errors,
+      message: `Successfully assigned ${result.assigned} tickets to support agents${result.errors > 0 ? `, ${result.errors} failed` : ''}`
+    });
+  } catch (error: any) {
+    logger.error('Auto-assign error', { error: error.message });
+    res.status(500).json({ error: 'Failed to auto-assign tickets' });
+  }
+};
+
+/**
+ * Rebalance tickets among agents (admin only)
+ * POST /api/tickets/admin/rebalance
+ * Moves tickets from overloaded agents to available agents
+ */
+export const rebalanceTickets = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const reassignments = await TicketAssignmentService.rebalanceTickets();
+
+    logger.info('Ticket rebalance completed', {
+      count: reassignments.length,
+      details: reassignments
+    });
+
+    res.json({
+      success: true,
+      reassignments,
+      message: `Rebalanced ${reassignments.length} tickets among support agents`
+    });
+  } catch (error: any) {
+    logger.error('Rebalance error', { error: error.message });
+    res.status(500).json({ error: 'Failed to rebalance tickets' });
+  }
+};
+
+/**
+ * Reassign slow tickets to faster agents (admin only)
+ * POST /api/tickets/admin/optimize
+ * Finds tickets stuck in progress and reassigns to faster agents
+ */
+export const optimizeTicketAssignment = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const reassignments = await TicketAssignmentService.reassignSlowTickets();
+
+    logger.info('Ticket optimization completed', {
+      count: reassignments.length,
+      details: reassignments
+    });
+
+    res.json({
+      success: true,
+      reassignments,
+      message: `Optimized ${reassignments.length} slow tickets by reassigning to faster agents`
+    });
+  } catch (error: any) {
+    logger.error('Optimize error', { error: error.message });
+    res.status(500).json({ error: 'Failed to optimize ticket assignment' });
   }
 };
