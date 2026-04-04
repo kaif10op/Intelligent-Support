@@ -29,12 +29,19 @@ const setSessionCookie = (res: Response, user: { id: string; role: string; email
     { expiresIn: '7d' }
   );
 
+  // For cross-origin requests from different domains, use SameSite=None
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('token', sessionToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax', // Use 'none' for cross-domain in production
     maxAge: 7 * 24 * 60 * 60 * 1000,
+    domain: isProduction ? undefined : 'localhost', // Don't set domain for prod (subdomain handling)
+    path: '/',
   });
+
+  // Return token in response body for client to store
+  return sessionToken;
 };
 
 export const googleAuth = async (req: Request, res: Response) => {
@@ -47,7 +54,7 @@ export const googleAuth = async (req: Request, res: Response) => {
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID!,
     });
-    
+
     const payload = ticket.getPayload();
     if (!payload?.email) return res.status(400).json({ error: 'Invalid Google token' });
 
@@ -56,7 +63,7 @@ export const googleAuth = async (req: Request, res: Response) => {
     // Determine admin based on exact match perhaps? Just mark first user as Admin
     const userCount = await prisma.user.count();
     let role: 'USER' | 'ADMIN' = userCount === 0 ? 'ADMIN' : 'USER';
-    
+
     // Find or create
     let user = await prisma.user.findUnique({ where: { googleId } });
     if (!user) {
@@ -65,9 +72,9 @@ export const googleAuth = async (req: Request, res: Response) => {
       });
     }
 
-    setSessionCookie(res, user);
+    const sessionToken = setSessionCookie(res, user);
 
-    res.json({ user });
+    res.json({ user, token: sessionToken });
   } catch (err: any) {
     logger.error('Google verification failed', {
         error: err.message,
@@ -107,8 +114,8 @@ export const clerkAuth = async (req: Request, res: Response) => {
       });
     }
 
-    setSessionCookie(res, user);
-    res.json({ user });
+    const sessionToken = setSessionCookie(res, user);
+    res.json({ user, token: sessionToken });
   } catch (err: any) {
     logger.error('Clerk authentication failed', {
       error: err.message,

@@ -30,7 +30,16 @@ const Login = () => {
         };
 
         const res = await axios.post(API_ENDPOINTS.AUTH_CLERK, payload, axiosConfig);
-        setUser(res.data.user);
+
+        // Store JWT token in localStorage for API requests
+        if (res.data.token) {
+          localStorage.setItem('auth_token', res.data.token);
+        }
+
+        if (res.data.user) {
+          setUser(res.data.user);
+        }
+
         navigate('/');
       } catch (err: any) {
         setSyncError(err.response?.data?.error || 'Failed to create platform session');
