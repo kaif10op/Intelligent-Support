@@ -14,7 +14,7 @@ const RecentChats = () => {
   const fetchChats = async () => {
     try {
       const res = await axios.get(API_ENDPOINTS.CHAT_LIST, axiosConfig);
-      const data = Array.isArray(res.data) ? res.data : res.data.chats || res.data.data || [];
+      const data = res.data?.data || res.data?.chats || (Array.isArray(res.data) ? res.data : []);
       setChats(Array.isArray(data) ? data : []);
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Failed to load chats';

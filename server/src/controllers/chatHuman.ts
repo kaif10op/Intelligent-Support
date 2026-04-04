@@ -167,13 +167,14 @@ export const getChatTranscript = async (req: AuthRequest, res: Response) => {
  */
 export const closeChat = async (req: AuthRequest, res: Response) => {
   try {
-    const { chatId, summary, satisfaction } = req.body;
+    const { chatId } = req.params;
+    const { summary, satisfaction } = req.body;
 
     if (!chatId) {
       return res.status(400).json({ error: 'chatId is required' });
     }
 
-    const chat = await prisma.chat.findUnique({ where: { id: chatId } });
+    const chat = await prisma.chat.findUnique({ where: { id: chatId as string } });
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found' });
     }
@@ -182,7 +183,7 @@ export const closeChat = async (req: AuthRequest, res: Response) => {
 
     await (prisma as any).message.create({
       data: {
-        chatId,
+        chatId: chatId as string,
         role: 'system',
         content: `Closed by ${closedByName}${summary ? '. ' + summary : ''}`,
         senderName: 'System'
@@ -190,7 +191,7 @@ export const closeChat = async (req: AuthRequest, res: Response) => {
     });
 
     const closed = await (prisma as any).chat.update({
-      where: { id: chatId },
+      where: { id: chatId as string },
       data: {
         isClosed: true,
         closedAt: new Date(),

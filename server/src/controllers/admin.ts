@@ -75,7 +75,17 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
       },
       orderBy: { createdAt: 'desc' },
     });
-    res.json({ users });
+    res.json({
+      data: users,
+      pagination: {
+        page: 1,
+        limit: users.length,
+        total: users.length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: false
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch users' });
   }

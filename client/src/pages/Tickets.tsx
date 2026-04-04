@@ -83,7 +83,7 @@ const Tickets = () => {
   const fetchSupportAgents = async () => {
     try {
       const res = await axios.get(apiUrl('/api/admin/users'), axiosConfig);
-      const agents = res.data.users.filter((u: any) => u.role === 'SUPPORT_AGENT' || u.role === 'ADMIN');
+      const agents = res.data.data.filter((u: any) => u.role === 'SUPPORT_AGENT' || u.role === 'ADMIN');
       setSupportAgents(agents);
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Failed to load support agents';

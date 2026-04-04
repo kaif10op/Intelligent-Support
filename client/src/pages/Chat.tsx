@@ -306,7 +306,7 @@ const Chat = () => {
       const fetchAgents = async () => {
         try {
           const res = await axios.get(apiUrl('/api/admin/users?role=SUPPORT_AGENT'), axiosConfig);
-          const agentList = res.data?.users || [];
+          const agentList = res.data?.data || [];
           setAgents(agentList.filter((a: any) => a.id !== user?.id));
         } catch (err) {
           console.error('Failed to fetch agents:', err);

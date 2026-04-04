@@ -403,7 +403,17 @@ export const getRecentChats = async (req: AuthRequest, res: Response) => {
       take: limit
     });
 
-    res.json({ chats, total: chats.length });
+    res.json({
+      data: chats,
+      pagination: {
+        page: 1,
+        limit: limit,
+        total: chats.length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: false
+      }
+    });
   } catch (error: any) {
     const msg = typeof error?.message === 'string' ? error.message : '';
     const missingSchema =
@@ -412,7 +422,7 @@ export const getRecentChats = async (req: AuthRequest, res: Response) => {
       msg.includes('The table');
 
     if (missingSchema) {
-      return res.json({ chats: [], total: 0 });
+      return res.json({ data: [], pagination: { page: 1, limit: 5, total: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false } });
     }
 
     res.status(500).json({ error: 'Failed to fetch recent chats' });
