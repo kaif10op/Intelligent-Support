@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { Users, Database, Shield, Zap, TrendingUp, Search, Filter, BarChart as BarIcon, PieChart as PieIcon, Activity, Loader2, AlertCircle, MessageSquare } from 'lucide-react';
+import { Users, Database, Shield, Zap, TrendingUp, Search, BarChart as BarIcon, PieChart as PieIcon, Activity, Loader2, AlertCircle, MessageSquare, Edit2, CheckCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { Link } from 'react-router-dom';
-import { API_ENDPOINTS, axiosConfig } from '../config/api';
+import axiosInstance, { API_ENDPOINTS } from '../config/api';
 
 const Admin = () => {
   const [stats, setStats] = useState<any>(null);
@@ -12,13 +11,17 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [chatSearchTerm, setChatSearchTerm] = useState('');
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [updatingRole, setUpdatingRole] = useState(false);
+  const [newRole, setNewRole] = useState<'USER' | 'ADMIN'>('USER');
 
   const fetchAdminData = async () => {
     try {
       const [statsRes, usersRes, chatsRes] = await Promise.all([
-        axios.get(API_ENDPOINTS.ADMIN_STATS, axiosConfig),
-        axios.get(API_ENDPOINTS.ADMIN_USERS, axiosConfig),
-        axios.get(API_ENDPOINTS.ADMIN_CHATS, axiosConfig).catch(() => ({ data: [] }))
+        axiosInstance.get(API_ENDPOINTS.ADMIN_STATS),
+        axiosInstance.get(API_ENDPOINTS.ADMIN_USERS),
+        axiosInstance.get(API_ENDPOINTS.ADMIN_CHATS).catch(() => ({ data: [] }))
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data);
@@ -35,9 +38,40 @@ const Admin = () => {
     fetchAdminData();
   }, []);
 
+  const handleChangeRole = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setUpdatingRole(true);
+      // Use axiosInstance to include JWT token in header
+      const response = await axiosInstance.put(
+        `${API_ENDPOINTS.ADMIN_USERS}/${selectedUser.id}/role`,
+        { role: newRole }
+      );
+
+      // Update local state
+      setUsers(users.map(u => u.id === selectedUser.id ? { ...u, role: newRole } : u));
+      setShowRoleModal(false);
+      setSelectedUser(null);
+
+      console.log('Role updated successfully:', response.data);
+    } catch (err: any) {
+      console.error('Error updating role:', err);
+      alert(`Error: ${err.response?.data?.error || 'Failed to update user role'}`);
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+
+  const handleSelectUser = (user: any) => {
+    setSelectedUser(user);
+    setNewRole(user.role);
+    setShowRoleModal(true);
+  };
+
   const handleUpdateTicket = async (ticketId: string, status: string) => {
     try {
-      await axios.put(API_ENDPOINTS.TICKET_UPDATE(ticketId), { status }, axiosConfig);
+      await axiosInstance.put(API_ENDPOINTS.TICKET_UPDATE(ticketId), { status });
       fetchAdminData();
     } catch (err) {
       console.error('Update ticket error:', err);
@@ -201,8 +235,8 @@ const Admin = () => {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Role</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Created</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">KBs</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Activity</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -231,11 +265,27 @@ const Admin = () => {
                     </span>
                   </td>
                   <td className="px-4 py-4 text-sm text-muted-foreground">{new Date(user.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-4 text-sm text-foreground font-medium">{user._count?.knowledgeBases || 0}</td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <MessageSquare className="w-4 h-4 text-primary" />
+                        <span className="text-foreground font-medium">{user._count?.chats || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Database className="w-4 h-4 text-secondary" />
+                        <span className="text-foreground font-medium">{user._count?.knowledgeBases || 0}</span>
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span className="text-sm text-emerald-400 font-medium">Active</span>
+                      <button
+                        onClick={() => handleSelectUser(user)}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Change Role
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -256,7 +306,7 @@ const Admin = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-foreground">Ticket Management</h2>
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Filter className="w-4 h-4" />
+            <Activity className="w-4 h-4" />
             <span>Recent Tickets</span>
           </div>
         </div>
@@ -379,6 +429,113 @@ const Admin = () => {
           )}
         </div>
       </section>
+
+      {/* Role Change Modal */}
+      {showRoleModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-elevated border border-border/50 rounded-xl max-w-md w-full p-8 space-y-6 animate-in fade-in zoom-in-95">
+            {/* Header */}
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">Change User Role</h2>
+              <p className="text-muted-foreground">Update role for <span className="font-semibold text-foreground">{selectedUser.name}</span></p>
+            </div>
+
+            {/* User Info */}
+            <div className="glass border border-border/30 rounded-lg p-4 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Name</p>
+                <p className="text-foreground">{selectedUser.name}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Email</p>
+                <p className="text-foreground">{selectedUser.email}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Current Role</p>
+                <p className={`text-sm font-bold px-2.5 py-1 rounded-lg inline-block ${
+                  selectedUser.role === 'ADMIN'
+                    ? 'bg-secondary/10 text-secondary'
+                    : 'bg-muted/10 text-muted-foreground'
+                }`}>
+                  {selectedUser.role}
+                </p>
+              </div>
+            </div>
+
+            {/* Role Selection */}
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-foreground">New Role</p>
+              <div className="space-y-2">
+                <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                  newRole === 'USER'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border/30 hover:border-border/50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="USER"
+                    checked={newRole === 'USER'}
+                    onChange={(e) => setNewRole(e.target.value as 'USER')}
+                    className="w-4 h-4"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">User</p>
+                    <p className="text-xs text-muted-foreground">Can create chats and manage their own KBs</p>
+                  </div>
+                </label>
+
+                <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                  newRole === 'ADMIN'
+                    ? 'border-secondary bg-secondary/10'
+                    : 'border-border/30 hover:border-border/50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="ADMIN"
+                    checked={newRole === 'ADMIN'}
+                    onChange={(e) => setNewRole(e.target.value as 'ADMIN')}
+                    className="w-4 h-4"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">Admin</p>
+                    <p className="text-xs text-muted-foreground">Full access to admin dashboard and user management</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => setShowRoleModal(false)}
+                disabled={updatingRole}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-border/50 text-foreground hover:bg-card/50 transition-colors font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleChangeRole}
+                disabled={updatingRole || newRole === selectedUser.role}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {updatingRole ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Update Role
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
