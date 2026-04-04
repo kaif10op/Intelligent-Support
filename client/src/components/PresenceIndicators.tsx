@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSocket } from '../hooks/useSocket';
+import { useSocket } from '../contexts/SocketContext';
 
 interface User {
   id: string;
@@ -26,8 +26,6 @@ export const PresenceIndicators: React.FC<PresenceIndicatorsProps> = ({
 
   useEffect(() => {
     if (!socket) return;
-
-    const roomName = `${resourceType}-${resourceId}`;
 
     // Join room
     socket.emit('user-presence', { resourceId, resourceType });

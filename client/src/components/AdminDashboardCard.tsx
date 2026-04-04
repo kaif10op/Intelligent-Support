@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Users, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface DashboardMetrics {
   totalTickets: number;
   openTickets: number;
   avgResponseTime: number;
-  average Resolution Time: number;
+  averageResolutionTime: number;
   slaCompliance: number;
   customerSatisfaction: number;
   ticketTrend: Array<{ date: string; count: number }>;

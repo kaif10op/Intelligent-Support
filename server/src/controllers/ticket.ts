@@ -20,6 +20,8 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
     const slaDuration = (slaDays[priority || 'MEDIUM'] || 3) * 24 * 60 * 60 * 1000;
     const dueAt = new Date(now.getTime() + slaDuration);
 
+    logger.info('Creating ticket', { title, description, priority, userId: req.user!.id, chatId });
+
     const ticket = await prisma.ticket.create({
       data: {
         title,
@@ -31,6 +33,8 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
         isOverdue: false
       }
     });
+
+    logger.info('Ticket created successfully', { ticketId: ticket.id });
 
     // Emit webhook event for ticket creation
     WebhookService.emit('ticket.created', {
@@ -45,8 +49,13 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
 
     res.json(ticket);
   } catch (error: any) {
-    logger.error('Create Ticket Error', { error: error.message, stack: error.stack });
-    res.status(500).json({ error: 'Failed to create ticket' });
+    logger.error('Create Ticket Error', {
+      error: error.message,
+      stack: error.stack,
+      code: error.code,
+      details: error
+    });
+    res.status(500).json({ error: 'Failed to create ticket', details: error.message });
   }
 };
 
