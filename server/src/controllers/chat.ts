@@ -392,6 +392,33 @@ export const getChats = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getRecentChats = async (req: AuthRequest, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 5, 20);
+
+    const chats = await prisma.chat.findMany({
+      where: { userId: req.user!.id },
+      orderBy: { updatedAt: 'desc' },
+      include: { kb: { select: { id: true, title: true } }, messages: { take: 1, orderBy: { createdAt: 'desc' } } },
+      take: limit
+    });
+
+    res.json({ chats, total: chats.length });
+  } catch (error: any) {
+    const msg = typeof error?.message === 'string' ? error.message : '';
+    const missingSchema =
+      msg.includes('does not exist') ||
+      msg.includes('relation') ||
+      msg.includes('The table');
+
+    if (missingSchema) {
+      return res.json({ chats: [], total: 0 });
+    }
+
+    res.status(500).json({ error: 'Failed to fetch recent chats' });
+  }
+};
+
 export const getChatDetails = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;

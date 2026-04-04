@@ -45,7 +45,7 @@ const Dashboard = () => {
       const [kbRes, ticketRes, chatRes] = await Promise.all([
         axios.get(API_ENDPOINTS.KB_LIST, axiosConfig).catch(() => ({ data: [] })),
         axios.get(apiUrl('/api/tickets/my'), axiosConfig).catch(() => ({ data: [] })),
-        axios.get(apiUrl('/api/chats/recent'), axiosConfig).catch(() => ({ data: [] }))
+        axios.get(API_ENDPOINTS.CHAT_RECENT, axiosConfig).catch(() => ({ data: {} }))
       ]);
 
       const kbData = Array.isArray(kbRes.data) ? kbRes.data : kbRes.data.data || [];
@@ -61,8 +61,8 @@ const Dashboard = () => {
         });
       }
 
-      const chatData = Array.isArray(chatRes.data) ? chatRes.data : chatRes.data.chats || [];
-      setRecentChats(Array.isArray(chatData) ? chatData.slice(0, 5) : []);
+      const chatData = chatRes.data.chats || [];
+      setRecentChats(Array.isArray(chatData) ? chatData : []);
 
       setLoading(false);
     } catch (err) {

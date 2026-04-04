@@ -37,6 +37,7 @@ export const API_ENDPOINTS = {
   // Chat
   CHAT_CREATE: apiUrl('/api/chat'),
   CHAT_LIST: apiUrl('/api/chat'),
+  CHAT_RECENT: apiUrl('/api/chat/recent'),
   CHAT_DETAIL: (id: string) => apiUrl(`/api/chat/${id}`),
   CHAT_MESSAGE: apiUrl('/api/chat/message'),
   CHAT_FEEDBACK: apiUrl('/api/chat/feedback'),

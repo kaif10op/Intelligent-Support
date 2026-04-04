@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { requireAuth } from '../middlewares/auth.js';
-import { chatWithAgent, getChats, getChatDetails, submitFeedback, clearChat, regenerateResponse, getSuggestions, exportChatsAsCSV } from '../controllers/chat.js';
+import { chatWithAgent, getChats, getRecentChats, getChatDetails, submitFeedback, clearChat, regenerateResponse, getSuggestions, exportChatsAsCSV } from '../controllers/chat.js';
 
 const router = Router();
 
 router.use(requireAuth as any);
 
 router.post('/', chatWithAgent as any);
+router.get('/recent', getRecentChats as any);
 router.get('/', getChats as any);
 router.get('/:id', getChatDetails as any);
 router.post('/message/:id/feedback', submitFeedback as any);
