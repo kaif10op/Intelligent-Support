@@ -125,8 +125,28 @@ export const logout = (req: Request, res: Response) => {
 
 export const getMe = async (req: Request, res: Response) => {
   try {
-    const token = req.cookies.token;
-    if (!token) return res.status(401).json({ error: 'Not authenticated' });
+    // Try to get token from multiple sources
+    let token = req.cookies.token;
+
+    // If no token in cookies, try Authorization header
+    if (!token && req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+
+    // If still no token, try x-token header
+    if (!token && req.headers['x-token']) {
+      token = req.headers['x-token'] as string;
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        error: 'Not authenticated',
+        tip: 'Send JWT token in cookie (token), Authorization header (Bearer), or x-token header'
+      });
+    }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
@@ -134,6 +154,9 @@ export const getMe = async (req: Request, res: Response) => {
 
     res.json({ user });
   } catch (e) {
-    res.status(401).json({ error: 'Invalid session' });
+    res.status(401).json({
+      error: 'Invalid session',
+      details: (e as any).message
+    });
   }
 };

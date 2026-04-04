@@ -14,23 +14,72 @@ export interface AuthRequest extends Request {
 }
 
 export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ error: 'Not authorized, no token' });
+  // Try to get token from multiple sources (in order of priority)
+  let token = req.cookies.token;
+
+  // If no token in cookies, try Authorization header (Bearer token)
+  if (!token && req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    if (authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove "Bearer " prefix
+    }
+  }
+
+  // If still no token, try x-token header (alternative header)
+  if (!token && req.headers['x-token']) {
+    token = req.headers['x-token'] as string;
+  }
+
+  if (!token) {
+    return res.status(401).json({
+      error: 'Not authorized, no token',
+      tip: 'Send token in: cookie (token), Authorization header (Bearer), or x-token header'
+    });
+  }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'Not authorized, token failed' });
+    res.status(401).json({
+      error: 'Not authorized, token failed',
+      details: (err as any).message
+    });
   }
 };
 
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user && req.user.role === 'ADMIN') {
-    next();
-  } else {
-    res.status(403).json({ error: 'Forbidden: Admin access required' });
+  // First verify auth
+  let token = req.cookies.token;
+
+  if (!token && req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    if (authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+  }
+
+  if (!token && req.headers['x-token']) {
+    token = Array.isArray(req.headers['x-token'])
+      ? req.headers['x-token'][0]
+      : (req.headers['x-token'] as string);
+  }
+
+  if (!token) {
+    return res.status(401).json({ error: 'Not authorized, no token' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (decoded.role === 'ADMIN') {
+      req.user = decoded;
+      next();
+    } else {
+      res.status(403).json({ error: 'Forbidden: Admin access required' });
+    }
+  } catch (err) {
+    res.status(401).json({ error: 'Not authorized, token failed' });
   }
 };
 
