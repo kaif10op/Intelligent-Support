@@ -153,9 +153,14 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
 
 export const updateTicket = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { status, priority, assignedToId } = req.body;
+  let { status, priority, assignedToId } = req.body;
 
   try {
+    // Support agents can only update status and priority, not reassign
+    if (req.user!.role === 'SUPPORT_AGENT' && assignedToId && assignedToId !== req.user!.id) {
+      return res.status(403).json({ error: 'Support agents can only self-assign tickets, not reassign to others' });
+    }
+
     // Check if ticket is overdue
     const ticket = await prisma.ticket.findUnique({
       where: { id: id as string },
