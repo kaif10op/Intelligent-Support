@@ -18,21 +18,23 @@ help:
 	@echo "make stop          - Stop all services without removing"
 	@echo "make format        - Format code"
 	@echo "make lint          - Lint code"
+	@echo "make deploy-prod   - Build and start all services in production"
+	@echo "make migrate-prod  - Run Prisma migrations for production"
 
 # Development
 dev:
 	@echo "Starting services in development mode..."
-	docker-compose up
+	docker compose up
 
 # Build images
 build:
 	@echo "Building Docker images..."
-	docker-compose build
+	docker compose build
 
 # Start all services (detached)
 up:
 	@echo "Starting all services..."
-	docker-compose up -d
+	docker compose up -d
 	@echo "Services started!"
 	@echo "Client: http://localhost:3000"
 	@echo "Server: http://localhost:5000"
@@ -40,49 +42,49 @@ up:
 # Stop all services
 down:
 	@echo "Stopping all services..."
-	docker-compose down
+	docker compose down
 
 # Remove everything including volumes
 clean:
 	@echo "Cleaning everything including volumes..."
-	docker-compose down -v
+	docker compose down -v
 	@echo "Cleanup complete!"
 
 # View logs
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 logs-server:
-	docker-compose logs -f server
+	docker compose logs -f server
 
 logs-client:
-	docker-compose logs -f client
+	docker compose logs -f client
 
 logs-db:
-	docker-compose logs -f db
+	docker compose logs -f db
 
 # Database operations
 migrate:
 	@echo "Running database migrations..."
-	docker-compose exec server npx prisma migrate deploy
+	docker compose exec server npx prisma migrate deploy
 
 seed:
 	@echo "Seeding database..."
-	docker-compose exec server npm run seed
+	docker compose exec server npm run seed
 
 # Show running containers
 ps:
-	docker-compose ps
+	docker compose ps
 
 # Stop services without removing
 stop:
 	@echo "Stopping services..."
-	docker-compose stop
+	docker compose stop
 
 # Restart services
 restart:
 	@echo "Restarting services..."
-	docker-compose restart
+	docker compose restart
 
 # Format code
 format:
@@ -139,10 +141,23 @@ deploy-render:
 	@echo "2. Connect repository to Render"
 	@echo "3. Render will automatically deploy based on render.yaml"
 
+# Production Deployment (Self-Hosted)
+deploy-prod:
+	@echo "Deploying to Production..."
+	@if [ ! -f .env.production ]; then echo "Error: .env.production is missing! Please create it."; exit 1; fi
+	docker compose -f docker-compose.prod.yml build
+	docker compose -f docker-compose.prod.yml up -d
+	@echo "Deployment complete! Visit your health endpoint to verify."
+
+migrate-prod:
+	@echo "Running production database migrations..."
+	@if [ ! -f .env.production ]; then echo "Error: .env.production is missing!"; exit 1; fi
+	docker compose -f docker-compose.prod.yml exec server npx prisma migrate deploy
+
 # Show environment info
 info:
 	@echo "System Information:"
 	@docker --version
-	@docker-compose --version
+	@docker compose version
 	@node --version || echo "Node.js not installed"
 	@npm --version || echo "npm not installed"

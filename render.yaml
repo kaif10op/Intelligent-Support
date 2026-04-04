@@ -5,7 +5,7 @@ services:
     runtime: node
     plan: free # Use the free tier (spins down after 15m of inactivity)
     region: singapore # Adjust as needed
-    buildCommand: npm install --prefix server --legacy-peer-deps && npm run build --prefix server && npx prisma generate --schema=server/prisma/schema.prisma
+    buildCommand: npm install --prefix server --legacy-peer-deps --include=dev && npm run build --prefix server && npx prisma generate --schema=server/prisma/schema.prisma
     startCommand: npx prisma db push --schema=server/prisma/schema.prisma --accept-data-loss && npm start --prefix server
     envVars:
       - key: NODE_VERSION

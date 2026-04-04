@@ -42,12 +42,14 @@ export const installPlugin = async (req: AuthRequest, res: Response) => {
         name,
         displayName,
         version: version || '1.0.0',
-        author: author || 'Unknown',
         description,
-        installUrl,
-        hooks: hooks || [],
-        permissions: permissions || {},
-        enabled: false
+        enabled: false,
+        config: {
+          author: author || 'Unknown',
+          installUrl,
+          hooks: hooks || [],
+          permissions: permissions || {},
+        }
       }
     });
 
@@ -276,14 +278,17 @@ export const uninstallPlugin = async (req: AuthRequest, res: Response) => {
  */
 export const triggerPluginHook = async (hookName: string, data: any) => {
   try {
-    // Get all enabled plugins that support this hook
-    const plugins = await prisma.plugin.findMany({
+    // Get all enabled plugins and filter by hook support
+    const allPlugins = await prisma.plugin.findMany({
       where: {
-        enabled: true,
-        hooks: {
-          hasSome: [hookName]
-        }
+        enabled: true
       }
+    });
+
+    // Filter plugins that support this hook
+    const plugins = allPlugins.filter(plugin => {
+      const hooks = (plugin.config as any)?.hooks || [];
+      return Array.isArray(hooks) && hooks.includes(hookName);
     });
 
     // Trigger webhook for each plugin

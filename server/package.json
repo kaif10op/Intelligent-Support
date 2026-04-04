@@ -42,6 +42,7 @@
     "mammoth": "^1.12.0",
     "multer": "^2.1.1",
     "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.18.0",
     "pg": "^8.20.0",
     "prisma": "^7.6.0",
     "redis": "^5.11.0",
@@ -57,9 +58,10 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.5.0",
     "@types/pdf-parse": "^1.1.5",
+    "@types/pdfkit": "^0.17.5",
     "@types/pg": "^8.20.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.2"
+    "typescript": "^5.7.0"
   }
 }

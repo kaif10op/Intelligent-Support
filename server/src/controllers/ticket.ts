@@ -6,6 +6,8 @@ import { ChatGroq } from '@langchain/groq';
 import { formatPaginatedResponse, parsePaginationParams, calculateSkipTake } from '../utils/pagination.js';
 import { exportTicketsToCSV, getExportFilename } from '../utils/export.js';
 import { sendTicketReplyEmail, sendTicketStatusChangedEmail, sendTicketAssignedEmail } from '../utils/email.js';
+import { WebhookService } from '../services/webhookService.js';
+import { TagService } from '../services/tagService.js';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
@@ -29,6 +31,17 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
         isOverdue: false
       }
     });
+
+    // Emit webhook event for ticket creation
+    WebhookService.emit('ticket.created', {
+      ticketId: ticket.id,
+      title: ticket.title,
+      priority: ticket.priority,
+      userId: ticket.userId,
+      dueAt: ticket.dueAt?.toISOString(),
+      chatId: ticket.chatId,
+      createdAt: ticket.createdAt.toISOString(),
+    }).catch(err => logger.error('Webhook emit error:', err));
 
     res.json(ticket);
   } catch (error: any) {
@@ -111,7 +124,7 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
 export const updateTicket = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { status, priority, assignedToId } = req.body;
-  
+
   try {
     // Check if ticket is overdue
     const ticket = await prisma.ticket.findUnique({
@@ -132,6 +145,16 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
         isOverdue: isOverdue || false
       }
     });
+
+    // Emit webhook event for status change
+    if (status && status !== ticket.status) {
+      WebhookService.emit('ticket.status.changed', {
+        ticketId: id,
+        previousStatus: ticket.status,
+        newStatus: status,
+        updatedAt: updatedTicket.updatedAt.toISOString(),
+      }).catch(err => logger.error('Webhook emit error:', err));
+    }
 
     // Send email notifications
     if (ticket.user?.email) {
@@ -154,8 +177,8 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
 
     res.json(updatedTicket);
   } catch (error: any) {
-    logger.error('Update Ticket Error', { 
-      error: error.message, 
+    logger.error('Update Ticket Error', {
+      error: error.message,
       stack: error.stack,
       ticketId: id,
       update: { status, priority, assignedToId }

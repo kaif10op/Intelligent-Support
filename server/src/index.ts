@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { logger } from './utils/logger.js';
 import { initRedis } from './utils/cache.js';
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { prisma } from './prisma.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -50,7 +51,7 @@ async function startServer() {
     app.use(cookieParser());
 
     // Performance monitoring middleware
-    app.use((req, res, next) => {
+    app.use((req: Request, res: Response, next: NextFunction) => {
       const start = Date.now();
       res.on('finish', () => {
         const duration = Date.now() - start;
@@ -66,10 +67,10 @@ async function startServer() {
 
     logger.info('Core middleware initialized');
 
-    app.get('/ping', (req, res) => res.send('pong'));
+    app.get('/ping', (req: Request, res: Response) => res.send('pong'));
 
     // Health check route
-    app.get('/healthz', async (req, res) => {
+    app.get('/healthz', async (req: Request, res: Response) => {
       try {
         // Test database connection
         await prisma.$queryRaw`SELECT 1`;
@@ -97,12 +98,12 @@ async function startServer() {
     logger.info('All routes registered');
 
     // 404 handler
-    app.use((req, res) => {
+    app.use((req: Request, res: Response) => {
       res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
     });
 
-    // Global error handler (simplified)
-    app.use((err: any, req: any, res: any, next: any) => {
+    // Global error handler
+    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
       logger.error('Request error', { error: err.message || err, stack: err.stack });
       const statusCode = err.statusCode || 500;
       res.status(statusCode).json({

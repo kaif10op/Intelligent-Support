@@ -9,6 +9,7 @@ if (!process.env.JWT_SECRET) {
 const JWT_SECRET = process.env.JWT_SECRET;
 
 export interface AuthRequest extends Request {
+  cookies: Record<string, string>;
   user?: { id: string; role: string; email: string };
 }
 

@@ -81,7 +81,7 @@ export const injectMessageIntoChat = async (req: AuthRequest, res: Response) => 
         chatId: chatId as string,
         role: asAdmin ? 'admin' : 'system',
         content,
-        context: asAdmin
+        feedback: asAdmin
           ? `Injected by admin ${admin?.name || req.user!.email} for customer assistance`
           : `System message: Admin intervention`
       }
@@ -130,7 +130,7 @@ export const flagChatForReview = async (req: AuthRequest, res: Response) => {
         chatId: chatId as string,
         role: 'system',
         content: `[FLAGGED FOR REVIEW] Reason: ${reason || 'Admin discretion'}. Priority: ${priority}`,
-        context: `Flagged by admin ${admin?.name || req.user!.email}`
+        feedback: `Flagged by admin ${admin?.name || req.user!.email}`
       }
     });
 

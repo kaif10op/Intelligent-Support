@@ -12,6 +12,8 @@ import { DynamicTool } from '@langchain/core/tools';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { logger } from '../utils/logger.js';
+import { WebhookService } from '../services/webhookService.js';
+import { TagService } from '../services/tagService.js';
 
 // Helper to safely create LLM instances with fallbacks
 const createLLMInstances = () => {
@@ -284,6 +286,15 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
         data: { title: message.substring(0, 50), userId: req.user!.id, kbId: kb.id }
       });
       currentChatId = chat.id;
+
+      // Emit webhook event for chat creation
+      WebhookService.emit('chat.created', {
+        chatId: chat.id,
+        title: chat.title,
+        userId: req.user!.id,
+        kbId: kb.id,
+        createdAt: chat.createdAt.toISOString(),
+      }).catch(err => logger.error('Webhook emit error:', err));
     }
 
     await prisma.message.create({ data: { role: 'user', content: message, chatId: currentChatId } });
@@ -307,11 +318,31 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
     }
 
     await prisma.message.create({
-      data: { 
-        role: 'ai', 
-        content: fullAnswer, 
+      data: {
+        role: 'ai',
+        content: fullAnswer,
         chatId: currentChatId,
         confidence: (req as any).maxSimilarity || null
+      }
+    }).then(msg => {
+      // Emit webhook event for message creation
+      WebhookService.emit('chat.message.created', {
+        chatId: currentChatId,
+        messageId: msg.id,
+        role: 'ai',
+        contentLength: fullAnswer.length,
+        confidence: msg.confidence,
+        createdAt: msg.createdAt.toISOString(),
+      }).catch(err => logger.error('Webhook emit error:', err));
+
+      // Auto-tag the message
+      TagService.autoTagMessage(msg.id, fullAnswer, 'assistant')
+        .catch(err => logger.error('Auto-tag error:', err));
+
+      // Auto-tag the chat if low confidence
+      if ((req as any).maxSimilarity && (req as any).maxSimilarity < 0.7) {
+        TagService.autoTagChat(currentChatId)
+          .catch(err => logger.error('Chat auto-tag error:', err));
       }
     });
 
@@ -394,6 +425,13 @@ export const submitFeedback = async (req: AuthRequest, res: Response) => {
       data: { rating }
     });
 
+    // Emit webhook event for feedback
+    WebhookService.emit('feedback.submitted', {
+      messageId: id,
+      chatId: message.chatId,
+      rating,
+      createdAt: new Date().toISOString(),
+    }).catch(err => logger.error('Webhook emit error:', err));
 
     res.json({ success: true });
   } catch (error: any) {
