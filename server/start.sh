@@ -4,10 +4,24 @@
 # Goal: Start server FAST, skip database migration by default
 
 echo "🚀 Starting Customer Support Agent on Render..."
+echo "   NODE_ENV: $NODE_ENV"
+echo "   PORT: ${PORT:-8000}"
+echo "   PWD: $(pwd)"
+echo "   Files in dist/: $(ls -1 dist/ 2>/dev/null | wc -l) items"
 
 # Ensure we're in the server directory
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
+echo "   Changed to: $(pwd)"
+
+# Verify dist/index.js exists
+if [ ! -f "dist/index.js" ]; then
+  echo "❌ ERROR: dist/index.js not found!"
+  echo "   Expected at: $(pwd)/dist/index.js"
+  echo "   Available files:"
+  ls -la dist/ 2>/dev/null || echo "   dist/ directory missing"
+  exit 1
+fi
 
 # CRITICAL: Clear DATABASE_URL if not explicitly production
 # This prevents loading unreachable credentials from .env
@@ -18,8 +32,9 @@ fi
 
 # On Render, never attempt auto-migration to avoid hangs
 # User must manually run: npx prisma db push after setting DATABASE_URL
-echo "✅ Starting server (database migrations are manual)"
-echo "   To migrate: Set DATABASE_URL on Render dashboard, then redeploy"
+echo "✅ Starting Node.js server..."
+echo "   Running: node dist/index.js"
 
-# Start server directly - avoid npm path issues
-exec node dist/index.js
+# Start server directly with error output
+# Use 2>&1 to capture stderr as well as stdout
+exec node dist/index.js 2>&1

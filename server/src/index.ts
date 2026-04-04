@@ -24,6 +24,13 @@ import webhookRoutes from './routes/webhooks.js';
 
 const app = express();
 
+// Add fallback routes BEFORE trying to initialize complex stuff
+// This ensures server responds even if initialization fails
+app.get('/ping', (req: Request, res: Response) => res.send('pong'));
+app.get('/healthz', (req: Request, res: Response) => {
+  res.json({ status: 'initializing', message: 'Server is starting...' });
+});
+
 async function startServer() {
   try {
     logger.info('Starting server initialization...');
