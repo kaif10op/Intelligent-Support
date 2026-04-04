@@ -50,7 +50,7 @@ export const AdminDashboard: React.FC = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-24 bg-gray-100 rounded-lg animate-pulse" />
+          <div key={i} className="h-24 bg-surface-100 rounded-lg animate-pulse" />
         ))}
       </div>
     );
@@ -110,8 +110,8 @@ export const AdminDashboard: React.FC = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ticket Trend */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Ticket Trend (7 days)</h3>
+        <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-surface-900 mb-4">Ticket Trend (7 days)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={metrics.ticketTrend}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -130,8 +130,8 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Priority Distribution */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Priority Distribution</h3>
+        <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-surface-900 mb-4">Priority Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -154,23 +154,23 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Team Performance */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Performance</h3>
+        <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm lg:col-span-2">
+          <h3 className="text-lg font-semibold text-surface-900 mb-4">Team Performance</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-200">
+              <thead className="border-b border-surface-200">
                 <tr>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Agent</th>
-                  <th className="text-center py-3 px-4 font-semibold text-gray-700">Tickets Resolved</th>
-                  <th className="text-center py-3 px-4 font-semibold text-gray-700">Rating</th>
-                  <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                  <th className="text-left py-3 px-4 font-semibold text-surface-700">Agent</th>
+                  <th className="text-center py-3 px-4 font-semibold text-surface-700">Tickets Resolved</th>
+                  <th className="text-center py-3 px-4 font-semibold text-surface-700">Rating</th>
+                  <th className="text-center py-3 px-4 font-semibold text-surface-700">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {metrics.teamPerformance.map((agent, idx) => (
-                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-900 font-medium">{agent.agent}</td>
-                    <td className="py-3 px-4 text-center text-gray-700">{agent.resolved}</td>
+                  <tr key={idx} className="border-b border-surface-100 hover:bg-surface-50">
+                    <td className="py-3 px-4 text-surface-900 font-medium">{agent.agent}</td>
+                    <td className="py-3 px-4 text-center text-surface-700">{agent.resolved}</td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex justify-center">
                         {[...Array(5)].map((_, i) => (
@@ -203,20 +203,20 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Customer Satisfaction */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Customer Satisfaction</h3>
-            <p className="text-gray-600 text-sm mt-1">Based on last 100 tickets</p>
+            <h3 className="text-lg font-semibold text-surface-900">Customer Satisfaction</h3>
+            <p className="text-surface-600 text-sm mt-1">Based on last 100 tickets</p>
           </div>
           <div className="text-right">
-            <div className="text-4xl font-bold text-blue-600">{metrics.customerSatisfaction}%</div>
-            <div className="text-sm text-gray-600">Overall CSAT</div>
+            <div className="text-4xl font-bold text-primary-600">{metrics.customerSatisfaction}%</div>
+            <div className="text-sm text-surface-600">Overall CSAT</div>
           </div>
         </div>
-        <div className="mt-4 w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+        <div className="mt-4 w-full bg-surface-200 h-2 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-green-400 to-blue-600 transition-all duration-300"
+            className="h-full bg-gradient-to-r from-accent-400 to-primary-600 transition-all duration-300"
             style={{ width: `${metrics.customerSatisfaction}%` }}
           />
         </div>
@@ -237,18 +237,18 @@ interface MetricCardProps {
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, trend, trendUp }) => (
-  <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+  <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm hover:shadow-md transition-shadow">
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-gray-600 text-sm font-medium">{title}</p>
-        <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+        <p className="text-surface-600 text-sm font-medium">{title}</p>
+        <p className="text-3xl font-bold text-surface-900 mt-2">{value}</p>
         {trend && (
-          <p className={`text-sm mt-2 font-semibold ${trendUp ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`text-sm mt-2 font-semibold ${trendUp ? 'text-accent-500' : 'text-red-600'}`}>
             {trendUp ? '↑' : '↓'} {trend}
           </p>
         )}
       </div>
-      <div className="text-gray-400">{icon}</div>
+      <div className="text-surface-400">{icon}</div>
     </div>
   </div>
 );

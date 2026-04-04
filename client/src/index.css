@@ -6,72 +6,120 @@
 
 @layer base {
   :root {
-    background: #0a0e27;
-    --accent-primary: #ec4899;
-    --accent-secondary: #3b82f6;
-    --text-muted: #a0aec0;
-    --bg-card: #0f1629;
-    --glass-border: rgba(30, 41, 59, 0.5);
+    background: #ffffff;
+    --accent-primary: #3b82f6;
+    --accent-secondary: #10b981;
+    --text-muted: #6c757d;
+    --bg-card: #f8f9fa;
+    --glass-border: rgba(233, 236, 239, 0.5);
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-surface-900;
     font-family: 'Inter', system-ui, sans-serif;
     @apply antialiased;
   }
 
   h1 {
-    @apply text-4xl font-bold tracking-tight;
+    @apply text-4xl font-bold tracking-tight text-surface-900;
   }
 
   h2 {
-    @apply text-3xl font-bold tracking-tight;
+    @apply text-3xl font-bold tracking-tight text-surface-900;
   }
 
   h3 {
-    @apply text-2xl font-semibold;
+    @apply text-2xl font-semibold text-surface-900;
   }
 
   h4 {
-    @apply text-xl font-semibold;
+    @apply text-xl font-semibold text-surface-900;
   }
 }
 
 @layer components {
+  /* Typography utilities */
+  .heading-1 {
+    @apply text-3xl font-bold tracking-tight text-surface-900;
+  }
+
+  .heading-2 {
+    @apply text-2xl font-bold text-surface-900;
+  }
+
+  .heading-3 {
+    @apply text-xl font-semibold text-surface-900;
+  }
+
+  .heading-4 {
+    @apply text-lg font-semibold text-surface-900;
+  }
+
+  .body-large {
+    @apply text-base text-surface-700;
+  }
+
+  .body {
+    @apply text-sm text-surface-700;
+  }
+
+  .body-small {
+    @apply text-xs text-surface-600;
+  }
+
+  .label {
+    @apply text-xs font-medium uppercase tracking-wide text-surface-600;
+  }
+
+  /* Card components */
+  .card {
+    @apply bg-surface-100 border border-surface-200 rounded-lg;
+  }
+
+  .card-elevated {
+    @apply bg-white border border-surface-200 rounded-lg shadow-sm;
+  }
+
+  .card-interactive {
+    @apply card hover:shadow-md hover:border-primary-300 transition-all cursor-pointer;
+  }
+
+  /* Input component */
+  .input {
+    @apply px-3 py-2 border border-surface-300 rounded-lg bg-white text-surface-900 placeholder-surface-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors;
+  }
+
+  /* Legacy compatibility classes */
   .glass {
-    @apply bg-card/50 backdrop-blur-xl border border-border/50 rounded-xl;
+    @apply bg-surface-100 border border-surface-200 rounded-lg;
   }
 
   .glass-lg {
-    @apply bg-card/40 backdrop-blur-xl border border-border/30 rounded-2xl;
+    @apply bg-surface-50 border border-surface-200 rounded-lg;
   }
 
   .glass-elevated {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg;
+    @apply bg-white border border-surface-200 rounded-lg shadow-sm;
   }
 
   .gradient-primary {
-    @apply bg-gradient-to-r from-primary via-secondary to-primary;
-  }
-
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary-500 to-primary-600;
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-colors;
+    @apply bg-primary-500 text-white hover:bg-primary-600 transition-colors;
   }
 
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors;
+    @apply bg-surface-200 text-surface-900 hover:bg-surface-300 transition-colors;
   }
 
   .card-base {
-    @apply bg-card border border-border rounded-lg shadow-sm;
+    @apply bg-surface-100 border border-surface-200 rounded-lg;
   }
 
   .input-base {
-    @apply bg-input border border-border rounded-md px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring;
+    @apply bg-white border border-surface-300 rounded-lg px-3 py-2 text-surface-900 placeholder-surface-400 focus:outline-none focus:ring-1 focus:ring-primary-500;
   }
 }
 
@@ -134,24 +182,24 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: #f1f3f5;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: #ced4da;
   border-radius: 20px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(236, 72, 153, 0.5);
+  background: #3b82f6;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 /* Selection */
 ::selection {
-  background: rgb(236, 72, 153);
-  color: #0a0e27;
+  background: #3b82f6;
+  color: #ffffff;
 }
