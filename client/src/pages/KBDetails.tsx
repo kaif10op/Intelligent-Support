@@ -6,6 +6,7 @@ import { FileText, Upload, Trash2, ChevronLeft, CheckCircle2, AlertCircle, Datab
 import { useToast } from '../contexts/ToastContext';
 import ProgressBar from '../components/ProgressBar';
 import { API_ENDPOINTS, axiosConfig } from '../config/api';
+import { Card, Button } from '../components/ui';
 
 const KBDetails = () => {
   const { id } = useParams();
@@ -112,49 +113,39 @@ const KBDetails = () => {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        {/* Back Link Skeleton */}
-        <div className="h-4 bg-border/30 rounded w-32 animate-pulse"></div>
-
-        {/* Header Skeleton */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-14 h-14 bg-border/30 rounded-lg animate-pulse"></div>
-          <div className="flex-1 space-y-2">
-            <div className="h-8 bg-border/30 rounded w-1/3 animate-pulse"></div>
-            <div className="h-4 bg-border/30 rounded w-2/3 animate-pulse"></div>
+      <div className="min-h-screen bg-white">
+        <div className="border-b border-surface-200 bg-surface-50">
+          <div className="px-6 py-6 space-y-4">
+            <div className="h-8 bg-surface-200 rounded w-1/3 animate-pulse"></div>
+            <div className="h-4 bg-surface-200 rounded w-2/3 animate-pulse"></div>
           </div>
         </div>
-
-        {/* Two Column Layout Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Upload Section Skeleton */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="h-6 bg-border/30 rounded w-1/3 animate-pulse"></div>
-            <div className="border-2 border-dashed rounded-lg p-8 bg-border/10 animate-pulse">
-              <div className="space-y-3">
-                <div className="h-10 bg-border/30 rounded mx-auto w-10"></div>
-                <div className="h-4 bg-border/30 rounded w-2/3 mx-auto"></div>
-                <div className="h-3 bg-border/30 rounded w-1/2 mx-auto"></div>
+        <div className="px-6 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 space-y-4">
+              <div className="h-6 bg-surface-200 rounded w-1/3 animate-pulse"></div>
+              <div className="border-2 border-dashed rounded-lg p-8 bg-surface-100 animate-pulse">
+                <div className="space-y-3">
+                  <div className="h-10 bg-surface-200 rounded mx-auto w-10"></div>
+                  <div className="h-4 bg-surface-200 rounded w-2/3 mx-auto"></div>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Documents List Skeleton */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="h-6 bg-border/30 rounded w-1/4 animate-pulse"></div>
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="glass-elevated border border-border/50 rounded-lg p-4 flex items-center justify-between animate-pulse">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-10 h-10 bg-border/30 rounded-lg flex-shrink-0"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-border/30 rounded w-2/3"></div>
-                      <div className="h-3 bg-border/30 rounded w-1/3"></div>
+            <div className="lg:col-span-2 space-y-4">
+              <div className="h-6 bg-surface-200 rounded w-1/4 animate-pulse"></div>
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="card p-4 flex items-center justify-between animate-pulse">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="w-10 h-10 bg-surface-200 rounded-lg flex-shrink-0"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-surface-200 rounded w-2/3"></div>
+                        <div className="h-3 bg-surface-200 rounded w-1/3"></div>
+                      </div>
                     </div>
                   </div>
-                  <div className="h-8 bg-border/30 rounded w-20 flex-shrink-0"></div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -164,148 +155,156 @@ const KBDetails = () => {
 
   if (!kb) {
     return (
-      <div className="glass-elevated border border-border/50 rounded-lg p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-        <p className="text-foreground font-semibold">Knowledge Base not found</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Card elevated className="p-8 text-center max-w-md">
+          <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+          <p className="text-surface-900 font-semibold">Knowledge Base not found</p>
+          <Link to="/" className="text-primary-600 hover:text-primary-700 text-sm mt-4 inline-block">
+            Back to Dashboard
+          </Link>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Back Link */}
-      <Link
-        to="/"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        <span className="text-sm font-medium">Back to Dashboard</span>
-      </Link>
-
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-2.5 bg-primary/10 rounded-lg">
-          <Database className="w-6 h-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground">{kb.title}</h1>
-          <p className="text-muted-foreground mt-1">
-            {kb.description || 'Knowledge base for persistent AI memory'}
-          </p>
+      <div className="border-b border-surface-200 bg-surface-50">
+        <div className="px-6 py-6">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-surface-600 hover:text-surface-900 transition-colors mb-4"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">Back to Dashboard</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-primary-100 rounded-lg">
+              <Database className="w-6 h-6 text-primary-500" />
+            </div>
+            <div>
+              <h1 className="heading-1">{kb.title}</h1>
+              <p className="text-surface-600 mt-1">
+                {kb.description || 'Knowledge base for persistent AI memory'}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Upload Section - Wider on mobile */}
-        <div className="lg:col-span-1 space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Upload Documents</h2>
+      {/* Content */}
+      <div className="px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Upload Section */}
+          <div className="lg:col-span-1 space-y-4">
+            <h2 className="heading-4">Upload Documents</h2>
 
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
-              isDragActive
-                ? 'border-secondary bg-secondary/5'
-                : 'border-border hover:border-primary hover:bg-primary/5'
-            } ${uploading ? 'pointer-events-none opacity-60' : ''}`}
-          >
-            <input {...getInputProps()} />
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+                isDragActive
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-surface-300 hover:border-primary-500 hover:bg-primary-50'
+              } ${uploading ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              <input {...getInputProps()} />
 
-            {uploading ? (
-              <div className="space-y-4">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-                <ProgressBar
-                  progress={uploadProgress}
-                  status={uploadStatus}
-                  label={uploadFileName}
-                  showPercentage={true}
-                />
-                <p className="text-sm text-muted-foreground">
-                  {uploadStatus === 'processing'
-                    ? 'Processing document and generating embeddings...'
-                    : 'Uploading...'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Upload className={`w-10 h-10 mx-auto ${isDragActive ? 'text-secondary' : 'text-primary'}`} />
-                <div>
-                  <p className="text-foreground font-medium">
-                    {isDragActive ? 'Drop file here' : 'Drag & drop files here'}
+              {uploading ? (
+                <div className="space-y-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto" />
+                  <ProgressBar
+                    progress={uploadProgress}
+                    status={uploadStatus}
+                    label={uploadFileName}
+                    showPercentage={true}
+                  />
+                  <p className="text-sm text-surface-600">
+                    {uploadStatus === 'processing'
+                      ? 'Processing document and generating embeddings...'
+                      : 'Uploading...'}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
                 </div>
-                <p className="text-xs text-muted-foreground pt-2 border-t border-border/30">
-                  PDF, TXT, MD, DOCX • Max 10MB
-                </p>
+              ) : (
+                <div className="space-y-2">
+                  <Upload className={`w-10 h-10 mx-auto ${isDragActive ? 'text-primary-600' : 'text-primary-500'}`} />
+                  <div>
+                    <p className="text-surface-900 font-medium">
+                      {isDragActive ? 'Drop file here' : 'Drag & drop files here'}
+                    </p>
+                    <p className="text-xs text-surface-600 mt-1">or click to browse</p>
+                  </div>
+                  <p className="text-xs text-surface-600 pt-2 border-t border-surface-200">
+                    PDF, TXT, MD, DOCX • Max 10MB
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             )}
           </div>
 
-          {error && (
-            <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
-              <p className="text-sm text-destructive">{error}</p>
+          {/* Documents List */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="heading-4">
+                Documents ({kb.documents?.length || 0})
+              </h2>
             </div>
-          )}
-        </div>
 
-        {/* Documents List - Takes more space */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">
-              Documents ({kb.documents?.length || 0})
-            </h2>
-          </div>
-
-          {kb.documents?.length === 0 ? (
-            <div className="glass-elevated border border-border/50 rounded-lg p-12 text-center">
-              <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-              <p className="text-muted-foreground">No documents uploaded yet</p>
-              <p className="text-sm text-muted-foreground/70 mt-2">
-                Upload documents to build your knowledge base
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {kb.documents.map((doc: any) => (
-                <div
-                  key={doc.id}
-                  className="glass-elevated border border-border/50 rounded-lg p-4 flex items-center justify-between hover:border-primary/30 transition-colors group"
-                >
-                  {/* Document Info */}
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
-                      <FileText className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground truncate">{doc.filename}</h3>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <span>{(doc.size / 1024).toFixed(1)} KB</span>
-                        <span>•</span>
-                        <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+            {kb.documents?.length === 0 ? (
+              <Card elevated className="p-12 text-center">
+                <FileText className="w-12 h-12 text-surface-300 mx-auto mb-4" />
+                <p className="text-surface-600">No documents uploaded yet</p>
+                <p className="text-sm text-surface-500 mt-2">
+                  Upload documents to build your knowledge base
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {kb.documents.map((doc: any) => (
+                  <Card interactive key={doc.id} className="p-4 flex items-center justify-between">
+                    {/* Document Info */}
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                        <FileText className="w-5 h-5 text-primary-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-surface-900 truncate">{doc.filename}</h3>
+                        <div className="flex items-center gap-2 text-xs text-surface-600 mt-1">
+                          <span>{(doc.size / 1024).toFixed(1)} KB</span>
+                          <span>•</span>
+                          <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span className="text-xs font-medium">Processed</span>
+                    {/* Actions */}
+                    <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-green-100 text-green-800">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="text-xs font-medium">Processed</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Trash2 className="w-4 h-4" />}
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        title="Delete document"
+                      >
+                        Delete
+                      </Button>
                     </div>
-                    <button
-                      onClick={() => handleDeleteDocument(doc.id)}
-                      className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
-                      title="Delete document"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
