@@ -9,7 +9,7 @@ const normalizeBaseUrl = (rawUrl: string) => {
 };
 
 const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const rawWsBaseUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
+const rawWsBaseUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const API_BASE_URL = normalizeBaseUrl(rawApiBaseUrl);
 export const WS_BASE_URL = normalizeBaseUrl(rawWsBaseUrl);

@@ -21,31 +21,44 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuthStore();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  
+
   // Storage for active chat callbacks to handle routing without multiple listeners
   const chatCallbacks = useRef<Map<string, (data: any) => void>>(new Map());
 
   useEffect(() => {
     if (!user) return;
 
+    // Get JWT token for Socket.io authentication
+    const token = localStorage.getItem('auth_token');
+
     const newSocket = io(WS_BASE_URL, {
       auth: {
         userId: user.id,
         username: user.name,
-        role: user.role
+        role: user.role,
+        token: token || undefined
       },
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 5,
+      // CORS configuration for cross-origin requests
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      autoConnect: true,
     });
 
     newSocket.on('connect', () => {
-      console.log('✓ Socket connected');
+      console.log('✓ Socket connected', { url: WS_BASE_URL, userId: user.id });
       setIsConnected(true);
     });
 
     newSocket.on('disconnect', () => {
+      console.log('Socket disconnected');
       setIsConnected(false);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
     });
 
     // Centralized listeners for AI stream events
