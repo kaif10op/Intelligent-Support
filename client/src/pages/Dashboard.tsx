@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   Database,
@@ -39,6 +39,7 @@ const Dashboard = () => {
     inProgress: 0,
     resolved: 0,
   });
+  const didInitialFetch = useRef(false);
 
   const fetchData = async (isInitial = false) => {
     try {
@@ -58,32 +59,35 @@ const Dashboard = () => {
         }
       }
 
-      // Fetch fresh data
-      const [kbRes, ticketRes, chatRes] = await Promise.all([
-        axios.get(API_ENDPOINTS.KB_LIST, axiosConfig).catch(() => ({ data: [] })),
-        axios.get(apiUrl('/api/tickets/my'), axiosConfig).catch(() => ({ data: [] })),
-        axios.get(API_ENDPOINTS.CHAT_RECENT, axiosConfig).catch(() => ({ data: {} }))
-      ]);
+      // Fast path: first render only loads KBs for instant dashboard usability.
+      const kbRes = await axios.get(API_ENDPOINTS.KB_LIST, axiosConfig).catch(() => ({ data: [] }));
 
       const kbData = Array.isArray(kbRes.data) ? kbRes.data : kbRes.data.data || [];
       const kbArray = Array.isArray(kbData) ? kbData : [];
       setKbs(kbArray);
       cacheService.set(CACHE_KEYS.KB_LIST, kbArray, CACHE_TTL.MEDIUM);
 
-      const ticketData = Array.isArray(ticketRes.data) ? ticketRes.data : ticketRes.data.data || [];
-      if (ticketData.length > 0) {
-        setTickets(ticketData);
-        setTicketStats({
-          open: ticketData.filter((t: any) => t.status === 'OPEN').length,
-          inProgress: ticketData.filter((t: any) => t.status === 'IN_PROGRESS').length,
-          resolved: ticketData.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
-        });
-      }
+      // Defer heavier calls so page is interactive quickly.
+      setTimeout(async () => {
+        const [ticketRes, chatRes] = await Promise.all([
+          axios.get(apiUrl('/api/tickets/my?limit=20'), axiosConfig).catch(() => ({ data: [] })),
+          axios.get(`${API_ENDPOINTS.CHAT_RECENT}?limit=5`, axiosConfig).catch(() => ({ data: {} }))
+        ]);
 
-      const chatData = chatRes.data.chats || [];
-      const chatArray = Array.isArray(chatData) ? chatData : [];
-      setRecentChats(chatArray);
-      cacheService.set(CACHE_KEYS.CHAT_RECENT, chatArray, CACHE_TTL.MEDIUM);
+        const ticketData = Array.isArray(ticketRes.data) ? ticketRes.data : ticketRes.data.data || [];
+        const ticketArray = Array.isArray(ticketData) ? ticketData : [];
+        setTickets(ticketArray);
+        setTicketStats({
+          open: ticketArray.filter((t: any) => t.status === 'OPEN').length,
+          inProgress: ticketArray.filter((t: any) => t.status === 'IN_PROGRESS').length,
+          resolved: ticketArray.filter((t: any) => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
+        });
+
+        const chatPayload = chatRes.data?.data || chatRes.data?.chats || [];
+        const chatArray = Array.isArray(chatPayload) ? chatPayload : [];
+        setRecentChats(chatArray);
+        cacheService.set(CACHE_KEYS.CHAT_RECENT, chatArray, CACHE_TTL.MEDIUM);
+      }, isInitial ? 0 : 100);
 
       setLoading(false);
     } catch (err) {
@@ -96,6 +100,8 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    if (didInitialFetch.current) return;
+    didInitialFetch.current = true;
     fetchData(true);
   }, []);
 

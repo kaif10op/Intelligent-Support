@@ -15,6 +15,7 @@ interface AgentMetrics {
   avgResolutionTime: number; // in hours
   loadScore: number; // 0-100 (lower is better)
   isAvailable: boolean;
+  lastActiveAt?: Date | null;
 }
 
 interface ReassignmentResult {
@@ -72,6 +73,17 @@ export class TicketAssignmentService {
         const speedLoad = Math.min(100, (avgResolutionTime / 24) * 50); // 24 hours = 50 load score
         const loadScore = ticketLoad + speedLoad;
 
+        const recentTicketUpdate = await prisma.ticket.findFirst({
+          where: {
+            OR: [
+              { assignedToId: agent.id },
+              { escalatedToId: agent.id }
+            ]
+          },
+          orderBy: { updatedAt: 'desc' },
+          select: { updatedAt: true }
+        });
+
         return {
           id: agent.id,
           name: agent.name,
@@ -80,7 +92,8 @@ export class TicketAssignmentService {
           resolvedTickets: resolvedTickets.length,
           avgResolutionTime,
           loadScore,
-          isAvailable: assignedTickets < 10 // Consider available if < 10 tickets
+          isAvailable: assignedTickets < 10, // Consider available if < 10 tickets
+          lastActiveAt: recentTicketUpdate?.updatedAt || null
         };
       });
 
@@ -100,20 +113,31 @@ export class TicketAssignmentService {
 
       if (metrics.length === 0) return null;
 
-      // Sort by load score (ascending - lower load = better)
-      const sorted = metrics.sort((a, b) => a.loadScore - b.loadScore);
+      // Weighted ranking with fairness boost for least-assigned agents
+      const minAssigned = Math.min(...metrics.map(m => m.assignedTickets));
+      const ranked = metrics
+        .map(m => {
+          const fairnessBoost = m.assignedTickets === minAssigned ? -8 : 0;
+          const availabilityPenalty = m.isAvailable ? 0 : 25;
+          return {
+            ...m,
+            rankScore: m.loadScore + availabilityPenalty + fairnessBoost
+          };
+        })
+        .sort((a, b) => a.rankScore - b.rankScore);
 
       logger.info('Agent ranking', {
-        agents: sorted.map(a => ({
+        agents: ranked.map(a => ({
           name: a.name,
           tickets: a.assignedTickets,
           resolved: a.resolvedTickets,
           avgTime: `${a.avgResolutionTime.toFixed(1)}h`,
-          loadScore: a.loadScore.toFixed(1)
+          loadScore: a.loadScore.toFixed(1),
+          rankScore: a.rankScore.toFixed(1)
         }))
       });
 
-      return sorted[0];
+      return ranked[0];
     } catch (error: any) {
       logger.error('Error finding best agent', { error: error.message });
       return null;
@@ -138,7 +162,12 @@ export class TicketAssignmentService {
 
       for (const ticket of unassignedTickets) {
         try {
-          const bestAgent = await this.findBestAgent();
+          const metrics = await this.getSupportAgentMetrics();
+          const availableAgents = metrics
+            .filter(a => a.isAvailable)
+            .sort((a, b) => a.assignedTickets - b.assignedTickets || a.loadScore - b.loadScore);
+
+          const bestAgent = availableAgents[0] || (await this.findBestAgent());
           if (!bestAgent) {
             logger.warn('No available support agents for ticket assignment', {
               ticketId: ticket.id
@@ -151,7 +180,8 @@ export class TicketAssignmentService {
             where: { id: ticket.id },
             data: {
               assignedToId: bestAgent.id,
-              status: 'IN_PROGRESS'
+              status: 'IN_PROGRESS',
+              queueStatus: 'assigned'
             }
           });
 
@@ -312,6 +342,64 @@ export class TicketAssignmentService {
       return reassignments;
     } catch (error: any) {
       logger.error('Error reassigning slow tickets', { error: error.message });
+      return [];
+    }
+  }
+
+  /**
+   * Reassign tickets from inactive agents
+   * Inactive = no ticket updates in last 4 hours and currently has open/in-progress tickets
+   */
+  static async reassignInactiveAgentsTickets(): Promise<ReassignmentResult[]> {
+    try {
+      const metrics = await this.getSupportAgentMetrics();
+      const reassignments: ReassignmentResult[] = [];
+      const inactiveThreshold = new Date(Date.now() - 4 * 60 * 60 * 1000);
+
+      const inactiveAgents = metrics.filter(
+        a => a.assignedTickets > 0 && (!a.lastActiveAt || a.lastActiveAt < inactiveThreshold)
+      );
+
+      if (inactiveAgents.length === 0) return [];
+
+      for (const inactiveAgent of inactiveAgents) {
+        const replacement = metrics
+          .filter(a => a.id !== inactiveAgent.id && a.isAvailable)
+          .sort((a, b) => a.assignedTickets - b.assignedTickets || a.loadScore - b.loadScore)[0];
+
+        if (!replacement) continue;
+
+        const ticketsToMove = await prisma.ticket.findMany({
+          where: {
+            assignedToId: inactiveAgent.id,
+            status: { in: ['OPEN', 'IN_PROGRESS'] }
+          },
+          orderBy: { updatedAt: 'asc' },
+          take: 3
+        });
+
+        for (const ticket of ticketsToMove) {
+          await prisma.ticket.update({
+            where: { id: ticket.id },
+            data: { assignedToId: replacement.id }
+          });
+
+          reassignments.push({
+            ticketId: ticket.id,
+            oldAgentId: inactiveAgent.id,
+            newAgentId: replacement.id,
+            reason: `Reassigned from inactive agent ${inactiveAgent.name} to available agent ${replacement.name}`
+          });
+        }
+      }
+
+      if (reassignments.length > 0) {
+        logger.info('Inactive-agent reassignment completed', { count: reassignments.length });
+      }
+
+      return reassignments;
+    } catch (error: any) {
+      logger.error('Error reassigning inactive agent tickets', { error: error.message });
       return [];
     }
   }

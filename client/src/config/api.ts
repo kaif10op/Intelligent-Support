@@ -43,11 +43,18 @@ export const API_ENDPOINTS = {
   CHAT_FEEDBACK: apiUrl('/api/chat/feedback'),
   CHAT_REGENERATE: (messageId: string) => apiUrl(`/api/chat/regenerate/${messageId}`),
   CHAT_EXPORT: apiUrl('/api/chat/export'),
+  CHAT_HUMAN_STATUS: (chatId: string) => apiUrl(`/api/chat/human/${chatId}/status`),
+  CHAT_HUMAN_REQUEST: (chatId: string) => apiUrl(`/api/chat/human/${chatId}/request-handoff`),
+  CHAT_HUMAN_TAKEOVER: (chatId: string) => apiUrl(`/api/chat/human/${chatId}/takeover`),
+  CHAT_HUMAN_TRANSFER: (chatId: string, targetAgentId: string) => apiUrl(`/api/chat/human/${chatId}/transfer/${targetAgentId}`),
+  CHAT_HUMAN_MESSAGE: (chatId: string) => apiUrl(`/api/chat/human/${chatId}/message`),
+  CHAT_HUMAN_ASSIST: (chatId: string) => apiUrl(`/api/chat/human/${chatId}/assistant/suggest`),
 
   // Tickets
   TICKETS_LIST: apiUrl('/api/tickets'),
   TICKET_CREATE: apiUrl('/api/tickets'),
   TICKET_DETAIL: (id: string) => apiUrl(`/api/tickets/${id}`),
+  TICKET_CONTEXT: (id: string) => apiUrl(`/api/tickets/${id}/context`),
   TICKET_UPDATE: (id: string) => apiUrl(`/api/tickets/${id}`),
   TICKET_NOTE: (id: string) => apiUrl(`/api/tickets/${id}/notes`),
 

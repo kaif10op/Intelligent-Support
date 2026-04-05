@@ -1,33 +1,33 @@
 import { useAuthStore } from '../store/useAuthStore.js';
-import { useClerk } from '@clerk/react';
-import { LogOut, User, Shield, Menu, X } from 'lucide-react';
+import { UserButton, useClerk } from '@clerk/react';
+import { Shield, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Navbar = () => {
   const { user, logout } = useAuthStore();
-  const { signOut } = useClerk();
+  const { session } = useClerk();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout = async () => {
+  // Handle post-signout cleanup
+  const handleSignOut = async () => {
     try {
-      // 1. Sign out from Clerk first
-      await signOut();
+      await logout(); // Call backend logout
+      navigate('/login');
     } catch (err) {
-      console.error('Clerk signOut error:', err);
+      console.error('Logout error:', err);
+      navigate('/login');
     }
-
-    try {
-      // 2. Logout from backend (clear session)
-      await logout();
-    } catch (err) {
-      console.error('Backend logout error:', err);
-    }
-
-    // 3. Redirect to login page
-    navigate('/login');
   };
+
+  // Monitor Clerk session changes
+  useEffect(() => {
+    if (!session && user) {
+      // User signed out from Clerk, cleanup backend
+      handleSignOut();
+    }
+  }, [session, user]);
 
   return (
     <nav className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -63,30 +63,18 @@ const Navbar = () => {
               </Link>
             )}
 
-            {/* User Profile */}
-            <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-lg hover:bg-card/50 transition-colors">
-              {user?.picture ? (
-                <img
-                  src={user.picture}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full border border-border/30"
-                />
-              ) : (
-                <User className="w-5 h-5 text-muted-foreground" />
-              )}
-              <span className="text-sm font-medium text-foreground max-w-[150px] truncate">
-                {user?.name}
-              </span>
+            {/* Clerk User Button with Profile & Logout */}
+            <div className="hidden sm:block">
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-9 h-9",
+                    userButtonPopoverCard: "shadow-xl border border-border/50",
+                    userButtonPopoverActionButton: "hover:bg-primary/10"
+                  }
+                }}
+              />
             </div>
-
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
 
             {/* Mobile Menu Toggle */}
             <button
@@ -104,7 +92,7 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden pb-4 border-t border-border/50">
+          <div className="md:hidden pb-4 border-t border-border/50 space-y-2">
             <Link
               to="/kb"
               className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card/50 rounded transition-colors"
@@ -129,6 +117,17 @@ const Navbar = () => {
                 Admin Panel
               </Link>
             )}
+            {/* Mobile User Button */}
+            <div className="px-4 py-2">
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-9 h-9",
+                    userButtonPopoverCard: "shadow-xl border border-border/50"
+                  }
+                }}
+              />
+            </div>
           </div>
         )}
       </div>

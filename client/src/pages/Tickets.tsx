@@ -43,7 +43,7 @@ const Tickets = () => {
       setRefreshing(true);
       // Use /api/tickets/all only for admins, else use /api/tickets
       const endpoint = user?.role === 'ADMIN' ? apiUrl('/api/tickets/all') : apiUrl('/api/tickets');
-      const res = await axios.get(endpoint, axiosConfig);
+      const res = await axios.get(`${endpoint}?limit=30`, axiosConfig);
       const data = Array.isArray(res.data) ? res.data : res.data?.data || res.data?.tickets || [];
       setTickets(Array.isArray(data) ? data : []);
       setLoading(false);
@@ -85,7 +85,8 @@ const Tickets = () => {
   const fetchSupportAgents = async () => {
     try {
       const res = await axios.get(apiUrl('/api/admin/users'), axiosConfig);
-      const agents = res.data.data.filter((u: any) => u.role === 'SUPPORT_AGENT' || u.role === 'ADMIN');
+      const users = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data?.users) ? res.data.users : []);
+      const agents = users.filter((u: any) => u.role === 'SUPPORT_AGENT' || u.role === 'ADMIN');
       setSupportAgents(agents);
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Failed to load support agents';

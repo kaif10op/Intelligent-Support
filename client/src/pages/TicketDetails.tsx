@@ -15,6 +15,7 @@ interface Ticket {
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   userId: string;
   assignedToId?: string;
+  chatId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +34,18 @@ interface Message {
   content: string;
   createdAt?: string;
   senderName?: string;
+}
+
+interface TicketContextResponse {
+  ticket: any;
+  user: UserProfile;
+  assignedTo?: { id: string; name: string; email: string; role: string } | null;
+  context: {
+    ticketHistory: Ticket[];
+    recentChats: any[];
+    knowledgeBaseInteractions: { kbId: string; title: string; interactions: number; lastUsedAt: string }[];
+    currentTicketNotes: any[];
+  };
 }
 
 type DetailTab = 'overview' | 'chats' | 'tickets' | 'notes';
@@ -60,6 +73,7 @@ const TicketDetails = () => {
   const [sendingHuman, setSendingHuman] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
+  const [kbInteractions, setKbInteractions] = useState<{ kbId: string; title: string; interactions: number; lastUsedAt: string }[]>([]);
 
   // Fetch ticket and user details
   useEffect(() => {
@@ -72,39 +86,16 @@ const TicketDetails = () => {
     try {
       setLoading(true);
 
-      // Get ticket details
-      const ticketRes = await axios.get(apiUrl(`/api/tickets/${id}`), axiosConfig);
-      const ticketData = ticketRes.data;
+      // Get unified ticket context
+      const contextRes = await axios.get(apiUrl(`/api/tickets/${id}/context`), axiosConfig);
+      const contextData: TicketContextResponse = contextRes.data;
+      const ticketData = contextData.ticket;
       setTicket(ticketData);
-
-      // Get user profile
-      if (ticketData.userId) {
-        try {
-          const userRes = await axios.get(apiUrl(`/api/admin/users/${ticketData.userId}`), axiosConfig);
-          setUserProfile(userRes.data);
-        } catch (err) {
-          console.error('Failed to fetch user profile:', err);
-        }
-      }
-
-      // Get ticket notes
-      try {
-        const notesRes = await axios.get(apiUrl(`/api/tickets/${id}/messages`), axiosConfig);
-        setTicketNotes(notesRes.data || []);
-      } catch (err) {
-        console.error('Failed to fetch notes:', err);
-      }
-
-      // Fetch user's other tickets
-      if (ticketData.userId) {
-        try {
-          const ticketsRes = await axios.get(apiUrl('/api/tickets'), axiosConfig);
-          const userTicketList = (ticketsRes.data?.data || []).filter((t: any) => t.userId === ticketData.userId);
-          setUserTickets(userTicketList);
-        } catch (err) {
-          console.error('Failed to fetch user tickets:', err);
-        }
-      }
+      setUserProfile(contextData.user || null);
+      setTicketNotes(contextData.context.currentTicketNotes || []);
+      setUserTickets((contextData.context.ticketHistory || []).filter((t: any) => t.id !== ticketData.id));
+      setUserChats(contextData.context.recentChats || []);
+      setKbInteractions(contextData.context.knowledgeBaseInteractions || []);
 
       // If support agent, fetch support agents for transfer
       if (isAgent) {
@@ -125,14 +116,7 @@ const TicketDetails = () => {
   };
 
   const loadUserChats = async () => {
-    try {
-      const res = await axios.get(apiUrl('/api/chat'), axiosConfig);
-      const allChats = res.data?.data || [];
-      const userChat = allChats.find((c: any) => c.userId === ticket?.userId);
-      setUserChats(userChat ? [userChat] : []);
-    } catch (err) {
-      console.error('Failed to fetch user chats:', err);
-    }
+    // already loaded from context endpoint
   };
 
   const loadChatMessages = async (chatId: string) => {
@@ -207,6 +191,14 @@ const TicketDetails = () => {
     } catch (err: any) {
       addToast(err.response?.data?.error || 'Failed to update status', 'error');
     }
+  };
+
+  const handleOpenRelatedChat = () => {
+    if (ticket?.chatId) {
+      navigate(`/chat/${ticket.chatId}`);
+      return;
+    }
+    addToast('No related chat is linked to this ticket yet', 'error');
   };
 
   if (loading) {
@@ -371,6 +363,20 @@ const TicketDetails = () => {
                   <p className="text-muted-foreground text-sm">Member Since</p>
                   <p className="font-medium">{new Date(userProfile.createdAt).toLocaleDateString()}</p>
                 </div>
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Knowledge Base Interactions</p>
+                  {kbInteractions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No KB interactions found</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {kbInteractions.slice(0, 5).map(kb => (
+                        <p key={kb.kbId} className="text-sm">
+                          {kb.title} - {kb.interactions} chat{kb.interactions !== 1 ? 's' : ''}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </Card>
           )}
@@ -378,8 +384,9 @@ const TicketDetails = () => {
           {activeTab === 'chats' && (
             <div className="space-y-4">
               {userChats.length === 0 ? (
-                <Card className="p-6 text-center text-muted-foreground">
-                  No chats found for this user
+                <Card className="p-8 text-center space-y-3">
+                  <p className="font-medium">No chats yet</p>
+                  <p className="text-sm text-muted-foreground">This customer has not started a chat yet.</p>
                 </Card>
               ) : (
                 userChats.map(chat => (
@@ -495,8 +502,9 @@ const TicketDetails = () => {
           {activeTab === 'tickets' && (
             <div className="space-y-3">
               {userTickets.length === 0 ? (
-                <Card className="p-6 text-center text-muted-foreground">
-                  No other tickets from this user
+                <Card className="p-8 text-center space-y-3">
+                  <p className="font-medium">No other tickets</p>
+                  <p className="text-sm text-muted-foreground">This is the customer's only ticket right now.</p>
                 </Card>
               ) : (
                 userTickets.map(t => (
@@ -533,7 +541,10 @@ const TicketDetails = () => {
             <Card className="p-6 space-y-4">
               <h3 className="font-semibold">Ticket Notes</h3>
               {ticketNotes.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No notes yet</p>
+                <div className="text-center py-6">
+                  <p className="font-medium">No notes yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Use ticket messages to track updates and decisions.</p>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {ticketNotes.map((note: any, idx: number) => (
@@ -575,10 +586,10 @@ const TicketDetails = () => {
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => navigate(`/chat?kbId=${ticket.id}`)}
+                onClick={handleOpenRelatedChat}
               >
                 <MessageSquare size={16} className="mr-2" />
-                Start Chat with AI
+                Open Related Chat
               </Button>
             </div>
           </Card>

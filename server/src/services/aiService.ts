@@ -46,43 +46,81 @@ export class AIService {
   }
 
   static async processMessage(message: string, session: ChatSession) {
-    const { userId, kbId, chatId, onToken, onComplete, onError } = session;
+    const { userId, chatId, onToken, onComplete, onError } = session;
+    let { kbId } = session;
+    let kbMode = true; // Whether to use KB search tool
 
     try {
-      const kb = await prisma.knowledgeBase.findFirst({
-        where: { id: kbId, userId }
-      });
-      if (!kb) throw new Error('Unauthorized or missing KB');
+      // If kbId is missing or empty, try to find a default KB
+      if (!kbId || kbId.trim() === '') {
+        // Try to find user's own KB first
+        let defaultKb = await prisma.knowledgeBase.findFirst({
+          where: { userId },
+          orderBy: { createdAt: 'asc' }
+        });
 
-      // 1. Tool Definitions (Simplified for the service)
-      const kbSearchTool = new DynamicTool({
-        name: 'search_knowledge_base',
-        description: 'Searches the user documents for info.',
-        func: async (query: string) => {
-          const queryEmbeddings = await generateEmbeddings([query]);
-          if (!queryEmbeddings || !queryEmbeddings[0]) return 'Failed to generate search embeddings.';
-          const qVec = queryEmbeddings[0];
-
-          // Use PostgreSQL vector similarity search (<=> is cosine distance)
-          // We cast the Float[] embedding to vector for the search
-          const topChunks: any[] = await prisma.$queryRaw`
-            SELECT 
-              dc.content, 
-              d.filename,
-              1 - (dc.embedding::vector <=> ${qVec}::vector) as similarity
-            FROM "DocumentChunk" dc
-            JOIN "Document" d ON dc."docId" = d.id
-            WHERE d."kbId" = ${kbId}
-            ORDER BY dc.embedding::vector <=> ${qVec}::vector
-            LIMIT 5
-          `;
-
-          if (topChunks.length === 0) return 'No relevant info found.';
-          return topChunks.map(c => `File: ${c.filename}\nContent: ${c.content}`).join('\n\n');
+        // If user has no KB, find any available KB (fallback to admin/system KB)
+        if (!defaultKb) {
+          defaultKb = await prisma.knowledgeBase.findFirst({
+            orderBy: { createdAt: 'asc' } // Use the first/oldest KB in system
+          });
         }
-      });
 
-      const tools = [kbSearchTool];
+        if (defaultKb) {
+          kbId = defaultKb.id;
+          logger.info('Auto-selected default KB', { kbId, userId, kbTitle: defaultKb.title });
+        } else {
+          // No KB available - operate in KB-free mode
+          kbMode = false;
+          logger.info('Operating in KB-free mode (no knowledge base available)', { userId });
+        }
+      }
+
+      let kb = null;
+      if (kbMode && kbId) {
+        kb = await prisma.knowledgeBase.findFirst({
+          where: { id: kbId }
+        });
+        if (!kb) {
+          logger.warn('KB not found, switching to KB-free mode', { kbId });
+          kbMode = false;
+        }
+      }
+
+      // 1. Tool Definitions
+      const tools: any[] = [];
+      
+      // Only add KB search tool if we have a KB
+      if (kbMode && kbId) {
+        const kbSearchTool = new DynamicTool({
+          name: 'search_knowledge_base',
+          description: 'Searches the user documents for info.',
+          func: async (query: string) => {
+            const queryEmbeddings = await generateEmbeddings([query]);
+            if (!queryEmbeddings || !queryEmbeddings[0]) return 'Failed to generate search embeddings.';
+            const qVec = queryEmbeddings[0];
+
+            // Use PostgreSQL vector similarity search (<=> is cosine distance)
+            const topChunks: any[] = await prisma.$queryRaw`
+              SELECT 
+                dc.content, 
+                d.filename,
+                1 - (dc.embedding::vector <=> ${qVec}::vector) as similarity
+              FROM "DocumentChunk" dc
+              JOIN "Document" d ON dc."docId" = d.id
+              WHERE d."kbId" = ${kbId}
+              ORDER BY dc.embedding::vector <=> ${qVec}::vector
+              LIMIT 5
+            `;
+
+            if (topChunks.length === 0) return 'No relevant info found.';
+            return topChunks.map(c => `File: ${c.filename}\nContent: ${c.content}`).join('\n\n');
+          }
+        });
+        tools.push(kbSearchTool);
+      }
+
+      // Add web search if available
       if (process.env.TAVILY_API_KEY) {
         tools.push(new DynamicTool({
           name: 'web_search',
@@ -95,7 +133,9 @@ export class AIService {
         }));
       }
 
-      const agentModifier = `You are a professional customer support agent. Be concise and helpful.`;
+      const agentModifier = kbMode 
+        ? `You are a professional customer support agent. Be concise and helpful. Use the search_knowledge_base tool to find relevant information from our documentation.`
+        : `You are a helpful AI customer support assistant. While you don't have access to specific documentation, provide general helpful guidance and suggest contacting a human support agent for detailed questions. Be friendly, professional, and concise.`;
 
       // 2. Execute Agent with Streaming
       const provider = this.llmInstances[0]; 
@@ -125,7 +165,11 @@ export class AIService {
       let currentChatId = chatId;
       if (!currentChatId) {
         const chat = await prisma.chat.create({
-          data: { title: message.substring(0, 50), userId, kbId }
+          data: { 
+            title: message.substring(0, 50), 
+            userId, 
+            kbId: kbId || (kb?.id || '') // Use kbId if available, or empty string
+          }
         });
         currentChatId = chat.id;
       }

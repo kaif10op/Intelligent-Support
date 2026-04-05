@@ -29,9 +29,9 @@ const Search = lazy(() => import('./pages/Search'));
 const SupportAgentDashboard = lazy(() => import('./pages/SupportAgentDashboard'));
 
 const ProtectedRoute = ({ children, adminOnly = false, supportAgentOnly = false }: { children: React.ReactNode, adminOnly?: boolean, supportAgentOnly?: boolean }) => {
-  const { user, loading } = useAuthStore();
+  const { user, loading, initialized } = useAuthStore();
 
-  if (loading) return <div className="loading-container">Loading...</div>;
+  if (loading || !initialized) return <div className="loading-container">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (adminOnly && user.role !== 'ADMIN') return <Navigate to="/" />;
   if (supportAgentOnly && user.role !== 'SUPPORT_AGENT' && user.role !== 'ADMIN') return <Navigate to="/" />;
@@ -41,9 +41,9 @@ const ProtectedRoute = ({ children, adminOnly = false, supportAgentOnly = false 
 
 // Role-based home redirect
 const RoleBasedHome = () => {
-  const { user, loading } = useAuthStore();
+  const { user, loading, initialized } = useAuthStore();
 
-  if (loading) return <div className="loading-container">Loading...</div>;
+  if (loading || !initialized) return <div className="loading-container">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
 
   if (user.role === 'ADMIN') return <Navigate to="/admin/dashboard" />;
@@ -55,11 +55,13 @@ const RoleBasedHome = () => {
 
 
 function App() {
-  const { checkAuth } = useAuthStore();
+  const { checkAuth, initialized } = useAuthStore();
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (!initialized) {
+      checkAuth();
+    }
+  }, [checkAuth, initialized]);
 
   return (
     <ErrorBoundary>

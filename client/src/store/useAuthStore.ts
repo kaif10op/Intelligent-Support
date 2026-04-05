@@ -14,6 +14,7 @@ interface User {
 interface AuthState {
   user: User | null;
   loading: boolean;
+  initialized: boolean;
   setUser: (user: User | null) => void;
   checkAuth: () => Promise<void>;
   logout: () => Promise<void>;
@@ -35,10 +36,13 @@ const getCachedUser = (): User | null => {
 // Check for a persisted session to determine initial loading state
 const hasSession = typeof window !== 'undefined' && localStorage.getItem('auth_session') === 'true';
 const cachedUser = getCachedUser();
+let checkAuthPromise: Promise<void> | null = null;
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: cachedUser || null,
-  loading: !hasSession, // Show loading only if no session flag
+  // If a session exists, validate it before route decisions to prevent login flicker.
+  loading: hasSession,
+  initialized: !hasSession,
   setUser: (user) => {
     if (user) {
       localStorage.setItem('auth_session', 'true');
@@ -50,21 +54,33 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user });
   },
   checkAuth: async () => {
-    try {
-      const res = await axios.get(API_ENDPOINTS.AUTH_ME, axiosConfig);
-      if (res.data.user) {
-        localStorage.setItem('auth_session', 'true');
-        localStorage.setItem('auth_user', JSON.stringify(res.data.user));
-        set({ user: res.data.user, loading: false });
-      } else {
+    if (checkAuthPromise) return checkAuthPromise;
+    checkAuthPromise = (async () => {
+      set({ loading: true });
+      try {
+        const res = await axios.get(API_ENDPOINTS.AUTH_ME, axiosConfig);
+        if (res.data.user) {
+          localStorage.setItem('auth_session', 'true');
+          localStorage.setItem('auth_user', JSON.stringify(res.data.user));
+          set({ user: res.data.user, loading: false, initialized: true });
+        } else {
+          localStorage.removeItem('auth_session');
+          localStorage.removeItem('auth_user');
+          set({ user: null, loading: false, initialized: true });
+        }
+      } catch {
         localStorage.removeItem('auth_session');
         localStorage.removeItem('auth_user');
-        set({ user: null, loading: false });
+        set({ user: null, loading: false, initialized: true });
+      } finally {
+        checkAuthPromise = null;
       }
+    })();
+
+    try {
+      await checkAuthPromise;
     } catch {
-      localStorage.removeItem('auth_session');
-      localStorage.removeItem('auth_user');
-      set({ user: null, loading: false });
+      // no-op: state handled above
     }
   },
   logout: async () => {
@@ -77,7 +93,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       cacheService.clear();
       localStorage.removeItem('auth_session');
       localStorage.removeItem('auth_user');
-      set({ user: null });
+      set({ user: null, initialized: true, loading: false });
     }
   }
 }));

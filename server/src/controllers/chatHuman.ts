@@ -26,7 +26,7 @@ export const addHumanMessage = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Only support agents and admins can send messages' });
     }
 
-    const chat = await prisma.chat.findUnique({ where: { id: chatId as string } });
+    const chat = await (prisma as any).chat.findUnique({ where: { id: chatId as string } });
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found' });
     }
@@ -51,12 +51,65 @@ export const addHumanMessage = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Customer requests human assistance for an AI chat
+ */
+export const requestHumanHandoff = async (req: AuthRequest, res: Response) => {
+  try {
+    const { chatId } = req.params;
+    const { reason } = req.body;
+
+    const chat = await prisma.chat.findUnique({ where: { id: chatId as string } });
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    const canRequest = chat.userId === req.user!.id || req.user!.role === 'ADMIN' || req.user!.role === 'SUPPORT_AGENT';
+    if (!canRequest) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const currentMetadata = (chat as any)?.metadata && typeof (chat as any).metadata === 'object'
+      ? (chat as any).metadata
+      : {};
+
+    const updatedChat = await (prisma as any).chat.update({
+      where: { id: chatId as string },
+      data: {
+        metadata: {
+          ...currentMetadata,
+          humanHandoffRequested: true,
+          handoffRequestedAt: new Date().toISOString(),
+          handoffRequestedBy: req.user!.id,
+          handoffReason: reason || 'Customer requested human support'
+        }
+      }
+    });
+
+    await (prisma as any).message.create({
+      data: {
+        chatId: chatId as string,
+        role: 'system',
+        content: `Human support requested${reason ? `: ${reason}` : ''}`,
+        senderName: 'System',
+        senderRole: 'SYSTEM'
+      }
+    });
+
+    logger.info('Human handoff requested', { chatId, requestedBy: req.user!.id });
+    res.json({ success: true, chat: updatedChat });
+  } catch (error: any) {
+    logger.error('Request human handoff error', { error: error.message });
+    res.status(500).json({ error: 'Failed to request human handoff' });
+  }
+};
+
+/**
  * Support agent requests AI assistance
  */
 export const generateAgentAssistance = async (req: AuthRequest, res: Response) => {
   try {
     const { chatId } = req.params;
-    const { context } = req.body;
+    const { context, mode = 'draft_reply' } = req.body;
 
     if (req.user!.role !== 'SUPPORT_AGENT' && req.user!.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Only support agents and admins can use this' });
@@ -71,12 +124,76 @@ export const generateAgentAssistance = async (req: AuthRequest, res: Response) =
       return res.status(404).json({ error: 'Chat not found' });
     }
 
-    const suggestion = `AI Suggestion: Based on the conversation, consider addressing: ${context || 'the customer concern'}`;
+    const recentConversation = (chat.messages || [])
+      .map((m: any) => `${m.role}: ${m.content}`)
+      .join('\n')
+      .slice(-1500);
+
+    let suggestion = '';
+    if (mode === 'summary') {
+      suggestion = `Conversation summary:\n${recentConversation || context || 'No conversation context available.'}`;
+    } else if (mode === 'sentiment') {
+      suggestion = `Customer sentiment appears: neutral to concerned. Focus on reassurance, clarity, and specific next steps.\nContext: ${context || 'Latest customer concern'}`;
+    } else if (mode === 'next_steps') {
+      suggestion = `Recommended next steps:\n1) Confirm key issue details\n2) Provide targeted resolution steps\n3) Confirm outcome\n4) Offer escalation if unresolved`;
+    } else {
+      suggestion = `Suggested response draft: I understand your concern. Based on what you shared${context ? ` about "${context}"` : ''}, here is what we can do next...`;
+    }
+
     logger.info('AI assistance generated', { chatId });
-    res.json({ success: true, suggestion });
+    res.json({ success: true, suggestion, mode });
   } catch (error: any) {
     logger.error('Generate assistance error', { error: error.message });
     res.status(500).json({ error: 'Failed to generate assistance' });
+  }
+};
+
+/**
+ * Support agent/admin takes ownership of an active chat
+ */
+export const takeOverChat = async (req: AuthRequest, res: Response) => {
+  try {
+    const { chatId } = req.params;
+
+    if (req.user!.role !== 'SUPPORT_AGENT' && req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const chat = await (prisma as any).chat.findUnique({ where: { id: chatId as string } });
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    const currentMetadata = (chat as any)?.metadata && typeof (chat as any).metadata === 'object'
+      ? (chat as any).metadata
+      : {};
+
+    const updatedChat = await (prisma as any).chat.update({
+      where: { id: chatId as string },
+      data: {
+        assignedAgentId: req.user!.id,
+        metadata: {
+          ...currentMetadata,
+          humanHandoffRequested: false,
+          takenOverAt: new Date().toISOString(),
+          takenOverBy: req.user!.id
+        }
+      }
+    });
+
+    await (prisma as any).message.create({
+      data: {
+        chatId: chatId as string,
+        role: 'system',
+        content: `${req.user!.name || 'Support agent'} has joined and taken over this chat.`,
+        senderName: 'System',
+        senderRole: 'SYSTEM'
+      }
+    });
+
+    logger.info('Chat taken over by human agent', { chatId, agentId: req.user!.id });
+    res.json({ success: true, chat: updatedChat });
+  } catch (error: any) {
+    logger.error('Takeover error', { error: error.message });
+    res.status(500).json({ error: 'Failed to take over chat' });
   }
 };
 
@@ -121,6 +238,41 @@ export const transferChat = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     logger.error('Transfer error', { error: error.message });
     res.status(500).json({ error: 'Failed to transfer' });
+  }
+};
+
+/**
+ * Get handoff and assignment status for chat visibility in UI
+ */
+export const getHumanHandoffStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { chatId } = req.params;
+    const chat = await (prisma as any).chat.findUnique({
+      where: { id: chatId as string },
+      include: { assignedAgent: true }
+    });
+
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    const canAccess = chat.userId === req.user!.id || req.user!.role === 'SUPPORT_AGENT' || req.user!.role === 'ADMIN';
+    if (!canAccess) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const metadata = (chat as any)?.metadata && typeof (chat as any).metadata === 'object'
+      ? ((chat as any).metadata as Record<string, unknown>)
+      : {};
+    res.json({
+      chatId: chat.id,
+      assignedAgent: (chat as any).assignedAgent || null,
+      handoffRequested: Boolean(metadata.humanHandoffRequested),
+      handoffRequestedAt: metadata.handoffRequestedAt || null,
+      handoffReason: metadata.handoffReason || null,
+      takenOverAt: metadata.takenOverAt || null
+    });
+  } catch (error: any) {
+    logger.error('Get handoff status error', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch handoff status' });
   }
 };
 

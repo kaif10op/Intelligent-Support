@@ -9,6 +9,7 @@ import { sendTicketReplyEmail, sendTicketStatusChangedEmail, sendTicketAssignedE
 import { WebhookService } from '../services/webhookService.js';
 import { TagService } from '../services/tagService.js';
 import { TicketAssignmentService } from '../services/ticketAssignmentService.js';
+import { CacheService } from '../utils/cacheService.js';
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
@@ -48,6 +49,10 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
       createdAt: ticket.createdAt.toISOString(),
     }).catch(err => logger.error('Webhook emit error:', err));
 
+    CacheService.deletePattern(`ticket:list:${req.user!.role}:${req.user!.id}:*`).catch(() => {});
+    CacheService.deletePattern('ticket:list:ADMIN:*:*').catch(() => {});
+    CacheService.deletePattern('ticket:list:SUPPORT_AGENT:*:*').catch(() => {});
+
     res.json(ticket);
   } catch (error: any) {
     logger.error('Create Ticket Error', {
@@ -66,14 +71,28 @@ export const getMyTickets = async (req: AuthRequest, res: Response) => {
     const { skip, take } = calculateSkipTake(page, limit);
     const userRole = req.user!.role;
     const userId = req.user!.id;
+    const cacheKey = `ticket:list:${userRole}:${userId}:p${page}:l${limit}`;
+
+    const cached = await CacheService.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     // Build where clause based on user role
     let whereClause: any;
 
     if (userRole === 'SUPPORT_AGENT') {
-      // Support agents see ALL tickets (not just assigned or created)
-      // They can work on any ticket
-      whereClause = {};
+      // Support agents should see:
+      // 1. Tickets assigned to them
+      // 2. Tickets they created
+      // 3. Unassigned tickets (available for pickup)
+      whereClause = {
+        OR: [
+          { assignedToId: userId },
+          { userId: userId },
+          { assignedToId: null }
+        ]
+      };
     } else if (userRole === 'ADMIN') {
       // Admins see all tickets (no filter)
       whereClause = {};
@@ -96,7 +115,9 @@ export const getMyTickets = async (req: AuthRequest, res: Response) => {
       prisma.ticket.count({ where: whereClause })
     ]);
 
-    res.json(formatPaginatedResponse(tickets, total, page, limit));
+    const payload = formatPaginatedResponse(tickets, total, page, limit);
+    await CacheService.set(cacheKey, payload, { ttl: 20, tags: ['ticket-list', `user-${userId}`] });
+    res.json(payload);
   } catch (error: any) {
     const msg = typeof error?.message === 'string' ? error.message : '';
     const missingSchema =
@@ -119,6 +140,12 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
     // Only admins should call this (handled by middleware)
     const { page, limit } = parsePaginationParams(req.query);
     const { skip, take } = calculateSkipTake(page, limit);
+    const cacheKey = `ticket:list:ADMIN:${req.user!.id}:p${page}:l${limit}`;
+
+    const cached = await CacheService.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     const [tickets, total] = await Promise.all([
       prisma.ticket.findMany({
@@ -133,7 +160,9 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
       prisma.ticket.count()
     ]);
 
-    res.json(formatPaginatedResponse(tickets, total, page, limit));
+    const payload = formatPaginatedResponse(tickets, total, page, limit);
+    await CacheService.set(cacheKey, payload, { ttl: 20, tags: ['ticket-list', 'admin-list'] });
+    res.json(payload);
   } catch (error: any) {
     const msg = typeof error?.message === 'string' ? error.message : '';
     const missingSchema =
@@ -151,22 +180,71 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * Get single ticket details
+ * GET /api/tickets/:id
+ */
+export const getTicketById = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: id as string },
+      include: {
+        user: { select: { id: true, name: true, email: true, picture: true, createdAt: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
+        chat: { select: { id: true, title: true, kbId: true, createdAt: true, updatedAt: true } }
+      }
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    const isOwner = ticket.userId === req.user!.id;
+    const isStaff = req.user!.role === 'ADMIN' || req.user!.role === 'SUPPORT_AGENT';
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    res.json(ticket);
+  } catch (error: any) {
+    logger.error('Get ticket by id error', { error: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to fetch ticket details' });
+  }
+};
+
 export const updateTicket = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   let { status, priority, assignedToId } = req.body;
 
   try {
-    // Support agents can only update status and priority, not reassign
-    if (req.user!.role === 'SUPPORT_AGENT' && assignedToId && assignedToId !== req.user!.id) {
-      return res.status(403).json({ error: 'Support agents can only self-assign tickets, not reassign to others' });
-    }
-
     // Check if ticket is overdue
     const ticket = await prisma.ticket.findUnique({
       where: { id: id as string },
       include: { user: { select: { email: true, name: true } }, assignedTo: { select: { name: true } } }
     });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    const isAdmin = req.user!.role === 'ADMIN';
+    const isSupportAgent = req.user!.role === 'SUPPORT_AGENT';
+    const isAssignedAgent = ticket.assignedToId === req.user!.id;
+
+    if (isSupportAgent && !isAssignedAgent && ticket.assignedToId) {
+      return res.status(403).json({ error: 'Support agents can only update tickets assigned to them' });
+    }
+
+    // Support agents can self-assign unassigned tickets but cannot reassign assigned tickets to others
+    if (isSupportAgent && assignedToId) {
+      const isSelfAssign = assignedToId === req.user!.id;
+      const isCurrentlyUnassigned = !ticket.assignedToId;
+      if (!(isSelfAssign && isCurrentlyUnassigned)) {
+        return res.status(403).json({ error: 'Support agents can only self-assign unassigned tickets' });
+      }
+    }
+
+    if (!isAdmin && assignedToId && assignedToId !== req.user!.id) {
+      return res.status(403).json({ error: 'Only admins can assign tickets to other agents' });
+    }
 
     const now = new Date();
     const isOverdue = ticket.dueAt && new Date(ticket.dueAt) < now && ticket.status !== 'CLOSED' && ticket.status !== 'RESOLVED';
@@ -209,6 +287,8 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
         }
       }
     }
+
+    CacheService.deletePattern('ticket:list:*:*:*').catch(() => {});
 
     res.json(updatedTicket);
   } catch (error: any) {
@@ -265,6 +345,8 @@ export const addTicketNote = async (req: AuthRequest, res: Response) => {
       const replyPreview = content.substring(0, 100);
       await sendTicketReplyEmail(ticket.user.email, ticket.title, adminUser?.name || 'Support', replyPreview);
     }
+
+    CacheService.deletePattern('ticket:list:*:*:*').catch(() => {});
 
     res.json(note);
   } catch (error: any) {
@@ -331,6 +413,7 @@ export const deleteTicketMessage = async (req: AuthRequest, res: Response) => {
 
     // Delete the message
     await prisma.ticketNote.delete({ where: { id: noteId as string } });
+    CacheService.deletePattern('ticket:list:*:*:*').catch(() => {});
 
     res.json({ success: true, message: 'Message deleted' });
   } catch (error: any) {
@@ -518,6 +601,8 @@ export const assignTicket = async (req: AuthRequest, res: Response) => {
       adminId: req.user!.id
     });
 
+    CacheService.deletePattern('ticket:list:*:*:*').catch(() => {});
+
     res.json({ ticket: updatedTicket, success: true });
   } catch (error: any) {
     logger.error('Assign ticket error', { error: error.message, stack: error.stack });
@@ -609,7 +694,11 @@ export const optimizeTicketAssignment = async (req: AuthRequest, res: Response) 
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    const reassignments = await TicketAssignmentService.reassignSlowTickets();
+    const [slowReassignments, inactiveReassignments] = await Promise.all([
+      TicketAssignmentService.reassignSlowTickets(),
+      TicketAssignmentService.reassignInactiveAgentsTickets()
+    ]);
+    const reassignments = [...slowReassignments, ...inactiveReassignments];
 
     logger.info('Ticket optimization completed', {
       count: reassignments.length,
@@ -619,10 +708,98 @@ export const optimizeTicketAssignment = async (req: AuthRequest, res: Response) 
     res.json({
       success: true,
       reassignments,
-      message: `Optimized ${reassignments.length} slow tickets by reassigning to faster agents`
+      message: `Optimized ${reassignments.length} tickets through slow/inactive-agent reassignment`
     });
   } catch (error: any) {
     logger.error('Optimize error', { error: error.message });
     res.status(500).json({ error: 'Failed to optimize ticket assignment' });
+  }
+};
+
+/**
+ * Get comprehensive customer context for a ticket
+ * GET /api/tickets/:id/context
+ */
+export const getTicketContext = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: id as string },
+      include: {
+        user: { select: { id: true, name: true, email: true, picture: true, createdAt: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } }
+      }
+    });
+
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    const isOwner = ticket.userId === req.user!.id;
+    const isStaff = req.user!.role === 'ADMIN' || req.user!.role === 'SUPPORT_AGENT';
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const [ticketHistory, chats, kbInteractions, notes] = await Promise.all([
+      prisma.ticket.findMany({
+        where: { userId: ticket.userId },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: { id: true, title: true, status: true, priority: true, assignedToId: true, createdAt: true, updatedAt: true }
+      }),
+      prisma.chat.findMany({
+        where: { userId: ticket.userId },
+        include: {
+          kb: { select: { id: true, title: true } },
+          messages: { select: { id: true, role: true, content: true, createdAt: true, confidence: true, rating: true }, orderBy: { createdAt: 'desc' }, take: 5 }
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 15
+      }),
+      prisma.chat.findMany({
+        where: { userId: ticket.userId },
+        include: {
+          kb: { select: { id: true, title: true } }
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 50
+      }),
+      prisma.ticketNote.findMany({
+        where: { ticketId: id as string },
+        orderBy: { createdAt: 'asc' },
+        take: 100
+      })
+    ]);
+
+    const kbUsageMap = new Map<string, { kbId: string; title: string; interactions: number; lastUsedAt: Date }>();
+    for (const chat of kbInteractions) {
+      if (!chat.kb) continue;
+      const existing = kbUsageMap.get(chat.kb.id);
+      if (existing) {
+        existing.interactions += 1;
+        if (chat.updatedAt > existing.lastUsedAt) existing.lastUsedAt = chat.updatedAt;
+      } else {
+        kbUsageMap.set(chat.kb.id, {
+          kbId: chat.kb.id,
+          title: chat.kb.title,
+          interactions: 1,
+          lastUsedAt: chat.updatedAt
+        });
+      }
+    }
+
+    res.json({
+      ticket,
+      user: ticket.user,
+      assignedTo: ticket.assignedTo,
+      context: {
+        ticketHistory,
+        recentChats: chats,
+        knowledgeBaseInteractions: Array.from(kbUsageMap.values()).sort((a, b) => b.interactions - a.interactions),
+        currentTicketNotes: notes
+      }
+    });
+  } catch (error: any) {
+    logger.error('Get ticket context error', { error: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to fetch ticket context' });
   }
 };

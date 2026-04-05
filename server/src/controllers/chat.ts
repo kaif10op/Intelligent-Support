@@ -14,6 +14,7 @@ import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { logger } from '../utils/logger.js';
 import { WebhookService } from '../services/webhookService.js';
 import { TagService } from '../services/tagService.js';
+import { CacheService } from '../utils/cacheService.js';
 
 // Helper to safely create LLM instances with fallbacks
 const createLLMInstances = () => {
@@ -346,6 +347,11 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    // Invalidate chat list caches asynchronously after mutation.
+    CacheService.deletePattern(`chat:list:*:${req.user!.id}:*`).catch(() => {});
+    CacheService.deletePattern(`chat:recent:${req.user!.id}:*`).catch(() => {});
+    CacheService.deletePattern('chat:list:staff:*').catch(() => {});
+
     res.write(`data: ${JSON.stringify({ event: 'done', chatId: currentChatId })}\n\n`);
     res.end();
 
@@ -361,21 +367,45 @@ export const chatWithAgent = async (req: AuthRequest, res: Response) => {
 
 export const getChats = async (req: AuthRequest, res: Response) => {
   try {
+    const isStaff = req.user!.role === 'ADMIN' || req.user!.role === 'SUPPORT_AGENT';
     const { page, limit } = parsePaginationParams(req.query);
     const { skip, take } = calculateSkipTake(page, limit);
+    const cacheKey = isStaff
+      ? `chat:list:staff:${req.user!.id}:p${page}:l${limit}`
+      : `chat:list:user:${req.user!.id}:p${page}:l${limit}`;
+
+    const cached = await CacheService.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const include = isStaff
+      ? {
+          kb: { select: { title: true } },
+          user: { select: { id: true, name: true, email: true } },
+          assignedAgent: { select: { id: true, name: true, email: true, role: true } },
+          _count: { select: { messages: true } }
+        }
+      : {
+          kb: { select: { title: true } },
+          assignedAgent: { select: { id: true, name: true, email: true, role: true } },
+          _count: { select: { messages: true } }
+        };
 
     const [chats, total] = await Promise.all([
-      prisma.chat.findMany({
-        where: { userId: req.user!.id },
+      (prisma as any).chat.findMany({
+        where: isStaff ? {} : { userId: req.user!.id },
         orderBy: { updatedAt: 'desc' },
-        include: { kb: { select: { title: true } } },
+        include,
         skip,
         take
       }),
-      prisma.chat.count({ where: { userId: req.user!.id } })
+      prisma.chat.count({ where: isStaff ? {} : { userId: req.user!.id } })
     ]);
 
-    res.json(formatPaginatedResponse(chats, total, page, limit));
+    const payload = formatPaginatedResponse(chats, total, page, limit);
+    await CacheService.set(cacheKey, payload, { ttl: 20, tags: ['chat-list', `user-${req.user!.id}`] });
+    res.json(payload);
   } catch (error: any) {
     const msg = typeof error?.message === 'string' ? error.message : '';
     const missingSchema =
@@ -395,15 +425,24 @@ export const getChats = async (req: AuthRequest, res: Response) => {
 export const getRecentChats = async (req: AuthRequest, res: Response) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 5, 20);
+    const cacheKey = `chat:recent:${req.user!.id}:l${limit}`;
+
+    const cached = await CacheService.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     const chats = await prisma.chat.findMany({
       where: { userId: req.user!.id },
       orderBy: { updatedAt: 'desc' },
-      include: { kb: { select: { id: true, title: true } }, messages: { take: 1, orderBy: { createdAt: 'desc' } } },
+      include: {
+        kb: { select: { id: true, title: true } },
+        _count: { select: { messages: true } }
+      },
       take: limit
     });
 
-    res.json({
+    const payload = {
       data: chats,
       pagination: {
         page: 1,
@@ -413,7 +452,10 @@ export const getRecentChats = async (req: AuthRequest, res: Response) => {
         hasNextPage: false,
         hasPrevPage: false
       }
-    });
+    };
+
+    await CacheService.set(cacheKey, payload, { ttl: 20, tags: ['chat-recent', `user-${req.user!.id}`] });
+    res.json(payload);
   } catch (error: any) {
     const msg = typeof error?.message === 'string' ? error.message : '';
     const missingSchema =
@@ -432,9 +474,15 @@ export const getRecentChats = async (req: AuthRequest, res: Response) => {
 export const getChatDetails = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const chat = await prisma.chat.findFirst({
-      where: { id, userId: req.user!.id },
-      include: { messages: { orderBy: { createdAt: 'asc' } }, kb: true }
+    const isStaff = req.user!.role === 'ADMIN' || req.user!.role === 'SUPPORT_AGENT';
+    const chat = await (prisma as any).chat.findFirst({
+      where: isStaff ? { id } : { id, userId: req.user!.id },
+      include: {
+        messages: { orderBy: { createdAt: 'asc' } },
+        kb: true,
+        user: { select: { id: true, name: true, email: true } },
+        assignedAgent: { select: { id: true, name: true, email: true, role: true } }
+      }
     });
     if (!chat) return res.status(404).json({ error: 'Chat not found' });
     res.json(chat);
@@ -499,10 +547,51 @@ export const clearChat = async (req: AuthRequest, res: Response) => {
       where: { chatId }
     });
 
+    CacheService.deletePattern(`chat:list:*:${req.user!.id}:*`).catch(() => {});
+    CacheService.deletePattern(`chat:recent:${req.user!.id}:*`).catch(() => {});
+    CacheService.deletePattern('chat:list:staff:*').catch(() => {});
+
     res.json({ success: true, message: 'Chat cleared' });
   } catch (error: any) {
     logger.error('Clear Chat Error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to clear chat' });
+  }
+};
+
+/**
+ * Delete a chat permanently
+ * DELETE /api/chat/:id
+ */
+export const deleteChat = async (req: AuthRequest, res: Response) => {
+  try {
+    const chatId = req.params.id as string;
+    const isStaff = req.user!.role === 'ADMIN' || req.user!.role === 'SUPPORT_AGENT';
+
+    const chat = await prisma.chat.findFirst({
+      where: isStaff ? { id: chatId } : { id: chatId, userId: req.user!.id }
+    });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Prevent FK conflicts from tickets linked to this chat.
+    await prisma.ticket.updateMany({
+      where: { chatId },
+      data: { chatId: null }
+    });
+
+    await prisma.chat.delete({ where: { id: chatId } });
+
+    const ownerId = chat.userId;
+    CacheService.deletePattern(`chat:list:*:${ownerId}:*`).catch(() => {});
+    CacheService.deletePattern(`chat:recent:${ownerId}:*`).catch(() => {});
+    CacheService.deletePattern('chat:list:staff:*').catch(() => {});
+
+    res.json({ success: true, message: 'Chat deleted successfully' });
+  } catch (error: any) {
+    logger.error('Delete Chat Error', { error: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to delete chat' });
   }
 };
 

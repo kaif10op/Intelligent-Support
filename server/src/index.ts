@@ -22,6 +22,7 @@ import abTestRoutes from './routes/abTest.js';
 import voiceRoutes from './routes/voice.js';
 import pluginRoutes from './routes/plugins.js';
 import webhookRoutes from './routes/webhooks.js';
+import { TicketAssignmentService } from './services/ticketAssignmentService.js';
 
 const app = express();
 
@@ -105,6 +106,31 @@ async function startServer() {
     app.use('/api/webhooks', webhookRoutes);
 
     logger.info('All routes registered');
+
+    // Automated ticket assignment/reassignment optimizer loop
+    const runAssignmentCycle = async () => {
+      try {
+        const [autoAssign, rebalance, slow, inactive] = await Promise.all([
+          TicketAssignmentService.autoAssignUnassignedTickets(),
+          TicketAssignmentService.rebalanceTickets(),
+          TicketAssignmentService.reassignSlowTickets(),
+          TicketAssignmentService.reassignInactiveAgentsTickets()
+        ]);
+
+        logger.info('Ticket optimization cycle completed', {
+          autoAssigned: autoAssign.assigned,
+          autoAssignErrors: autoAssign.errors,
+          rebalanced: rebalance.length,
+          slowReassigned: slow.length,
+          inactiveReassigned: inactive.length
+        });
+      } catch (cycleError: any) {
+        logger.error('Ticket optimization cycle failed', { error: cycleError.message });
+      }
+    };
+
+    setInterval(runAssignmentCycle, 5 * 60 * 1000);
+    runAssignmentCycle().catch(err => logger.error('Initial optimization cycle failed', { error: err.message }));
 
     // 404 handler
     app.use((req: Request, res: Response) => {

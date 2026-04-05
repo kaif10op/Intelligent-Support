@@ -45,6 +45,8 @@ const Chat = () => {
   const [showTransfer, setShowTransfer] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
   const [humanInput, setHumanInput] = useState('');
+  const [handoffStatus, setHandoffStatus] = useState<any>(null);
+  const [requestingHandoff, setRequestingHandoff] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -240,13 +242,48 @@ const Chat = () => {
     }
   };
 
+  const loadHandoffStatus = async () => {
+    if (!id || id === 'new') return;
+    try {
+      const res = await axios.get(API_ENDPOINTS.CHAT_HUMAN_STATUS(id), axiosConfig);
+      setHandoffStatus(res.data);
+    } catch {
+      // keep quiet to avoid noisy UI if feature unavailable
+    }
+  };
+
+  const requestHumanHandoff = async () => {
+    if (!id || id === 'new') return;
+    setRequestingHandoff(true);
+    try {
+      await axios.post(API_ENDPOINTS.CHAT_HUMAN_REQUEST(id), { reason: 'Customer requested human support' }, axiosConfig);
+      addToast('Human support requested. An agent will join shortly.', 'success');
+      await loadHandoffStatus();
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to request human handoff', 'error');
+    } finally {
+      setRequestingHandoff(false);
+    }
+  };
+
+  const takeOverChat = async () => {
+    if (!id || id === 'new') return;
+    try {
+      await axios.post(API_ENDPOINTS.CHAT_HUMAN_TAKEOVER(id), {}, axiosConfig);
+      addToast('You have taken over this chat', 'success');
+      await loadHandoffStatus();
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to take over chat', 'error');
+    }
+  };
+
   const handleSendHumanMessage = async () => {
     if (!humanInput.trim() || !id || id === 'new') return;
 
     setSendingHuman(true);
     try {
       await axios.post(
-        apiUrl(`/api/chat/human/${id}/message`),
+        API_ENDPOINTS.CHAT_HUMAN_MESSAGE(id),
         { message: humanInput },
         axiosConfig
       );
@@ -272,8 +309,11 @@ const Chat = () => {
 
     try {
       const res = await axios.post(
-        apiUrl(`/api/chat/human/${id}/assistant/suggest`),
-        { context: messages[messages.length - 1]?.content || '' },
+        API_ENDPOINTS.CHAT_HUMAN_ASSIST(id),
+        {
+          context: messages[messages.length - 1]?.content || '',
+          mode: 'draft_reply'
+        },
         axiosConfig
       );
 
@@ -288,7 +328,7 @@ const Chat = () => {
 
     try {
       await axios.post(
-        apiUrl(`/api/chat/human/${id}/transfer/${targetAgentId}`),
+        API_ENDPOINTS.CHAT_HUMAN_TRANSFER(id, targetAgentId),
         { reason: 'Transferred by support agent' },
         axiosConfig
       );
@@ -301,6 +341,10 @@ const Chat = () => {
   };
 
   // Fetch available agents for transfer
+  useEffect(() => {
+    loadHandoffStatus();
+  }, [id]);
+
   useEffect(() => {
     if (isAgent && showTransfer) {
       const fetchAgents = async () => {
@@ -370,6 +414,44 @@ const Chat = () => {
           >
             <X size={16} />
           </button>
+        </div>
+      )}
+
+      {/* Handoff Banner */}
+      {id && id !== 'new' && messages.length > 1 && (
+        <div className="px-6 pt-3">
+          <div className="rounded-lg border border-border/50 bg-card/50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm">
+              {handoffStatus?.assignedAgent?.name ? (
+                <>
+                  <span className="font-medium">Human Support:</span> Assigned to {handoffStatus.assignedAgent.name}
+                </>
+              ) : handoffStatus?.handoffRequested ? (
+                <span className="font-medium text-amber-500">Human handoff requested - waiting for an agent</span>
+              ) : (
+                <span className="text-muted-foreground">AI support active</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {!isAgent && !handoffStatus?.handoffRequested && (
+                <button
+                  onClick={requestHumanHandoff}
+                  disabled={requestingHandoff}
+                  className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium disabled:opacity-60"
+                >
+                  {requestingHandoff ? 'Requesting...' : 'Request Human'}
+                </button>
+              )}
+              {isAgent && !handoffStatus?.assignedAgent && (
+                <button
+                  onClick={takeOverChat}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium"
+                >
+                  Take Over
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -597,24 +679,7 @@ const Chat = () => {
               <label className="text-xs font-medium text-secondary uppercase tracking-wide">
                 {user?.role === 'ADMIN' ? '👨‍💼 Admin Response' : '👤 Support Agent Response'}
               </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleRequestAIAssistance}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5"
-                  title="Get AI suggestion for response"
-                >
-                  <Zap size={14} />
-                  AI Suggest
-                </button>
-                <button
-                  onClick={() => setShowTransfer(!showTransfer)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5"
-                  title="Transfer chat to another agent"
-                >
-                  <ArrowRightLeft size={14} />
-                  Transfer
-                </button>
-              </div>
+              <span className="text-xs text-muted-foreground">Direct human reply mode</span>
             </div>
             <div className="flex gap-2">
               <input

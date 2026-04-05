@@ -40,9 +40,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       },
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      // CORS configuration for cross-origin requests
-      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 3,
+      // Prefer websocket only to reduce handshake overhead
+      transports: ['websocket'],
       withCredentials: true,
       autoConnect: true,
     });
