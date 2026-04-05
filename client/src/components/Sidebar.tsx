@@ -40,7 +40,7 @@ const Sidebar = () => {
     <aside className="hidden lg:flex flex-col w-64 border-r border-border/50 bg-background/50 backdrop-blur-sm sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
       {/* Main Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">Main</h3>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">Workspace</h3>
 
         {isAdmin ? (
           <>
@@ -112,16 +112,15 @@ const Sidebar = () => {
           </NavLink>
         )}
 
-        {/* Recently Active Section */}
         {recentChats.length > 0 && (
           <div className="mt-8 pt-6 border-t border-border/30">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2 flex items-center gap-2">
               <Clock className="w-3.5 h-3.5" />
-              Recently Active
+              Recent activity
             </h3>
 
             <div className="space-y-1">
-              {recentChats.map((chat: any) => (
+              {recentChats.slice(0, 4).map((chat: any) => (
                 <NavLink
                   key={chat.id}
                   to={`/chat/${chat.id}?kbId=${chat.kbId}`}
@@ -146,7 +145,7 @@ const Sidebar = () => {
 
       {/* Footer Navigation */}
       <div className="p-4 border-t border-border/30 space-y-1">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">Settings</h3>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">Workspace tools</h3>
 
         <NavLink to="/settings" className={navItemClass}>
           <Settings className="w-5 h-5 flex-shrink-0" />

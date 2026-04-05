@@ -6,6 +6,7 @@ import { WS_BASE_URL } from '../config/api';
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
+  hasConnectedOnce: boolean;
   emitTicketUpdate: (ticketId: string, event: string, data: any) => void;
   emitChatMessage: (chatId: string, message: string) => void;
   sendChatMessage: (data: { chatId?: string; kbId: string; message: string }) => void;
@@ -21,6 +22,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuthStore();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [hasConnectedOnce, setHasConnectedOnce] = useState(false);
 
   // Storage for active chat callbacks to handle routing without multiple listeners
   const chatCallbacks = useRef<Map<string, (data: any) => void>>(new Map());
@@ -50,6 +52,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     newSocket.on('connect', () => {
       console.log('✓ Socket connected', { url: WS_BASE_URL, userId: user.id });
       setIsConnected(true);
+      setHasConnectedOnce(true);
     });
 
     newSocket.on('disconnect', () => {
@@ -148,6 +151,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         socket,
         isConnected,
+        hasConnectedOnce,
         emitTicketUpdate,
         emitChatMessage,
         sendChatMessage,

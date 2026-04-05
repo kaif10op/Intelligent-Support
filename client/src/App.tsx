@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { useAuthStore } from './store/useAuthStore.js';
 import { ToastProvider } from './contexts/ToastContext';
 import { SocketProvider } from './contexts/SocketContext';
@@ -31,10 +32,17 @@ const isAdminRole = (role?: string) => ['ADMIN', 'SUPER_ADMIN'].includes((role |
 const isSupportStaffRole = (role?: string) =>
   isAdminRole(role) || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes((role || '').toUpperCase());
 
+const LoadingScreen = () => (
+  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-muted-foreground">
+    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+    <div className="text-sm font-medium">Loading workspace...</div>
+  </div>
+);
+
 const ProtectedRoute = ({ children, adminOnly = false, supportAgentOnly = false }: { children: React.ReactNode, adminOnly?: boolean, supportAgentOnly?: boolean }) => {
   const { user, loading, initialized } = useAuthStore();
 
-  if (loading || !initialized) return <div className="loading-container">Loading...</div>;
+  if (loading || !initialized) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" />;
   if (adminOnly && !isAdminRole(user.role)) return <Navigate to="/" />;
   if (supportAgentOnly && !isSupportStaffRole(user.role)) return <Navigate to="/" />;
@@ -46,7 +54,7 @@ const ProtectedRoute = ({ children, adminOnly = false, supportAgentOnly = false 
 const RoleBasedHome = () => {
   const { user, loading, initialized } = useAuthStore();
 
-  if (loading || !initialized) return <div className="loading-container">Loading...</div>;
+  if (loading || !initialized) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" />;
 
   if (isAdminRole(user.role)) return <Navigate to="/admin/dashboard" />;
@@ -73,7 +81,7 @@ function App() {
           <BrowserRouter>
             <ConnectionStatus />
             <ToastContainer />
-            <Suspense fallback={<div className="loading-container">Loading...</div>}>
+            <Suspense fallback={<LoadingScreen />}>
             <Routes>
             <Route path="/login" element={<Login />} />
 

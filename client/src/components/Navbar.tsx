@@ -1,6 +1,6 @@
 import { useAuthStore } from '../store/useAuthStore.js';
 import { UserButton, useClerk } from '@clerk/react';
-import { Shield, Menu, X } from 'lucide-react';
+import { Shield, Menu, X, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
@@ -38,10 +38,13 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <span className="text-white font-bold text-sm">AI</span>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-sm">
+              <Sparkles className="w-4.5 h-4.5 text-white" />
             </div>
-            <span className="font-bold text-lg hidden sm:inline text-foreground">Support</span>
+            <div className="hidden sm:block">
+              <div className="font-semibold text-sm text-foreground leading-none">Intelligent Support</div>
+              <div className="text-[11px] text-muted-foreground mt-1">AI + human support workspace</div>
+            </div>
           </Link>
 
           {/* Center Navigation */}
@@ -72,7 +75,7 @@ const Navbar = () => {
             {isAdmin && (
               <Link
                 to="/admin"
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium text-sm"
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium text-sm border border-primary/10"
               >
                 <Shield className="w-4 h-4" />
                 Admin

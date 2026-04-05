@@ -3,7 +3,7 @@ import { useUser } from '@clerk/react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Bot, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
+import { Bot, ShieldCheck, ArrowRight, BadgeCheck, Clock3, Users2 } from 'lucide-react';
 import { API_ENDPOINTS, axiosConfig } from '../config/api';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -55,74 +55,60 @@ const Login = () => {
     <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 py-12">
       {/* Gradient Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-3xl opacity-20"></div>
-        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-bl from-secondary/20 to-transparent rounded-full blur-3xl opacity-20"></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-primary/15 to-transparent rounded-full blur-3xl opacity-25"></div>
+        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-bl from-secondary/10 to-transparent rounded-full blur-3xl opacity-25"></div>
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 w-full max-w-5xl">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative z-10 w-full max-w-6xl">
+        <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-10 xl:gap-14 items-center">
           {/* Left: Hero Content */}
-          <div className="space-y-12">
-            {/* Logo & Title */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 backdrop-blur-sm">
-                  <Bot className="w-8 h-8 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-primary uppercase tracking-wider">SUPPORT AI</h2>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h1 className="text-5xl lg:text-6xl font-bold tracking-tight">
-                  <span className="text-foreground">Intelligent </span>
-                  <span className="gradient-text">Support</span>
-                </h1>
-                <p className="text-xl text-muted-foreground leading-relaxed">
-                  RAG-powered knowledge management and AI-driven customer support. Faster responses. Smarter answers.
-                </p>
-              </div>
+          <div className="space-y-10">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground backdrop-blur">
+              <Bot className="h-4 w-4 text-primary" />
+              Intelligent Support Platform
             </div>
 
-            {/* Features */}
-            <div className="space-y-4">
-              <div className="flex gap-4 items-start group cursor-pointer">
-                <div className="flex-shrink-0 mt-1">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                    <ShieldCheck className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Enterprise Secure</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Your documents are encrypted and protected with bank-level security.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 items-start group cursor-pointer">
-                <div className="flex-shrink-0 mt-1">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-                    <Zap className="h-6 w-6 text-secondary" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Lightning Fast</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Instant answers with vector-powered semantic search across your knowledge base.</p>
-                </div>
-              </div>
+            <div className="space-y-5">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
+                Support that feels{' '}
+                <span className="gradient-text">fast, human, and organized</span>
+              </h1>
+              <p className="max-w-2xl text-lg sm:text-xl text-muted-foreground leading-relaxed">
+                One workspace for customers, support agents, and admins - with AI copilots, human handoff, ticket routing, and clear operational visibility.
+              </p>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 pt-8 border-t border-border/50">
-              <div>
-                <div className="text-3xl font-bold text-primary">105+</div>
-                <p className="text-sm text-muted-foreground mt-1">Features Built</p>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-secondary">99.9%</div>
-                <p className="text-sm text-muted-foreground mt-1">Uptime SLA</p>
-              </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                {
+                  icon: ShieldCheck,
+                  title: 'Secure by default',
+                  text: 'Role-aware access and protected support workflows.'
+                },
+                {
+                  icon: Users2,
+                  title: 'Human handoff',
+                  text: 'Agents can step in instantly when a conversation needs them.'
+                },
+                {
+                  icon: Clock3,
+                  title: 'Always efficient',
+                  text: 'Automated queues, smarter context, and fewer manual steps.'
+                }
+              ].map(({ icon: Icon, title, text }) => (
+                <div key={title} className="rounded-2xl border border-border/60 bg-card/70 p-4 backdrop-blur-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">{title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{text}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -130,11 +116,11 @@ const Login = () => {
           <div className="lg:flex justify-center">
             <div className="w-full max-w-sm">
               {/* Glass Card */}
-              <div className="glass-elevated p-8 space-y-8">
+              <div className="glass-elevated p-8 space-y-8 shadow-xl border border-border/40">
                 {/* Heading */}
                 <div className="space-y-2 text-center">
-                  <h2 className="text-2xl font-bold text-foreground">Get Started</h2>
-                  <p className="text-sm text-muted-foreground">Sign in or create an account to continue.</p>
+                  <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
+                  <p className="text-sm text-muted-foreground">Access your workspace, tickets, chats, and support tools.</p>
                   {syncing && <p className="text-xs text-primary">Setting up your platform access...</p>}
                   {syncError && <p className="text-xs text-destructive">{syncError}</p>}
                 </div>
@@ -166,31 +152,21 @@ const Login = () => {
                 </div>
 
                 {/* Info Box */}
-                <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground">
-                    By signing in, you agree to our Terms of Service and Privacy Policy. Your data is encrypted and never shared.
-                  </p>
+                <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+                  <div className="flex items-start gap-3">
+                    <BadgeCheck className="mt-0.5 h-4 w-4 text-primary" />
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Secure, role-based access keeps customer conversations, support queues, and admin controls in one clean workspace.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Footer */}
                 <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                  <span>First time here?</span>
+                  <span>Need access for your team?</span>
                   <span className="text-primary font-medium flex items-center gap-1">
                     Create account <ArrowRight className="w-3 h-3" />
                   </span>
-                </div>
-              </div>
-
-              {/* Trust Badges */}
-              <div className="mt-8 flex items-center justify-center gap-6 px-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-foreground">5M+</div>
-                  <p className="text-xs text-muted-foreground mt-1">Conversations</p>
-                </div>
-                <div className="w-px h-8 bg-border/30"></div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-foreground">1K+</div>
-                  <p className="text-xs text-muted-foreground mt-1">Customers</p>
                 </div>
               </div>
             </div>

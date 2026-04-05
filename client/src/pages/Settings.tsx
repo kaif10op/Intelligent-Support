@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore.js';
-import { User, Lock, Moon } from 'lucide-react';
+import { User, Lock, Moon, LayoutGrid, ShieldCheck } from 'lucide-react';
 import { Card } from '../components/ui';
 import { UserButton } from '@clerk/react';
 
@@ -20,12 +20,16 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-surface-50">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50">
-        <div className="px-6 py-6">
+      <div className="border-b border-surface-200 bg-surface-50/90 backdrop-blur">
+        <div className="px-6 py-6 space-y-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-surface-500">
+            <LayoutGrid className="w-3.5 h-3.5 text-primary-500" />
+            Workspace settings
+          </div>
           <h1 className="heading-1">Account Settings</h1>
-          <p className="text-surface-600 mt-1">Manage your profile, security, and preferences</p>
+          <p className="text-surface-600 max-w-2xl">Manage your profile, access, and workspace preferences from one clean place.</p>
         </div>
       </div>
 
@@ -58,7 +62,7 @@ const Settings = () => {
                       }
                     }}
                   />
-                  <p className="text-xs text-surface-500">Use profile menu to update avatar/account settings.</p>
+                  <p className="text-xs text-surface-500">Use the profile menu to manage your identity and account details.</p>
                 </div>
               </div>
 
@@ -115,7 +119,7 @@ const Settings = () => {
               </div>
 
               <div className="p-3 rounded-lg bg-surface-50 border border-surface-200 text-xs text-surface-600">
-                Password and account security are managed via your identity provider (Clerk profile menu).
+                Password and security settings are managed through your identity provider in the profile menu.
               </div>
             </div>
           </Card>
@@ -132,7 +136,7 @@ const Settings = () => {
               <div className="flex items-center justify-between py-3 border-b border-surface-200">
                 <div className="space-y-1">
                   <h3 className="text-sm font-medium text-surface-900">Dark Mode</h3>
-                  <p className="text-xs text-surface-600">Applies after refresh</p>
+                  <p className="text-xs text-surface-600">Saved locally and applied on refresh</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -150,7 +154,10 @@ const Settings = () => {
                 </label>
               </div>
 
-              <div className="text-xs text-surface-500">Notification controls are being consolidated into role-aware workflows.</div>
+              <div className="flex items-start gap-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-xs text-surface-500">
+                <ShieldCheck className="mt-0.5 w-4 h-4 text-primary-500" />
+                <span>Notification and automation controls are centralized in role-aware workflows for support and admin users.</span>
+              </div>
             </div>
           </Card>
         </div>
