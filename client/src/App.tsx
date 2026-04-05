@@ -21,20 +21,23 @@ const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard'));
 const RecentChats = lazy(() => import('./pages/RecentChats'));
 const KnowledgeBases = lazy(() => import('./pages/KnowledgeBases'));
 const Settings = lazy(() => import('./pages/Settings'));
-const UserPreferences = lazy(() => import('./pages/UserPreferences'));
 const Help = lazy(() => import('./pages/Help'));
 const Tickets = lazy(() => import('./pages/Tickets'));
 const TicketDetails = lazy(() => import('./pages/TicketDetails'));
 const Search = lazy(() => import('./pages/Search'));
 const SupportAgentDashboard = lazy(() => import('./pages/SupportAgentDashboard'));
 
+const isAdminRole = (role?: string) => ['ADMIN', 'SUPER_ADMIN'].includes((role || '').toUpperCase());
+const isSupportStaffRole = (role?: string) =>
+  isAdminRole(role) || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes((role || '').toUpperCase());
+
 const ProtectedRoute = ({ children, adminOnly = false, supportAgentOnly = false }: { children: React.ReactNode, adminOnly?: boolean, supportAgentOnly?: boolean }) => {
   const { user, loading, initialized } = useAuthStore();
 
   if (loading || !initialized) return <div className="loading-container">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
-  if (adminOnly && user.role !== 'ADMIN') return <Navigate to="/" />;
-  if (supportAgentOnly && user.role !== 'SUPPORT_AGENT' && user.role !== 'ADMIN') return <Navigate to="/" />;
+  if (adminOnly && !isAdminRole(user.role)) return <Navigate to="/" />;
+  if (supportAgentOnly && !isSupportStaffRole(user.role)) return <Navigate to="/" />;
 
   return <>{children}</>;
 };
@@ -46,8 +49,8 @@ const RoleBasedHome = () => {
   if (loading || !initialized) return <div className="loading-container">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
 
-  if (user.role === 'ADMIN') return <Navigate to="/admin/dashboard" />;
-  if (user.role === 'SUPPORT_AGENT') return <Navigate to="/support-queue" />;
+  if (isAdminRole(user.role)) return <Navigate to="/admin/dashboard" />;
+  if (isSupportStaffRole(user.role)) return <Navigate to="/support-queue" />;
   return <Navigate to="/dashboard" />;
 };
 
@@ -125,7 +128,7 @@ function App() {
             } />
 
             <Route path="/ticket/:id" element={
-              <ProtectedRoute>
+              <ProtectedRoute supportAgentOnly>
                 <Layout><TicketDetails /></Layout>
               </ProtectedRoute>
             } />
@@ -156,14 +159,14 @@ function App() {
             } />
 
             <Route path="/search" element={
-              <ProtectedRoute>
+              <ProtectedRoute supportAgentOnly>
                 <Layout><Search /></Layout>
               </ProtectedRoute>
             } />
 
             <Route path="/preferences" element={
               <ProtectedRoute>
-                <Layout><UserPreferences /></Layout>
+                <Navigate to="/settings" replace />
               </ProtectedRoute>
             } />
 

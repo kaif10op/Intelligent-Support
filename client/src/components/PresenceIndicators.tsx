@@ -46,6 +46,7 @@ export const PresenceIndicators: React.FC<PresenceIndicatorsProps> = ({
     });
 
     return () => {
+      socket.emit('leave-presence', { resourceId, resourceType });
       socket.off('presence-update');
       socket.off('user-typing');
       socket.off('user-stopped-typing');

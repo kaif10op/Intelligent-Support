@@ -129,19 +129,54 @@ export const generateAgentAssistance = async (req: AuthRequest, res: Response) =
       .join('\n')
       .slice(-1500);
 
-    let suggestion = '';
-    if (mode === 'summary') {
-      suggestion = `Conversation summary:\n${recentConversation || context || 'No conversation context available.'}`;
-    } else if (mode === 'sentiment') {
-      suggestion = `Customer sentiment appears: neutral to concerned. Focus on reassurance, clarity, and specific next steps.\nContext: ${context || 'Latest customer concern'}`;
-    } else if (mode === 'next_steps') {
-      suggestion = `Recommended next steps:\n1) Confirm key issue details\n2) Provide targeted resolution steps\n3) Confirm outcome\n4) Offer escalation if unresolved`;
-    } else {
-      suggestion = `Suggested response draft: I understand your concern. Based on what you shared${context ? ` about "${context}"` : ''}, here is what we can do next...`;
-    }
+    const mergedContext = context || recentConversation || 'No conversation context available.';
+    const outputByMode: Record<string, string> = {
+      draft_reply: `Suggested response draft:\nI understand your concern. Thanks for explaining the issue. Based on your message, here are the exact steps we should try next, and I will stay with you until this is resolved.`,
+      summary: `Conversation summary:\n${mergedContext}`,
+      sentiment: `Sentiment analysis:\nCustomer tone appears neutral to concerned.\nRecommendation: acknowledge impact, reassure ownership, provide concrete ETA.`,
+      next_steps: `Recommended next steps:\n1) Confirm issue scope and impact\n2) Validate account/environment details\n3) Apply fix or workaround\n4) Confirm customer outcome\n5) Offer escalation path if unresolved`,
+      escalation_check: `Escalation check:\nEscalate if issue is security-sensitive, revenue-impacting, repeated after fix, or blocked by engineering dependency.`,
+      root_cause: `Root cause hypotheses:\n1) Configuration mismatch\n2) Missing dependency/state sync\n3) Role/permission inconsistency\n4) Intermittent backend timeout\nUse logs + recent deploy diff to validate.`,
+      priority_assessment: `Priority recommendation:\nSet HIGH if customer is blocked from core workflow, affects multiple users, or has SLA risk.\nOtherwise set MEDIUM with active monitoring.`,
+      sla_risk: `SLA risk view:\nRisk is elevated if first response > target window or no owner assigned.\nAction: assign immediately and post a progress update.`,
+      response_tone: `Tone improvement:\nUse empathetic, concise wording.\nTemplate: “I understand how this impacts your work. I’ve started investigating and here is the immediate next step…”`,
+      knowledge_gaps: `Knowledge base gaps detected:\n- Missing troubleshooting checklist for this pattern\n- Missing known-issues entry\n- Missing escalation criteria\nRecommend adding article after resolution.`,
+      followup_questions: `Suggested follow-up questions:\n1) When did this start?\n2) Is it reproducible consistently?\n3) Any recent account/config changes?\n4) Exact error text or screenshot?\n5) Affected users or scope?`,
+      resolution_plan: `Resolution plan:\n1) Triage and reproduce\n2) Apply shortest safe workaround\n3) Validate with customer\n4) Document root cause\n5) Publish KB update and close with summary`,
+      concise_reply: `Concise reply:\nThanks for reporting this. I can help now. Please share the exact error text and when it started so I can resolve this quickly.`,
+      empathetic_reply: `Empathetic reply:\nI’m sorry this disrupted your work. I’m taking ownership and will guide you step-by-step until we get this fixed.`,
+      deescalation_reply: `De-escalation reply:\nI understand this is frustrating. Let’s stabilize this first with a quick workaround, then I’ll provide a full fix and final update.`,
+      executive_summary: `Executive summary:\nIssue impact, current status, owner, risk level, and immediate next action in one paragraph for leadership visibility.`,
+      intent_detection: `Intent detection:\nPrimary intent appears to be issue resolution. Secondary intent may include urgency reassurance and ETA clarity.`,
+      blocker_identification: `Blocker identification:\nLikely blockers: missing permissions, unavailable dependency, environment mismatch, or unresolved upstream incident.`,
+      verification_steps: `Verification checklist:\n1) Reproduce issue\n2) Apply change\n3) Validate expected behavior\n4) Confirm with customer\n5) Record evidence`,
+      workaround_generation: `Workaround options:\n- Temporary permission override\n- Alternate workflow path\n- Retry with safe reset sequence\n- Roll back recent risky change`,
+      bug_report_draft: `Bug report draft:\nTitle, reproducible steps, expected vs actual result, environment, logs, impact, and urgency classification.`,
+      incident_update: `Incident status update:\nWe identified the issue scope, mitigation is in progress, and next update will include root cause and permanent fix.`,
+      action_items: `Action items:\n- Assign owner\n- Confirm customer impact\n- Execute workaround\n- Validate fix\n- Publish closure summary`,
+      customer_update_short: `Customer update (short):\nQuick update: we’re actively working on your issue, have identified likely cause, and will share the next progress update shortly.`,
+      customer_update_detailed: `Customer update (detailed):\nWe reproduced the problem, isolated probable cause, and started remediation. Current ETA is based on validation status; we’ll confirm exact closure timing next.`,
+      rca_template: `RCA template:\n1) What happened\n2) Why it happened\n3) Detection gaps\n4) Corrective actions\n5) Preventive controls`,
+      policy_compliance_check: `Policy compliance check:\nVerify data handling, authorization scope, escalation policy, audit trail, and communication standards are followed.`,
+      refund_eligibility_check: `Refund/credit eligibility check:\nAssess SLA breach, service impact duration, policy terms, and prior compensation history before proposing credits.`,
+      upsell_opportunity: `Upsell opportunity signal:\nIf issue reveals missing feature fit, suggest a relevant plan/add-on only after resolution and customer recovery.`,
+      churn_risk_assessment: `Churn risk assessment:\nRisk rises with repeated incidents, delayed response, and unclear ownership. Counter with proactive updates and fast resolution.`,
+      language_simplify: `Language simplify:\nUse plain, non-technical wording. Replace jargon with direct, step-based guidance customers can execute quickly.`,
+      translation_ready: `Translation-ready rewrite:\nShort sentences, unambiguous terms, and locale-neutral phrasing for easier translation and consistent meaning.`,
+      qa_test_scenarios: `QA test scenarios:\nHappy path, permission edge case, timeout case, stale session case, and recovery validation after reconnect.`,
+      kb_article_draft: `KB article draft:\nProblem statement, symptoms, root causes, fix steps, verification checklist, and escalation guidance.`,
+      handoff_note: `Handoff note:\nCurrent status, attempted fixes, customer sentiment, pending actions, and exact next owner action for smooth transfer.`,
+      staffing_recommendation: `Staffing recommendation:\nAssign to specialist if repeat incident pattern, high business impact, or complexity exceeds frontline scope.`,
+      time_to_resolve_estimate: `Time-to-resolve estimate:\nInitial estimate depends on reproduction + validation. Provide risk-adjusted ETA with checkpoint updates.`,
+      confidence_score: `Confidence estimate:\nCurrent confidence is moderate until validation evidence confirms root cause and durable fix.`,
+      risk_matrix: `Risk matrix:\nLikelihood: medium. Impact: medium to high if unresolved. Mitigation: prioritize ownership, workaround, and transparent updates.`,
+      closure_checklist: `Closure checklist:\nIssue resolved, customer confirmed, documentation updated, follow-up scheduled, and prevention action logged.`
+    };
+
+    const suggestion = outputByMode[mode] || outputByMode.draft_reply;
 
     logger.info('AI assistance generated', { chatId });
-    res.json({ success: true, suggestion, mode });
+    res.json({ success: true, suggestion, mode, supportedModes: Object.keys(outputByMode) });
   } catch (error: any) {
     logger.error('Generate assistance error', { error: error.message });
     res.status(500).json({ error: 'Failed to generate assistance' });

@@ -19,6 +19,10 @@ const Tickets = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TicketTab>('all');
   const [newTicket, setNewTicket] = useState({ title: '', description: '', priority: 'MEDIUM' });
+  const [ticketAiMode, setTicketAiMode] = useState('draft_ticket');
+  const [ticketAiLoading, setTicketAiLoading] = useState(false);
+  const [ticketAiResult, setTicketAiResult] = useState('');
+  const [ticketAiPackLoading, setTicketAiPackLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState('ALL');
@@ -30,6 +34,8 @@ const Tickets = () => {
   const [selectedTicketForAssign, setSelectedTicketForAssign] = useState<any>(null);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [autoAssigning, setAutoAssigning] = useState(false);
+  const [startingChatTicketId, setStartingChatTicketId] = useState<string | null>(null);
+  const isSupportStaff = user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT';
 
   useEffect(() => {
     fetchTickets();
@@ -71,6 +77,66 @@ const Tickets = () => {
     }
   };
 
+  const handleGenerateTicketWithAI = async () => {
+    try {
+      setTicketAiLoading(true);
+      const context = `${newTicket.title}\n${newTicket.description}`.trim();
+      const res = await axios.post(
+        API_ENDPOINTS.TICKET_AI_COPILOT,
+        { flow: 'ticket_creation', mode: ticketAiMode, context },
+        axiosConfig
+      );
+      const suggestion = res.data?.suggestion || '';
+      const draft = res.data?.draft;
+
+      if (draft) {
+        setNewTicket((prev) => ({
+          ...prev,
+          title: draft.title || prev.title,
+          description: draft.description || prev.description,
+          priority: draft.priority || prev.priority
+        }));
+      }
+      setTicketAiResult(suggestion || 'Draft generated.');
+      addToast('AI ticket draft generated', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to generate ticket draft', 'error');
+    } finally {
+      setTicketAiLoading(false);
+    }
+  };
+
+  const handleRunTicketAIPack = async () => {
+    try {
+      setTicketAiPackLoading(true);
+      const context = `${newTicket.title}\n${newTicket.description}`.trim();
+      const packModes = ['draft_ticket', 'priority_recommendation', 'title_improver', 'description_improver'];
+      const res = await axios.post(
+        API_ENDPOINTS.TICKET_AI_COPILOT,
+        { flow: 'ticket_creation', mode: 'draft_ticket', modes: packModes, context },
+        axiosConfig
+      );
+      const draft = res.data?.draft;
+      if (draft) {
+        setNewTicket((prev) => ({
+          ...prev,
+          title: draft.title || prev.title,
+          description: draft.description || prev.description,
+          priority: draft.priority || prev.priority
+        }));
+      }
+      const combined = Array.isArray(res.data?.outputs)
+        ? res.data.outputs.map((o: any) => `## ${o.mode}\n${o.suggestion}`).join('\n\n')
+        : res.data?.suggestion || 'Draft generated.';
+      setTicketAiResult(combined);
+      addToast('AI ticket pack completed', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to run AI ticket pack', 'error');
+    } finally {
+      setTicketAiPackLoading(false);
+    }
+  };
+
   const handleUpdateStatus = async (ticketId: string, status: string) => {
     try {
       await axios.put(API_ENDPOINTS.TICKET_UPDATE(ticketId), { status }, axiosConfig);
@@ -84,7 +150,7 @@ const Tickets = () => {
 
   const fetchSupportAgents = async () => {
     try {
-      const res = await axios.get(apiUrl('/api/admin/users'), axiosConfig);
+      const res = await axios.get(API_ENDPOINTS.TICKET_AGENTS, axiosConfig);
       const users = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data?.users) ? res.data.users : []);
       const agents = users.filter((u: any) => u.role === 'SUPPORT_AGENT' || u.role === 'ADMIN');
       setSupportAgents(agents);
@@ -128,6 +194,24 @@ const Tickets = () => {
       addToast(errorMsg, 'error');
     } finally {
       setAutoAssigning(false);
+    }
+  };
+
+  const handleStartChat = async (ticket: any) => {
+    try {
+      setStartingChatTicketId(ticket.id);
+      const res = await axios.post(apiUrl(`/api/tickets/${ticket.id}/init-chat`), {}, axiosConfig);
+      const chatId = res.data?.chat?.id;
+      if (chatId) {
+        addToast('Support chat started successfully', 'success');
+        navigate(`/chat/${chatId}`);
+        return;
+      }
+      addToast('Failed to start chat for this ticket', 'error');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to start chat for this ticket', 'error');
+    } finally {
+      setStartingChatTicketId(null);
     }
   };
 
@@ -324,7 +408,12 @@ const Tickets = () => {
         {filteredTickets.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTickets.map(ticket => (
-              <Card elevated className="p-6 flex flex-col hover:shadow-md transition-shadow cursor-pointer" key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)}>
+              <Card
+                elevated
+                className={`p-6 flex flex-col transition-shadow ${isSupportStaff ? 'hover:shadow-md cursor-pointer' : ''}`}
+                key={ticket.id}
+                onClick={isSupportStaff ? () => navigate(`/ticket/${ticket.id}`) : undefined}
+              >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                   <Badge variant={getPriorityVariant(ticket.priority)}>
@@ -383,7 +472,7 @@ const Tickets = () => {
                           Assign Agent
                         </Button>
                       )}
-                      {(user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT') && ticket.status === 'OPEN' && (
+                      {isSupportStaff && ticket.status === 'OPEN' && (
                         <Button
                           variant="secondary"
                           size="sm"
@@ -394,7 +483,7 @@ const Tickets = () => {
                           Handle
                         </Button>
                       )}
-                      {(user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT') && ticket.status === 'IN_PROGRESS' && (
+                      {isSupportStaff && ticket.status === 'IN_PROGRESS' && (
                         <Button
                           variant="primary"
                           size="sm"
@@ -406,7 +495,24 @@ const Tickets = () => {
                         </Button>
                       )}
                     </div>
+                    {isSupportStaff && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<Zap className="w-3.5 h-3.5" />}
+                        fullWidth
+                        loading={startingChatTicketId === ticket.id}
+                        onClick={() => handleStartChat(ticket)}
+                        >
+                          Start Chat
+                        </Button>
+                    )}
                   </div>
+                  {!isSupportStaff && (
+                    <div className="rounded-lg bg-surface-100 border border-surface-200 px-3 py-2 text-xs text-surface-600">
+                      Ticket submitted successfully. A support agent will review the full details and respond here.
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}
@@ -449,6 +555,51 @@ const Tickets = () => {
       >
         <div className="space-y-4">
           <p className="text-surface-600 text-sm">Submit a new support request</p>
+          <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">AI Ticket Copilot</p>
+              <p className="text-xs text-surface-600">Draft better tickets automatically</p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                ['draft_ticket', 'Full Draft'],
+                ['title_improver', 'Better Title'],
+                ['description_improver', 'Better Description'],
+                ['priority_recommendation', 'Priority Advice']
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTicketAiMode(value)}
+                  className={`px-2 py-1 rounded-md text-xs border ${
+                    ticketAiMode === value
+                      ? 'bg-primary/15 text-primary border-primary/30'
+                      : 'bg-white border-surface-200 text-surface-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={handleGenerateTicketWithAI} loading={ticketAiLoading}>
+                Generate with AI
+              </Button>
+              <Button type="button" variant="outline" onClick={handleRunTicketAIPack} loading={ticketAiPackLoading}>
+                Run Full AI Pack
+              </Button>
+              {ticketAiResult && (
+                <Button type="button" variant="secondary" onClick={() => setTicketAiResult('')}>
+                  Clear
+                </Button>
+              )}
+            </div>
+            {ticketAiResult && (
+              <div className="text-xs text-surface-700 p-2 rounded bg-white border border-surface-200 whitespace-pre-wrap">
+                {ticketAiResult}
+              </div>
+            )}
+          </div>
           <form onSubmit={handleCreateTicket} className="space-y-4">
             <Input
               label="Ticket Title"

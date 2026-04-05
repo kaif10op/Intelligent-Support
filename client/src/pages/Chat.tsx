@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Send, Bot, ChevronLeft, Loader2, Info, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, AlertTriangle, Paperclip, File, X, Copy, Trash2, Check, Zap, ArrowRightLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -7,6 +7,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
+import PresenceIndicators from '../components/PresenceIndicators';
 
 interface Message {
   id?: string;
@@ -18,6 +19,58 @@ interface Message {
   senderRole?: string;
 }
 
+const AI_TOOL_OPTIONS = [
+  { value: 'draft_reply', label: 'Draft Reply', category: 'responses' },
+  { value: 'summary', label: 'Summary', category: 'analysis' },
+  { value: 'sentiment', label: 'Sentiment', category: 'analysis' },
+  { value: 'next_steps', label: 'Next Steps', category: 'planning' },
+  { value: 'escalation_check', label: 'Escalation Check', category: 'risk' },
+  { value: 'root_cause', label: 'Root Cause', category: 'analysis' },
+  { value: 'priority_assessment', label: 'Priority', category: 'risk' },
+  { value: 'sla_risk', label: 'SLA Risk', category: 'risk' },
+  { value: 'response_tone', label: 'Tone Improve', category: 'responses' },
+  { value: 'knowledge_gaps', label: 'KB Gaps', category: 'knowledge' },
+  { value: 'followup_questions', label: 'Follow-up Qs', category: 'responses' },
+  { value: 'resolution_plan', label: 'Resolution Plan', category: 'planning' },
+  { value: 'concise_reply', label: 'Concise Reply', category: 'responses' },
+  { value: 'empathetic_reply', label: 'Empathetic Reply', category: 'responses' },
+  { value: 'deescalation_reply', label: 'De-escalation', category: 'responses' },
+  { value: 'executive_summary', label: 'Executive Summary', category: 'analysis' },
+  { value: 'intent_detection', label: 'Intent Detection', category: 'analysis' },
+  { value: 'blocker_identification', label: 'Blocker Finder', category: 'analysis' },
+  { value: 'verification_steps', label: 'Verification Steps', category: 'planning' },
+  { value: 'workaround_generation', label: 'Workaround', category: 'planning' },
+  { value: 'bug_report_draft', label: 'Bug Report', category: 'documentation' },
+  { value: 'incident_update', label: 'Incident Update', category: 'responses' },
+  { value: 'action_items', label: 'Action Items', category: 'planning' },
+  { value: 'customer_update_short', label: 'Customer Update Short', category: 'responses' },
+  { value: 'customer_update_detailed', label: 'Customer Update Detailed', category: 'responses' },
+  { value: 'rca_template', label: 'RCA Template', category: 'documentation' },
+  { value: 'policy_compliance_check', label: 'Policy Check', category: 'risk' },
+  { value: 'refund_eligibility_check', label: 'Refund Check', category: 'risk' },
+  { value: 'upsell_opportunity', label: 'Upsell Signal', category: 'analysis' },
+  { value: 'churn_risk_assessment', label: 'Churn Risk', category: 'risk' },
+  { value: 'language_simplify', label: 'Simplify Language', category: 'responses' },
+  { value: 'translation_ready', label: 'Translation Ready', category: 'responses' },
+  { value: 'qa_test_scenarios', label: 'QA Scenarios', category: 'planning' },
+  { value: 'kb_article_draft', label: 'KB Article', category: 'documentation' },
+  { value: 'handoff_note', label: 'Handoff Note', category: 'documentation' },
+  { value: 'staffing_recommendation', label: 'Staffing Advice', category: 'risk' },
+  { value: 'time_to_resolve_estimate', label: 'TTR Estimate', category: 'planning' },
+  { value: 'confidence_score', label: 'Confidence', category: 'analysis' },
+  { value: 'risk_matrix', label: 'Risk Matrix', category: 'risk' },
+  { value: 'closure_checklist', label: 'Closure Checklist', category: 'planning' }
+] as const;
+
+const AI_WORKFLOW_PACKS = [
+  { id: 'escalation-pack', label: 'Escalation Pack', modes: ['summary', 'priority_assessment', 'sla_risk', 'escalation_check'] },
+  { id: 'resolution-pack', label: 'Resolution Pack', modes: ['root_cause', 'next_steps', 'verification_steps', 'resolution_plan'] },
+  { id: 'customer-update-pack', label: 'Customer Update Pack', modes: ['sentiment', 'empathetic_reply', 'customer_update_short', 'customer_update_detailed'] },
+  { id: 'quality-pack', label: 'Quality Pack', modes: ['qa_test_scenarios', 'policy_compliance_check', 'risk_matrix', 'closure_checklist'] },
+  { id: 'handoff-pack', label: 'Handoff Pack', modes: ['summary', 'blocker_identification', 'action_items', 'handoff_note'] },
+  { id: 'closure-pack', label: 'Closure Pack', modes: ['summary', 'concise_reply', 'closure_checklist', 'incident_update'] }
+] as const;
+
 const Chat = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -26,7 +79,7 @@ const Chat = () => {
   const { addToast } = useToast();
   const { subscribeTo, unsubscribeFrom, onChatMessage, sendChatMessage } = useSocket();
   const user = useAuthStore((state: any) => state.user);
-  const isAgent = user?.role === 'SUPPORT_AGENT' || user?.role === 'ADMIN';
+  const isAgent = ['SUPPORT_AGENT', 'ADMIN', 'SUPPORT', 'AGENT'].includes(user?.role || '');
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -47,9 +100,54 @@ const Chat = () => {
   const [humanInput, setHumanInput] = useState('');
   const [handoffStatus, setHandoffStatus] = useState<any>(null);
   const [requestingHandoff, setRequestingHandoff] = useState(false);
+  const [aiToolMode, setAiToolMode] = useState('draft_reply');
+  const [aiToolResult, setAiToolResult] = useState('');
+  const [aiToolLoading, setAiToolLoading] = useState(false);
+  const [aiToolSearch, setAiToolSearch] = useState('');
+  const [aiToolCategory, setAiToolCategory] = useState<string>('all');
+  const [aiToolHistory, setAiToolHistory] = useState<Array<{
+    mode: string;
+    label: string;
+    output: string;
+    createdAt: string;
+  }>>([]);
+  const [aiFavoriteTools, setAiFavoriteTools] = useState<string[]>([]);
+  const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null);
+  const [userAiMode, setUserAiMode] = useState('summary');
+  const [userAiResult, setUserAiResult] = useState('');
+  const [userAiLoading, setUserAiLoading] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const filteredTools = useMemo(() => {
+    const q = aiToolSearch.trim().toLowerCase();
+    return AI_TOOL_OPTIONS.filter((tool) => {
+      const inCategory = aiToolCategory === 'all' || tool.category === aiToolCategory;
+      const inSearch = !q || tool.label.toLowerCase().includes(q) || tool.value.includes(q);
+      return inCategory && inSearch;
+    });
+  }, [aiToolSearch, aiToolCategory]);
+  const favoriteTools = useMemo(
+    () => AI_TOOL_OPTIONS.filter((tool) => aiFavoriteTools.includes(tool.value)),
+    [aiFavoriteTools]
+  );
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('chat.aiToolFavorites');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setAiFavoriteTools(parsed.filter((v) => typeof v === 'string'));
+      }
+    } catch {
+      // ignore malformed local data
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('chat.aiToolFavorites', JSON.stringify(aiFavoriteTools));
+  }, [aiFavoriteTools]);
 
   // Fetch chat history and KB info
   useEffect(() => {
@@ -78,6 +176,25 @@ const Chat = () => {
       } else if (data.type === 'ai-error') {
         setStreaming(false);
         setError(data.message || 'AI generation failed');
+        setMessages(prev => {
+          if (prev.length === 0) return prev;
+          const last = prev[prev.length - 1];
+          if (last.role === 'assistant' && !last.content) {
+            return prev.slice(0, -1);
+          }
+          return prev;
+        });
+      } else if (data.type === 'ai-paused') {
+        setStreaming(false);
+        setMessages(prev => {
+          if (prev.length === 0) return prev;
+          const last = prev[prev.length - 1];
+          if (last.role === 'assistant' && !last.content) {
+            return prev.slice(0, -1);
+          }
+          return prev;
+        });
+        addToast(data.message || 'A support agent is viewing this conversation, so AI is paused.', 'info');
       }
     });
 
@@ -304,22 +421,153 @@ const Chat = () => {
     }
   };
 
-  const handleRequestAIAssistance = async () => {
-    if (!id || id === 'new') return;
+  const runAiTool = async (mode: string, writeResult = true) => {
+    if (!id || id === 'new') {
+      addToast('Open a specific chat to run AI tools', 'info');
+      return '';
+    }
 
     try {
+      setAiToolLoading(true);
       const res = await axios.post(
         API_ENDPOINTS.CHAT_HUMAN_ASSIST(id),
         {
           context: messages[messages.length - 1]?.content || '',
-          mode: 'draft_reply'
+          mode
         },
         axiosConfig
       );
-
-      addToast('AI Suggestion: ' + res.data.suggestion, 'info');
+      const output = res.data.suggestion || 'No output generated.';
+      if (writeResult) setAiToolResult(output);
+      const selectedTool = AI_TOOL_OPTIONS.find(t => t.value === mode);
+      setAiToolHistory(prev => [
+        {
+          mode,
+          label: selectedTool?.label || mode,
+          output,
+          createdAt: new Date().toISOString()
+        },
+        ...prev.slice(0, 7)
+      ]);
+      return output;
     } catch (err: any) {
       addToast(err.response?.data?.error || 'Failed to get AI assistance', 'error');
+      return '';
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleRequestAIAssistance = async () => {
+    await runAiTool(aiToolMode, true);
+  };
+
+  const handleInsertAiIntoReply = () => {
+    if (!aiToolResult) return;
+    setHumanInput(prev => (prev ? `${prev}\n\n${aiToolResult}` : aiToolResult));
+    addToast('AI output inserted into reply box', 'success');
+  };
+
+  const handleCopyAiResult = async () => {
+    if (!aiToolResult) return;
+    try {
+      await navigator.clipboard.writeText(aiToolResult);
+      addToast('AI output copied', 'success');
+    } catch {
+      addToast('Failed to copy AI output', 'error');
+    }
+  };
+
+  const handleReuseHistory = (item: { mode: string; output: string }) => {
+    setAiToolMode(item.mode);
+    setAiToolResult(item.output);
+  };
+
+  const runUserCopilot = async () => {
+    if (!id || id === 'new') {
+      addToast('Open a specific conversation to use AI copilot', 'info');
+      return;
+    }
+    try {
+      setUserAiLoading(true);
+      const context = messages[messages.length - 1]?.content || input || '';
+      const res = await axios.post(
+        API_ENDPOINTS.TICKET_AI_COPILOT,
+        {
+          flow: 'problem_solving',
+          mode: userAiMode,
+          context
+        },
+        axiosConfig
+      );
+      setUserAiResult(res.data?.suggestion || 'No output generated.');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to run AI copilot', 'error');
+    } finally {
+      setUserAiLoading(false);
+    }
+  };
+
+  const runUserCopilotPack = async () => {
+    if (!id || id === 'new') {
+      addToast('Open a specific conversation to use AI copilot', 'info');
+      return;
+    }
+    try {
+      setUserAiLoading(true);
+      const context = messages.slice(-8).map((m) => `${m.role}: ${m.content}`).join('\n') || input || '';
+      const modes = ['summary', 'next_steps', 'customer_reply', 'description_improver'];
+      const res = await axios.post(
+        API_ENDPOINTS.TICKET_AI_COPILOT,
+        {
+          flow: 'problem_solving',
+          mode: 'summary',
+          modes,
+          context
+        },
+        axiosConfig
+      );
+      const combined = Array.isArray(res.data?.outputs)
+        ? res.data.outputs.map((o: any) => `## ${o.mode}\n${o.suggestion}`).join('\n\n')
+        : res.data?.suggestion || 'No output generated.';
+      setUserAiResult(combined);
+      addToast('AI customer pack completed', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to run AI customer pack', 'error');
+    } finally {
+      setUserAiLoading(false);
+    }
+  };
+
+  const handleInsertUserAi = () => {
+    if (!userAiResult) return;
+    setInput((prev) => (prev ? `${prev}\n\n${userAiResult}` : userAiResult));
+    addToast('AI output inserted into chat input', 'success');
+  };
+
+  const toggleFavoriteTool = (mode: string) => {
+    setAiFavoriteTools((prev) =>
+      prev.includes(mode) ? prev.filter((m) => m !== mode) : [...prev, mode]
+    );
+  };
+
+  const runWorkflowPack = async (packId: string) => {
+    const pack = AI_WORKFLOW_PACKS.find((p) => p.id === packId);
+    if (!pack || aiToolLoading) return;
+    setRunningWorkflow(pack.id);
+    try {
+      const outputs: string[] = [];
+      for (const mode of pack.modes) {
+        const output = await runAiTool(mode, false);
+        const label = AI_TOOL_OPTIONS.find((t) => t.value === mode)?.label || mode;
+        if (output) outputs.push(`## ${label}\n${output}`);
+      }
+      if (outputs.length > 0) {
+        setAiToolResult(outputs.join('\n\n'));
+        addToast(`${pack.label} completed`, 'success');
+      }
+    } finally {
+      setRunningWorkflow(null);
     }
   };
 
@@ -349,7 +597,7 @@ const Chat = () => {
     if (isAgent && showTransfer) {
       const fetchAgents = async () => {
         try {
-          const res = await axios.get(apiUrl('/api/admin/users?role=SUPPORT_AGENT'), axiosConfig);
+          const res = await axios.get(API_ENDPOINTS.TICKET_AGENTS, axiosConfig);
           const agentList = res.data?.data || [];
           setAgents(agentList.filter((a: any) => a.id !== user?.id));
         } catch (err) {
@@ -359,6 +607,32 @@ const Chat = () => {
       fetchAgents();
     }
   }, [showTransfer, isAgent, user?.id]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isAgent || !id || id === 'new') return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleRequestAIAssistance();
+        return;
+      }
+
+      if (e.altKey && /^[1-9]$/.test(e.key)) {
+        const idx = Number(e.key) - 1;
+        if (filteredTools[idx]) {
+          e.preventDefault();
+          setAiToolMode(filteredTools[idx].value);
+          addToast(`Selected: ${filteredTools[idx].label}`, 'info');
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isAgent, id, filteredTools]);
 
   // Auto-fetch suggestions when streaming completes
   useEffect(() => {
@@ -391,6 +665,10 @@ const Chat = () => {
               {kbName}
             </span>
           </div>
+        )}
+
+        {id && id !== 'new' && (
+          <PresenceIndicators resourceId={id} resourceType="chat" />
         )}
 
         <button
@@ -629,7 +907,7 @@ const Chat = () => {
       {/* Input Area - Fixed */}
       <div className="flex-shrink-0 border-t border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 space-y-3">
         {/* Support Agent Panel */}
-        {isAgent && id && id !== 'new' && (
+        {isAgent && (
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setShowTransfer(!showTransfer)}
@@ -646,8 +924,257 @@ const Chat = () => {
               title="Get AI suggestion for response"
             >
               <Zap size={16} />
-              AI Help
+              Run AI Tool
             </button>
+          </div>
+        )}
+
+        {/* User AI Copilot */}
+        {!isAgent && (
+          <div className="space-y-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-primary">AI Copilot</p>
+              <p className="text-xs text-muted-foreground">Problem-solving helper for customers</p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                ['summary', 'Summarize issue'],
+                ['next_steps', 'What to do next'],
+                ['customer_reply', 'Draft clear message'],
+                ['description_improver', 'Improve details']
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setUserAiMode(value)}
+                  className={`px-2 py-1 rounded-md text-xs border ${
+                    userAiMode === value
+                      ? 'bg-primary/15 text-primary border-primary/30'
+                      : 'bg-card/40 border-border/40 text-muted-foreground'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={runUserCopilot}
+                  disabled={userAiLoading}
+                  className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {userAiLoading ? 'Running...' : 'Run Copilot'}
+                </button>
+                <button
+                  onClick={runUserCopilotPack}
+                  disabled={userAiLoading}
+                  className="px-3 py-2 rounded-lg bg-primary/15 text-primary text-sm font-medium hover:bg-primary/20 disabled:opacity-50"
+                >
+                  Run Full Pack
+                </button>
+                {userAiResult && (
+                  <button
+                    onClick={handleInsertUserAi}
+                  className="px-3 py-2 rounded-lg bg-secondary/20 text-secondary text-sm hover:bg-secondary/30"
+                >
+                  Insert
+                </button>
+              )}
+              {userAiResult && (
+                <button
+                  onClick={() => setUserAiResult('')}
+                  className="px-3 py-2 rounded-lg bg-card/50 text-muted-foreground text-sm hover:bg-card"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {userAiResult && (
+              <div className="p-3 rounded-lg bg-background/70 border border-border/40 text-sm whitespace-pre-wrap">
+                {userAiResult}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* AI Tools Panel for staff (10+ modes) */}
+        {isAgent && (
+          <div className="space-y-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-amber-500">AI Toolbelt</p>
+              <p className="text-xs text-muted-foreground">40 tools: search, filter, run, reuse</p>
+            </div>
+            {(!id || id === 'new') && (
+              <div className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
+                Select a specific conversation to run tools. Toolbelt is now always visible for support/admin users.
+              </div>
+            )}
+            <div className="flex flex-col md:flex-row gap-2">
+              <input
+                value={aiToolSearch}
+                onChange={(e) => setAiToolSearch(e.target.value)}
+                placeholder="Search tools..."
+                className="flex-1 px-3 py-2 rounded-lg bg-card/40 border border-border/50 text-sm outline-none focus:border-amber-500"
+              />
+              <div className="flex gap-2 flex-wrap">
+                {['all', 'responses', 'analysis', 'planning', 'risk', 'documentation', 'knowledge'].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setAiToolCategory(cat)}
+                    className={`px-2 py-1 rounded-md text-xs border ${
+                      aiToolCategory === cat
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-500'
+                        : 'bg-card/30 border-border/40 text-muted-foreground'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {favoriteTools.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Pinned tools</p>
+                <div className="flex flex-wrap gap-2">
+                  {favoriteTools.map(({ value, label }) => (
+                    <button
+                      key={`fav-${value}`}
+                      onClick={() => setAiToolMode(value)}
+                      className={`px-2 py-1 rounded-md text-xs border ${
+                        aiToolMode === value
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-500'
+                          : 'bg-card/30 border-border/40 text-muted-foreground'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 max-h-52 overflow-y-auto pr-1">
+              {filteredTools.map(({ value, label }) => (
+                <div key={value} className="relative">
+                  <button
+                    onClick={() => setAiToolMode(value)}
+                    className={`w-full px-2 py-2 pr-6 rounded-lg text-xs border transition-colors text-left ${
+                      aiToolMode === value
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-500'
+                        : 'bg-card/40 border-border/50 text-muted-foreground hover:text-foreground'
+                    }`}
+                    title="Click to select this tool"
+                  >
+                    {label}
+                  </button>
+                  <button
+                    onClick={() => toggleFavoriteTool(value)}
+                    className={`absolute top-1 right-1 text-[10px] px-1 rounded ${
+                      aiFavoriteTools.includes(value) ? 'text-amber-500' : 'text-muted-foreground'
+                    }`}
+                    title={aiFavoriteTools.includes(value) ? 'Unpin tool' : 'Pin tool'}
+                  >
+                    {aiFavoriteTools.includes(value) ? '★' : '☆'}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-muted-foreground">One-click workflows</p>
+                <button
+                  onClick={async () => {
+                    if (aiToolLoading) return;
+                    setRunningWorkflow('agent-speed-pack');
+                    try {
+                      const modes = ['summary', 'root_cause', 'next_steps', 'customer_update_detailed'];
+                      const outputs: string[] = [];
+                      for (const mode of modes) {
+                        const output = await runAiTool(mode, false);
+                        const label = AI_TOOL_OPTIONS.find((t) => t.value === mode)?.label || mode;
+                        if (output) outputs.push(`## ${label}\n${output}`);
+                      }
+                      if (outputs.length) {
+                        setAiToolResult(outputs.join('\n\n'));
+                        addToast('Agent speed pack completed', 'success');
+                      }
+                    } finally {
+                      setRunningWorkflow(null);
+                    }
+                  }}
+                  disabled={!!runningWorkflow || aiToolLoading}
+                  className="px-2 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-xs text-amber-500 disabled:opacity-50"
+                >
+                  {runningWorkflow === 'agent-speed-pack' ? 'Running Speed Pack...' : 'Run Speed Pack'}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {AI_WORKFLOW_PACKS.map((pack) => (
+                  <button
+                    key={pack.id}
+                    onClick={() => runWorkflowPack(pack.id)}
+                    disabled={!!runningWorkflow || aiToolLoading}
+                    className="px-3 py-1.5 rounded-md bg-card/40 border border-border/40 text-xs text-foreground hover:border-amber-500/40 disabled:opacity-50"
+                  >
+                    {runningWorkflow === pack.id ? `Running ${pack.label}...` : pack.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">Shortcuts: `Ctrl/Cmd + Enter` run selected tool, `Alt + 1..9` quick-select visible tools.</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleRequestAIAssistance}
+                disabled={aiToolLoading}
+                className="px-3 py-2 rounded-lg bg-amber-500 text-black text-sm font-medium hover:bg-amber-400 disabled:opacity-50"
+              >
+                {aiToolLoading ? 'Running...' : 'Run Selected Tool'}
+              </button>
+              {aiToolResult && (
+                <button
+                  onClick={handleInsertAiIntoReply}
+                  className="px-3 py-2 rounded-lg bg-secondary/20 text-secondary text-sm hover:bg-secondary/30"
+                >
+                  Insert to Reply
+                </button>
+              )}
+              {aiToolResult && (
+                <button
+                  onClick={handleCopyAiResult}
+                  className="px-3 py-2 rounded-lg bg-primary/10 text-primary text-sm hover:bg-primary/20"
+                >
+                  Copy
+                </button>
+              )}
+              {aiToolResult && (
+                <button
+                  onClick={() => setAiToolResult('')}
+                  className="px-3 py-2 rounded-lg bg-card/50 text-muted-foreground text-sm hover:bg-card"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {aiToolResult && (
+              <div className="p-3 rounded-lg bg-background/70 border border-border/40 text-sm whitespace-pre-wrap">
+                {aiToolResult}
+              </div>
+            )}
+            {aiToolHistory.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Recent AI outputs</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {aiToolHistory.map((item, idx) => (
+                    <button
+                      key={`${item.mode}-${item.createdAt}-${idx}`}
+                      onClick={() => handleReuseHistory(item)}
+                      className="text-left p-2 rounded-lg bg-card/40 border border-border/30 hover:border-amber-500/40"
+                    >
+                      <p className="text-xs font-medium text-foreground">{item.label}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{item.output}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

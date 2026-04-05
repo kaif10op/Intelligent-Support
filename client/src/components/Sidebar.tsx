@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon, User, ChevronRight, BarChart3, Users } from 'lucide-react';
+import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon, ChevronRight, BarChart3, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS, axiosConfig } from '../config/api';
@@ -8,6 +8,9 @@ import { useAuthStore } from '../store/useAuthStore';
 const Sidebar = () => {
   const { user } = useAuthStore();
   const [recentChats, setRecentChats] = useState<any[]>([]);
+  const role = (user?.role || '').toUpperCase();
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(role);
+  const isSupport = isAdmin || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes(role);
 
   useEffect(() => {
     const fetchRecent = async () => {
@@ -37,65 +40,76 @@ const Sidebar = () => {
     <aside className="hidden lg:flex flex-col w-64 border-r border-border/50 bg-background/50 backdrop-blur-sm sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
       {/* Main Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">
-          Main
-        </h3>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">Main</h3>
 
-        <NavLink to="/" className={navItemClass}>
-          <Home className="w-5 h-5 flex-shrink-0" />
-          <span>Dashboard</span>
-        </NavLink>
-
-        <NavLink to="/chats" className={navItemClass}>
-          <MessageSquare className="w-5 h-5 flex-shrink-0" />
-          <span>Recent Chats</span>
-        </NavLink>
-
-        <NavLink to="/knowledge-bases" className={navItemClass}>
-          <Database className="w-5 h-5 flex-shrink-0" />
-          <span>Knowledge Bases</span>
-        </NavLink>
-
-        <NavLink to="/tickets" className={navItemClass}>
-          <Ticket className="w-5 h-5 flex-shrink-0" />
-          <span>Tickets</span>
-        </NavLink>
-
-        <NavLink to="/search" className={navItemClass}>
-          <SearchIcon className="w-5 h-5 flex-shrink-0" />
-          <span>Search</span>
-        </NavLink>
-
-        {/* Admin Section */}
-        {user?.role === 'ADMIN' && (
+        {isAdmin ? (
           <>
-            <div className="mt-8 pt-6 border-t border-border/30">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">
-                Admin
-              </h3>
-              <NavLink to="/admin/dashboard" className={navItemClass}>
-                <BarChart3 className="w-5 h-5 flex-shrink-0" />
-                <span>Dashboard</span>
-              </NavLink>
-              <NavLink to="/admin" className={navItemClass}>
-                <Users className="w-5 h-5 flex-shrink-0" />
-                <span>Portal</span>
-              </NavLink>
-            </div>
+            <NavLink to="/admin/dashboard" className={navItemClass}>
+              <BarChart3 className="w-5 h-5 flex-shrink-0" />
+              <span>Admin Dashboard</span>
+            </NavLink>
+            <NavLink to="/admin" className={navItemClass}>
+              <Users className="w-5 h-5 flex-shrink-0" />
+              <span>User Management</span>
+            </NavLink>
+            <NavLink to="/tickets" className={navItemClass}>
+              <Ticket className="w-5 h-5 flex-shrink-0" />
+              <span>Tickets</span>
+            </NavLink>
+            <NavLink to="/chats" className={navItemClass}>
+              <MessageSquare className="w-5 h-5 flex-shrink-0" />
+              <span>Chats</span>
+            </NavLink>
+            <NavLink to="/knowledge-bases" className={navItemClass}>
+              <Database className="w-5 h-5 flex-shrink-0" />
+              <span>Knowledge Bases</span>
+            </NavLink>
           </>
-        )}
-
-        {/* Support Agent Section */}
-        {user?.role === 'SUPPORT_AGENT' && (
-          <div className="mt-8 pt-6 border-t border-border/30">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">
-              Support
-            </h3>
+        ) : isSupport ? (
+          <>
             <NavLink to="/support-queue" className={navItemClass}>
               <Ticket className="w-5 h-5 flex-shrink-0" />
               <span>Support Queue</span>
             </NavLink>
-          </div>
+            <NavLink to="/tickets" className={navItemClass}>
+              <Ticket className="w-5 h-5 flex-shrink-0" />
+              <span>All Tickets</span>
+            </NavLink>
+            <NavLink to="/chats" className={navItemClass}>
+              <MessageSquare className="w-5 h-5 flex-shrink-0" />
+              <span>Recent Chats</span>
+            </NavLink>
+            <NavLink to="/knowledge-bases" className={navItemClass}>
+              <Database className="w-5 h-5 flex-shrink-0" />
+              <span>Knowledge Bases</span>
+            </NavLink>
+          </>
+        ) : (
+          <>
+            <NavLink to="/dashboard" className={navItemClass}>
+              <Home className="w-5 h-5 flex-shrink-0" />
+              <span>Dashboard</span>
+            </NavLink>
+            <NavLink to="/chats" className={navItemClass}>
+              <MessageSquare className="w-5 h-5 flex-shrink-0" />
+              <span>Recent Chats</span>
+            </NavLink>
+            <NavLink to="/tickets" className={navItemClass}>
+              <Ticket className="w-5 h-5 flex-shrink-0" />
+              <span>My Tickets</span>
+            </NavLink>
+            <NavLink to="/knowledge-bases" className={navItemClass}>
+              <Database className="w-5 h-5 flex-shrink-0" />
+              <span>Knowledge Bases</span>
+            </NavLink>
+          </>
+        )}
+
+        {isAdmin && (
+          <NavLink to="/search" className={navItemClass}>
+            <SearchIcon className="w-5 h-5 flex-shrink-0" />
+            <span>Global Search</span>
+          </NavLink>
         )}
 
         {/* Recently Active Section */}
@@ -132,14 +146,7 @@ const Sidebar = () => {
 
       {/* Footer Navigation */}
       <div className="p-4 border-t border-border/30 space-y-1">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">
-          Settings
-        </h3>
-
-        <NavLink to="/preferences" className={navItemClass}>
-          <User className="w-5 h-5 flex-shrink-0" />
-          <span>Preferences</span>
-        </NavLink>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2 mb-2">Settings</h3>
 
         <NavLink to="/settings" className={navItemClass}>
           <Settings className="w-5 h-5 flex-shrink-0" />

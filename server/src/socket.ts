@@ -17,6 +17,17 @@ interface AuthenticatedSocket extends Socket {
 
 import { config } from './config.js';
 
+type ResourceType = 'ticket' | 'chat' | 'kb';
+
+interface PresenceUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  role: string;
+  socketId: string;
+  seenAt: string;
+}
+
 export const initializeSocket = (httpServer: HTTPServer) => {
   const corsOrigins = config.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
 
@@ -48,6 +59,71 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     const user = socket.user;
     if (!user) return;
 
+    const presenceRegistry = (io as any).presenceRegistry || new Map<string, Map<string, PresenceUser>>();
+    const socketPresenceMap = (io as any).socketPresenceMap || new Map<string, Set<string>>();
+    (io as any).presenceRegistry = presenceRegistry;
+    (io as any).socketPresenceMap = socketPresenceMap;
+
+    const presenceKey = (resourceType: ResourceType, resourceId: string) => `${resourceType}:${resourceId}`;
+    const isStaffRole = (role: string) => ['ADMIN', 'SUPER_ADMIN', 'SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes((role || '').toUpperCase());
+    const emitPresenceUpdate = (resourceType: ResourceType, resourceId: string) => {
+      const key = presenceKey(resourceType, resourceId);
+      const users = Array.from((presenceRegistry.get(key)?.values() || []) as Iterable<PresenceUser>).map((u) => ({
+        id: u.id,
+        name: u.name,
+        avatar: u.avatar
+      }));
+      io.to(`${resourceType}-${resourceId}`).emit('presence-update', { resourceType, resourceId, users });
+    };
+    const addPresence = (resourceType: ResourceType, resourceId: string) => {
+      const key = presenceKey(resourceType, resourceId);
+      const bySocket = socketPresenceMap.get(socket.id) || new Set<string>();
+      const resourceUsers = presenceRegistry.get(key) || new Map<string, PresenceUser>();
+      const now = new Date().toISOString();
+      resourceUsers.set(socket.id, {
+        id: user.userId,
+        name: user.username,
+        role: user.role,
+        socketId: socket.id,
+        seenAt: now
+      });
+      presenceRegistry.set(key, resourceUsers);
+      bySocket.add(key);
+      socketPresenceMap.set(socket.id, bySocket);
+      socket.join(`${resourceType}-${resourceId}`);
+      emitPresenceUpdate(resourceType, resourceId);
+    };
+    const removePresence = (resourceType: ResourceType, resourceId: string) => {
+      const key = presenceKey(resourceType, resourceId);
+      const resourceUsers = presenceRegistry.get(key);
+      if (resourceUsers) {
+        resourceUsers.delete(socket.id);
+        if (resourceUsers.size === 0) {
+          presenceRegistry.delete(key);
+        } else {
+          presenceRegistry.set(key, resourceUsers);
+        }
+      }
+      const bySocket = socketPresenceMap.get(socket.id);
+      bySocket?.delete(key);
+      if (bySocket && bySocket.size === 0) socketPresenceMap.delete(socket.id);
+      socket.leave(`${resourceType}-${resourceId}`);
+      emitPresenceUpdate(resourceType, resourceId);
+    };
+    const cleanupSocketPresence = () => {
+      const keys = Array.from((socketPresenceMap.get(socket.id) || []) as Iterable<string>);
+      for (const key of keys) {
+        const [resourceType, resourceId] = key.split(':') as [ResourceType, string];
+        removePresence(resourceType, resourceId);
+      }
+    };
+    const hasActiveStaffPresence = (resourceType: ResourceType, resourceId: string) => {
+      const key = presenceKey(resourceType, resourceId);
+      const users = presenceRegistry.get(key);
+      if (!users || users.size === 0) return false;
+      return Array.from(users.values() as Iterable<PresenceUser>).some((u) => u.socketId !== socket.id && isStaffRole(u.role));
+    };
+
     logger.info('User connected', { username: user.username, socketId: socket.id });
 
     // Join user-specific room for direct notifications
@@ -69,6 +145,18 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     socket.on('unsubscribe-ticket', (ticketId: string) => {
       socket.leave(`ticket-${ticketId}`);
       logger.debug('User unsubscribed from ticket', { username: user.username, ticketId });
+    });
+
+    socket.on('user-presence', (data: { resourceId: string; resourceType: ResourceType }) => {
+      if (!data?.resourceId || !data?.resourceType) return;
+      addPresence(data.resourceType, data.resourceId);
+      logger.debug('Presence joined', { username: user.username, resourceType: data.resourceType, resourceId: data.resourceId });
+    });
+
+    socket.on('leave-presence', (data: { resourceId: string; resourceType: ResourceType }) => {
+      if (!data?.resourceId || !data?.resourceType) return;
+      removePresence(data.resourceType, data.resourceId);
+      logger.debug('Presence left', { username: user.username, resourceType: data.resourceType, resourceId: data.resourceId });
     });
 
     // Ticket status updated
@@ -113,24 +201,91 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     // Chat message sent (client initiates new message via socket)
     socket.on('send-chat-message', async (data: { chatId?: string; kbId: string; message: string }) => {
       const { chatId, kbId, message } = data;
-      
-      // Notify client AI started thinking
-      io.to(`chat-${chatId}`).emit('ai-typing', { chatId });
+      const trimmedMessage = (message || '').trim();
 
-      await AIService.processMessage(message, {
-        userId: user.userId,
-        kbId,
-        chatId,
-        onToken: (token, realizedChatId) => {
-          socket.emit('ai-token', { chatId: realizedChatId, token });
-        },
-        onComplete: (fullAnswer, finalChatId) => {
-          socket.emit('ai-complete', { chatId: finalChatId, fullAnswer });
-        },
-        onError: (error) => {
-          socket.emit('ai-error', { message: error.message });
-        }
-      });
+      if (!trimmedMessage) {
+        socket.emit('ai-error', { message: 'Message cannot be empty' });
+        return;
+      }
+
+      const chatRecord = chatId
+        ? await prisma.chat.findUnique({
+            where: { id: chatId },
+            select: {
+              id: true,
+              userId: true,
+              assignedAgentId: true,
+              tickets: { select: { id: true } }
+            }
+          })
+        : null;
+
+      const ticketIds = chatRecord?.tickets?.map((ticket) => ticket.id) || [];
+      const humanActive = (chatId && hasActiveStaffPresence('chat', chatId))
+        || ticketIds.some((ticketId) => hasActiveStaffPresence('ticket', ticketId));
+
+      if (humanActive && chatId) {
+        socket.emit('ai-paused', {
+          chatId,
+          reason: 'human_active',
+          message: 'A support agent is actively viewing this conversation, so AI will wait.'
+        });
+        io.to(`chat-${chatId}`).emit('ai-paused', {
+          chatId,
+          reason: 'human_active',
+          message: 'A support agent is actively viewing this conversation, so AI will wait.'
+        });
+        return;
+      }
+
+      // Notify both room and sender so UI starts consistently.
+      if (chatId) {
+        io.to(`chat-${chatId}`).emit('ai-typing', { chatId });
+      } else {
+        socket.emit('ai-typing', { chatId: 'new' });
+      }
+
+      let settled = false;
+      const finishError = (errorMessage: string) => {
+        if (settled) return;
+        settled = true;
+        socket.emit('ai-error', { message: errorMessage });
+      };
+      const finishComplete = (finalChatId: string, fullAnswer: string) => {
+        if (settled) return;
+        settled = true;
+        socket.emit('ai-complete', { chatId: finalChatId, fullAnswer });
+      };
+
+      // Prevent infinite "AI is thinking" UX if provider/tool stream hangs.
+      const watchdog = setTimeout(() => {
+        finishError('AI response timed out. Please try again.');
+      }, 45000);
+
+      try {
+        await AIService.processMessage(trimmedMessage, {
+          userId: user.userId,
+          kbId,
+          chatId,
+          onToken: (token, realizedChatId) => {
+            if (settled) return;
+            socket.emit('ai-token', { chatId: realizedChatId, token });
+          },
+          onComplete: (fullAnswer, finalChatId) => {
+            clearTimeout(watchdog);
+            finishComplete(finalChatId, fullAnswer);
+          },
+          onError: (error) => {
+            clearTimeout(watchdog);
+            finishError(error?.message || 'Failed to process message');
+          }
+        });
+      } catch (error: any) {
+        clearTimeout(watchdog);
+        finishError(error?.message || 'Failed to process message');
+      } finally {
+        clearTimeout(watchdog);
+      }
     });
 
     // Chat message received (notifications)
@@ -196,6 +351,7 @@ export const initializeSocket = (httpServer: HTTPServer) => {
 
     // Disconnect handler
     socket.on('disconnect', () => {
+      cleanupSocketPresence();
       logger.info('User disconnected', { username: user.username, socketId: socket.id });
     });
 

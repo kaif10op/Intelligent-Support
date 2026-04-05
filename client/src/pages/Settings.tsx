@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { User, Lock, Moon } from 'lucide-react';
-import { Card, Button } from '../components/ui';
+import { Card } from '../components/ui';
+import { UserButton } from '@clerk/react';
 
 const Settings = () => {
   const { user } = useAuthStore();
@@ -48,9 +49,17 @@ const Settings = () => {
                     <User className="w-10 h-10 text-primary-500" />
                   )}
                 </div>
-                <Button variant="ghost" size="sm">
-                  Change Avatar
-                </Button>
+                <div className="text-center space-y-2">
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        avatarBox: 'w-9 h-9 mx-auto',
+                        userButtonPopoverCard: 'shadow-xl border border-border/50'
+                      }
+                    }}
+                  />
+                  <p className="text-xs text-surface-500">Use profile menu to update avatar/account settings.</p>
+                </div>
               </div>
 
               {/* Name Field */}
@@ -105,14 +114,9 @@ const Settings = () => {
                 <span className="text-xs font-medium text-green-600">Active (Google)</span>
               </div>
 
-              {/* Manage Passwords Button */}
-              <Button
-                variant="outline"
-                fullWidth
-                className="mt-4"
-              >
-                Manage Passwords
-              </Button>
+              <div className="p-3 rounded-lg bg-surface-50 border border-surface-200 text-xs text-surface-600">
+                Password and account security are managed via your identity provider (Clerk profile menu).
+              </div>
             </div>
           </Card>
 
@@ -128,7 +132,7 @@ const Settings = () => {
               <div className="flex items-center justify-between py-3 border-b border-surface-200">
                 <div className="space-y-1">
                   <h3 className="text-sm font-medium text-surface-900">Dark Mode</h3>
-                  <p className="text-xs text-surface-600">Coming soon</p>
+                  <p className="text-xs text-surface-600">Applies after refresh</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -146,17 +150,7 @@ const Settings = () => {
                 </label>
               </div>
 
-              {/* Notifications Toggle */}
-              <div className="flex items-center justify-between py-3">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-medium text-surface-900">Notifications</h3>
-                  <p className="text-xs text-surface-600">Get email updates</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-not-allowed opacity-50">
-                  <div className="w-11 h-6 bg-surface-300 rounded-full"></div>
-                  <span className="absolute w-5 h-5 bg-white rounded-full top-0.5 left-0.5"></span>
-                </label>
-              </div>
+              <div className="text-xs text-surface-500">Notification controls are being consolidated into role-aware workflows.</div>
             </div>
           </Card>
         </div>

@@ -84,6 +84,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       if (cb) cb({ type: 'ai-error', ...data });
     });
 
+    newSocket.on('ai-paused', (data) => {
+      const cb = chatCallbacks.current.get(data.chatId) || chatCallbacks.current.get('new');
+      if (cb) cb({ type: 'ai-paused', ...data });
+    });
+
     newSocket.on('new-chat-message', (data) => {
       const cb = chatCallbacks.current.get(data.chatId);
       if (cb) cb(data);

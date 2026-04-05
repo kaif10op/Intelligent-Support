@@ -13,6 +13,11 @@ export interface AuthRequest extends Request {
   user?: { id: string; role: string; email: string; name?: string };
 }
 
+const normalizeRole = (role?: string) => (role || '').toUpperCase();
+const isAdminRole = (role?: string) => ['ADMIN', 'SUPER_ADMIN'].includes(normalizeRole(role));
+const isSupportStaffRole = (role?: string) =>
+  isAdminRole(role) || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes(normalizeRole(role));
+
 export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
   // Try to get token from multiple sources (in order of priority)
   let token = req.cookies.token;
@@ -72,7 +77,7 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    if (decoded.role === 'ADMIN') {
+    if (isAdminRole(decoded.role)) {
       req.user = decoded;
       next();
     } else {
@@ -106,7 +111,7 @@ export const requireSupportAgent = (req: AuthRequest, res: Response, next: NextF
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    if (decoded.role === 'ADMIN' || decoded.role === 'SUPPORT_AGENT') {
+    if (isSupportStaffRole(decoded.role)) {
       req.user = decoded;
       next();
     } else {

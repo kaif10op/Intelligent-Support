@@ -55,8 +55,10 @@ export const API_ENDPOINTS = {
   TICKET_CREATE: apiUrl('/api/tickets'),
   TICKET_DETAIL: (id: string) => apiUrl(`/api/tickets/${id}`),
   TICKET_CONTEXT: (id: string) => apiUrl(`/api/tickets/${id}/context`),
+  TICKET_AGENTS: apiUrl('/api/tickets/agents'),
   TICKET_UPDATE: (id: string) => apiUrl(`/api/tickets/${id}`),
   TICKET_NOTE: (id: string) => apiUrl(`/api/tickets/${id}/notes`),
+  TICKET_AI_COPILOT: apiUrl('/api/tickets/ai/copilot'),
 
   // Admin
   ADMIN_STATS: apiUrl('/api/admin/stats'),

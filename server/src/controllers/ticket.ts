@@ -11,6 +11,11 @@ import { TagService } from '../services/tagService.js';
 import { TicketAssignmentService } from '../services/ticketAssignmentService.js';
 import { CacheService } from '../utils/cacheService.js';
 
+const normalizeRole = (role?: string) => (role || '').toUpperCase();
+const isAdminRole = (role?: string) => ['ADMIN', 'SUPER_ADMIN'].includes(normalizeRole(role));
+const isSupportStaffRole = (role?: string) =>
+  isAdminRole(role) || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes(normalizeRole(role));
+
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
     const { title, description, priority, chatId } = req.body;
@@ -81,7 +86,7 @@ export const getMyTickets = async (req: AuthRequest, res: Response) => {
     // Build where clause based on user role
     let whereClause: any;
 
-    if (userRole === 'SUPPORT_AGENT') {
+    if (isSupportStaffRole(userRole) && !isAdminRole(userRole)) {
       // Support agents should see:
       // 1. Tickets assigned to them
       // 2. Tickets they created
@@ -93,7 +98,7 @@ export const getMyTickets = async (req: AuthRequest, res: Response) => {
           { assignedToId: null }
         ]
       };
-    } else if (userRole === 'ADMIN') {
+    } else if (isAdminRole(userRole)) {
       // Admins see all tickets (no filter)
       whereClause = {};
     } else {
@@ -181,12 +186,54 @@ export const getAllTickets = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Get available support agents for assignment/transfer (staff endpoint)
+ * GET /api/tickets/agents
+ */
+export const getSupportAgents = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!isSupportStaffRole(req.user!.role)) {
+      return res.status(403).json({ error: 'Support or admin access required' });
+    }
+
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    const agents = users.filter((u) => isSupportStaffRole(u.role));
+
+    res.json({
+      data: agents,
+      pagination: {
+        page: 1,
+        limit: agents.length,
+        total: agents.length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: false
+      }
+    });
+  } catch (error: any) {
+    logger.error('Get support agents error', { error: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to fetch support agents' });
+  }
+};
+
+/**
  * Get single ticket details
  * GET /api/tickets/:id
  */
 export const getTicketById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (!isSupportStaffRole(req.user!.role)) {
+      return res.status(403).json({ error: 'Ticket details are restricted to support agents and admins' });
+    }
     const ticket = await prisma.ticket.findUnique({
       where: { id: id as string },
       include: {
@@ -200,16 +247,99 @@ export const getTicketById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
-    const isOwner = ticket.userId === req.user!.id;
-    const isStaff = req.user!.role === 'ADMIN' || req.user!.role === 'SUPPORT_AGENT';
-    if (!isOwner && !isStaff) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
     res.json(ticket);
   } catch (error: any) {
     logger.error('Get ticket by id error', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to fetch ticket details' });
+  }
+};
+
+/**
+ * Initialize a chat for a ticket when no chat exists yet
+ * POST /api/tickets/:id/init-chat
+ */
+export const initializeTicketChat = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const isStaff = isSupportStaffRole(req.user!.role);
+    if (!isStaff) {
+      return res.status(403).json({ error: 'Only support agents and admins can initialize ticket chats' });
+    }
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: id as string },
+      include: { user: { select: { id: true, name: true, email: true } } }
+    });
+
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    // If chat already exists, return it.
+    if (ticket.chatId) {
+      const existingChat = await (prisma as any).chat.findUnique({
+        where: { id: ticket.chatId },
+        include: { kb: { select: { id: true, title: true } } }
+      });
+      if (existingChat) {
+        return res.json({ success: true, chat: existingChat, alreadyExisted: true });
+      }
+    }
+
+    // Pick KB for this user: own KB first, then any available KB.
+    let kb = await prisma.knowledgeBase.findFirst({
+      where: { userId: ticket.userId },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    if (!kb) {
+      kb = await prisma.knowledgeBase.findFirst({
+        orderBy: { createdAt: 'asc' }
+      });
+    }
+
+    // As a last resort, create a lightweight support KB for ticket owner.
+    if (!kb) {
+      kb = await prisma.knowledgeBase.create({
+        data: {
+          title: 'General Support',
+          description: 'Auto-created support knowledge base',
+          userId: ticket.userId
+        }
+      });
+    }
+
+    const chatTitle = `Support: ${ticket.title}`.slice(0, 120);
+    const chat = await (prisma as any).chat.create({
+      data: {
+        title: chatTitle,
+        userId: ticket.userId,
+        kbId: kb.id,
+        assignedAgentId: req.user!.id
+      }
+    });
+
+    await prisma.ticket.update({
+      where: { id: id as string },
+      data: { chatId: chat.id }
+    });
+
+    await (prisma as any).message.create({
+      data: {
+        chatId: chat.id,
+        role: 'system',
+        content: `${req.user!.name || 'Support'} started this chat from ticket #${ticket.id}.`,
+        senderName: 'System',
+        senderRole: 'SYSTEM'
+      }
+    });
+
+    CacheService.deletePattern('ticket:list:*:*:*').catch(() => {});
+    CacheService.deletePattern(`chat:list:*:${ticket.userId}:*`).catch(() => {});
+    CacheService.deletePattern(`chat:recent:${ticket.userId}:*`).catch(() => {});
+
+    res.json({ success: true, chat, createdFromTicket: true });
+  } catch (error: any) {
+    logger.error('Initialize ticket chat error', { error: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to initialize ticket chat' });
   }
 };
 
@@ -225,8 +355,8 @@ export const updateTicket = async (req: AuthRequest, res: Response) => {
     });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
 
-    const isAdmin = req.user!.role === 'ADMIN';
-    const isSupportAgent = req.user!.role === 'SUPPORT_AGENT';
+    const isAdmin = isAdminRole(req.user!.role);
+    const isSupportAgent = isSupportStaffRole(req.user!.role) && !isAdmin;
     const isAssignedAgent = ticket.assignedToId === req.user!.id;
 
     if (isSupportAgent && !isAssignedAgent && ticket.assignedToId) {
@@ -362,6 +492,9 @@ export const addTicketNote = async (req: AuthRequest, res: Response) => {
 export const getTicketMessages = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   try {
+    if (!isSupportStaffRole(req.user!.role)) {
+      return res.status(403).json({ error: 'Ticket message history is restricted to support agents and admins' });
+    }
     // Verify user has access to this ticket
     const ticket = await prisma.ticket.findUnique({
       where: { id: id as string }
@@ -489,6 +622,149 @@ Reply:`;
 };
 
 /**
+ * Cross-role AI copilot for ticket creation and problem solving
+ * POST /api/tickets/ai/copilot
+ */
+export const generateTicketCopilot = async (req: AuthRequest, res: Response) => {
+  try {
+    const { context = '', flow = 'problem_solving', mode = 'next_steps', modes = [], ticketId } = req.body || {};
+    const role = normalizeRole(req.user?.role);
+    const isStaff = isSupportStaffRole(role);
+
+    const baseModes = {
+      ticket_creation: ['draft_ticket', 'priority_recommendation', 'title_improver', 'description_improver'],
+      problem_solving: [
+        'summary',
+        'root_cause',
+        'next_steps',
+        'resolution_plan',
+        'customer_reply',
+        'escalation_check',
+        'risk_check',
+        'diagnostic_checklist',
+        'effort_estimate',
+        'qa_validation_plan'
+      ],
+      ticket_update: ['status_update', 'internal_note', 'customer_update', 'handoff_bundle', 'timeline_update', 'closure_summary', 'followup_plan']
+    } as const;
+
+    const roleFilteredModes = isStaff
+      ? [...baseModes.ticket_creation, ...baseModes.problem_solving, ...baseModes.ticket_update]
+      : [...baseModes.ticket_creation, 'summary', 'next_steps', 'customer_reply', 'description_improver'];
+
+    const selectedMode = roleFilteredModes.includes(mode) ? mode : roleFilteredModes[0];
+    const requestedModes = Array.isArray(modes) ? modes.filter((m: string) => roleFilteredModes.includes(m)) : [];
+
+    let ticketContext = context as string;
+    if (ticketId) {
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId as string },
+        include: { notes: { orderBy: { createdAt: 'desc' }, take: 8 } }
+      });
+      if (ticket) {
+        const notesContext = ticket.notes.map(n => `${n.role}: ${n.content}`).join('\n');
+        ticketContext = `${ticket.title}\n${ticket.description}\n${notesContext}`.slice(0, 3000);
+      }
+    }
+
+    const compact = (ticketContext || '').trim();
+    const fallbackContext = compact || 'No additional context provided.';
+
+    const outputByMode: Record<string, { suggestion: string; draft?: { title: string; description: string; priority: string } }> = {
+      draft_ticket: {
+        suggestion: `Drafted a complete ticket package based on your issue context.`,
+        draft: {
+          title: `Support Request: ${fallbackContext.slice(0, 70) || 'Issue assistance needed'}`,
+          description: `Issue summary:\n${fallbackContext}\n\nExpected outcome:\n- Restore normal workflow\n- Confirm root cause\n- Provide validated resolution steps`,
+          priority: /urgent|down|blocked|critical|payment|security/i.test(fallbackContext) ? 'HIGH' : 'MEDIUM'
+        }
+      },
+      priority_recommendation: {
+        suggestion: `Priority recommendation:\nSet HIGH when user is blocked from core workflow, security risk exists, or multiple users are affected.\nOtherwise MEDIUM with monitored follow-up.`
+      },
+      title_improver: {
+        suggestion: `Improved title:\n${`Issue: ${fallbackContext}`.slice(0, 120)}`
+      },
+      description_improver: {
+        suggestion: `Improved description:\nProblem:\n${fallbackContext}\n\nWhat was tried:\n- Basic checks completed\n\nRequested help:\n- Step-by-step resolution and verification`
+      },
+      summary: {
+        suggestion: `Case summary:\n${fallbackContext}`
+      },
+      root_cause: {
+        suggestion: `Root cause hypotheses:\n1) Configuration mismatch\n2) Permission/role mismatch\n3) Stale session or token state\n4) Backend validation or dependency issue`
+      },
+      next_steps: {
+        suggestion: `Recommended next steps:\n1) Confirm reproducible steps\n2) Validate role and account scope\n3) Apply minimal-risk fix\n4) Verify with customer\n5) Document final resolution`
+      },
+      resolution_plan: {
+        suggestion: `Resolution plan:\n- Triage and isolate issue\n- Apply workaround if user is blocked\n- Deploy permanent fix\n- Validate and close with summary`
+      },
+      customer_reply: {
+        suggestion: `Customer-ready reply:\nThanks for the details — I’m actively working on this now. I’ve identified the most likely cause and will share the exact fix steps shortly. I’ll stay with you until this is resolved.`
+      },
+      escalation_check: {
+        suggestion: `Escalation guidance:\nEscalate if issue is security-related, affects multiple customers, has repeated failure after fix, or risks SLA breach.`
+      },
+      risk_check: {
+        suggestion: `Risk check:\nLikelihood: medium\nImpact: medium/high if unresolved\nMitigation: assign owner, provide workaround, proactive customer updates`
+      },
+      status_update: {
+        suggestion: `Status update draft:\nInvestigation in progress. Scope and likely cause identified. Next update will include validated fix and ETA.`
+      },
+      internal_note: {
+        suggestion: `Internal note draft:\nObserved behavior, attempted fixes, blockers, and pending owner actions documented for handoff continuity.`
+      },
+      customer_update: {
+        suggestion: `Customer progress update:\nQuick update: we’re actively resolving this and validating the solution now. We’ll share confirmed next steps very shortly.`
+      },
+      diagnostic_checklist: {
+        suggestion: `Diagnostic checklist:\n1) Confirm exact error and timestamp\n2) Validate permissions/role mapping\n3) Verify recent config or deployment changes\n4) Check logs for correlated failures\n5) Reproduce in controlled environment`
+      },
+      effort_estimate: {
+        suggestion: `Effort estimate:\nLow effort if issue is config/permission mismatch.\nMedium effort if reproducible bug requires patch.\nHigh effort if cross-service dependency or data repair is needed.`
+      },
+      handoff_bundle: {
+        suggestion: `Handoff bundle:\n- Current status\n- Reproduction details\n- Actions already attempted\n- Remaining blockers\n- Next owner + immediate next action`
+      },
+      qa_validation_plan: {
+        suggestion: `QA validation plan:\n- Primary user flow validation\n- Permission edge case\n- Retry/timeout scenario\n- Regression checks\n- User confirmation after fix`
+      },
+      timeline_update: {
+        suggestion: `Timeline update draft:\nInvestigation is active. Initial findings are available. Next milestone is fix validation, followed by customer confirmation and closure update.`
+      },
+      closure_summary: {
+        suggestion: `Closure summary draft:\nIssue resolved and validated. Root cause documented, mitigation applied, and user confirmation requested before final closure.`
+      },
+      followup_plan: {
+        suggestion: `Follow-up plan:\n- Monitor for recurrence over next cycle\n- Confirm user stability\n- Add KB note if reusable\n- Close ticket with resolution references`
+      }
+    };
+
+    const selected = outputByMode[selectedMode] || outputByMode.next_steps;
+    const outputs = requestedModes.length > 0
+      ? requestedModes.map((m: string) => ({
+          mode: m,
+          suggestion: (outputByMode[m] || outputByMode.next_steps).suggestion
+        }))
+      : [];
+
+    res.json({
+      success: true,
+      flow,
+      mode: selectedMode,
+      suggestion: selected.suggestion,
+      draft: selected.draft || null,
+      outputs,
+      availableModes: roleFilteredModes
+    });
+  } catch (error: any) {
+    logger.error('Ticket copilot error', { error: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to generate copilot output' });
+  }
+};
+
+/**
  * Export user's tickets to CSV
  * GET /api/tickets/export/csv
  */
@@ -578,7 +854,7 @@ export const assignTicket = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Support agent not found' });
     }
 
-    if (agent.role !== 'SUPPORT_AGENT' && agent.role !== 'ADMIN') {
+      if (!isSupportStaffRole(agent.role)) {
       return res.status(400).json({ error: 'Can only assign to support agents or admins' });
     }
 
@@ -723,6 +999,9 @@ export const optimizeTicketAssignment = async (req: AuthRequest, res: Response) 
 export const getTicketContext = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    if (!isSupportStaffRole(req.user!.role)) {
+      return res.status(403).json({ error: 'Ticket context is restricted to support agents and admins' });
+    }
     const ticket = await prisma.ticket.findUnique({
       where: { id: id as string },
       include: {
@@ -732,12 +1011,6 @@ export const getTicketContext = async (req: AuthRequest, res: Response) => {
     });
 
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-
-    const isOwner = ticket.userId === req.user!.id;
-    const isStaff = req.user!.role === 'ADMIN' || req.user!.role === 'SUPPORT_AGENT';
-    if (!isOwner && !isStaff) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
 
     const [ticketHistory, chats, kbInteractions, notes] = await Promise.all([
       prisma.ticket.findMany({

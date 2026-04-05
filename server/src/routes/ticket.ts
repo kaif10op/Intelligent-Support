@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin, requireSupportAgent } from '../middlewares/auth.js';
-import { createTicket, getMyTickets, getAllTickets, getTicketById, getTicketContext, updateTicket, addTicketNote, getTicketMessages, deleteTicketMessage, suggestReply, exportMyTicketsAsCSV, exportAllTicketsAsCSV, assignTicket, getAssignmentMetrics, autoAssignTickets, rebalanceTickets, optimizeTicketAssignment } from '../controllers/ticket.js';
+import { createTicket, getMyTickets, getAllTickets, getSupportAgents, getTicketById, getTicketContext, initializeTicketChat, updateTicket, addTicketNote, getTicketMessages, deleteTicketMessage, suggestReply, generateTicketCopilot, exportMyTicketsAsCSV, exportAllTicketsAsCSV, assignTicket, getAssignmentMetrics, autoAssignTickets, rebalanceTickets, optimizeTicketAssignment } from '../controllers/ticket.js';
 
 const router = Router();
 
@@ -18,10 +18,13 @@ router.get('/export/all/csv', requireAuth, requireAdmin, exportAllTicketsAsCSV);
 
 // User Routes (continued - static paths)
 router.get('/my', requireAuth, getMyTickets); // Alternative endpoint
+router.get('/agents', requireAuth, requireSupportAgent, getSupportAgents);
 router.get('/export/csv', requireAuth, exportMyTicketsAsCSV); // Export user's tickets
+router.post('/ai/copilot', requireAuth, generateTicketCopilot);
 
 // Dynamic Routes (MUST come AFTER all static routes)
 router.get('/:id/context', requireAuth, getTicketContext);
+router.post('/:id/init-chat', requireAuth, requireSupportAgent, initializeTicketChat);
 router.get('/:id/messages', requireAuth, getTicketMessages);
 router.post('/:id/messages', requireAuth, addTicketNote); // Users and admins can add messages
 router.delete('/:id/messages/:noteId', requireAuth, deleteTicketMessage); // Users can delete own, admins can delete any

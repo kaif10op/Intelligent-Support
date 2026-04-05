@@ -6,7 +6,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { TavilySearch } from '@langchain/tavily';
 import { DynamicTool } from '@langchain/core/tools';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
-import { HumanMessage, AIMessage } from '@langchain/core/messages';
+import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
 import { logger } from '../utils/logger.js';
 
 export interface ChatSession {
@@ -20,6 +20,135 @@ export interface ChatSession {
 
 export class AIService {
   private static llmInstances: any[] = AIService.createLLMInstances();
+
+  private static formatTimestamp(value?: Date | string | null) {
+    if (!value) return 'unknown-time';
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? 'unknown-time' : date.toISOString();
+  }
+
+  private static clip(value: string, max = 600) {
+    const compact = value.replace(/\s+/g, ' ').trim();
+    return compact.length > max ? `${compact.slice(0, max)}…` : compact;
+  }
+
+  private static async buildSupportContext(session: ChatSession, message: string, kbId: string, currentChatId?: string) {
+    const currentUserId = session.userId;
+    const now = new Date().toISOString();
+    const [chat, userTickets, recentChats, kb, kbDocs] = await Promise.all([
+      currentChatId
+        ? prisma.chat.findUnique({
+            where: { id: currentChatId },
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+              assignedAgent: { select: { id: true, name: true, email: true, role: true } },
+              tickets: {
+                include: {
+                  assignedTo: { select: { id: true, name: true, email: true, role: true } },
+                  notes: { orderBy: { createdAt: 'desc' }, take: 5 }
+                },
+                orderBy: { updatedAt: 'desc' }
+              },
+              messages: {
+                orderBy: { createdAt: 'desc' },
+                take: 12
+              }
+            }
+          })
+        : Promise.resolve(null),
+      prisma.ticket.findMany({
+        where: { userId: currentUserId },
+        orderBy: { updatedAt: 'desc' },
+        take: 12,
+        include: {
+          assignedTo: { select: { id: true, name: true, email: true, role: true } },
+          notes: { orderBy: { createdAt: 'desc' }, take: 3 }
+        }
+      }),
+      prisma.chat.findMany({
+        where: { userId: currentUserId },
+        orderBy: { updatedAt: 'desc' },
+        take: 8,
+        include: {
+          kb: { select: { id: true, title: true } },
+          assignedAgent: { select: { id: true, name: true, email: true, role: true } },
+          messages: { orderBy: { createdAt: 'desc' }, take: 4 }
+        }
+      }),
+      kbId
+        ? prisma.knowledgeBase.findFirst({
+            where: { id: kbId },
+            include: {
+              documents: {
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                select: { id: true, filename: true, type: true, createdAt: true }
+              }
+            }
+          })
+        : Promise.resolve(null),
+      kbId
+        ? prisma.document.findMany({
+            where: { kbId },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+            select: { id: true, filename: true, type: true, createdAt: true }
+          })
+        : Promise.resolve([])
+    ]);
+
+    const activeTickets = userTickets.filter((ticket) => ['OPEN', 'IN_PROGRESS'].includes((ticket as any).status));
+    const resolvedTickets = userTickets.filter((ticket) => ['RESOLVED', 'CLOSED'].includes((ticket as any).status));
+
+    const currentTranscript = chat
+      ? (chat.messages || [])
+          .slice()
+          .reverse()
+          .map((m: any) => `[${AIService.formatTimestamp(m.createdAt)}] ${m.senderName || m.role}: ${AIService.clip(m.content, 360)}`)
+          .join('\n')
+      : '';
+
+    const activeTicketSummary = activeTickets
+      .map((ticket: any) => {
+        const latestNote = ticket.notes?.[0];
+        return `- [${AIService.formatTimestamp(ticket.updatedAt)}] ${ticket.title} (${ticket.status}/${ticket.priority})${ticket.assignedTo?.name ? ` assigned to ${ticket.assignedTo.name}` : ''}${latestNote?.content ? ` | latest note: ${AIService.clip(latestNote.content, 180)}` : ''}`;
+      })
+      .join('\n');
+
+    const historicalResolvedSummary = resolvedTickets
+      .slice(0, 6)
+      .map((ticket: any) => {
+        const latestNote = ticket.notes?.[0];
+        return `- [${AIService.formatTimestamp(ticket.updatedAt)}] ${ticket.title} (${ticket.status})${latestNote?.content ? ` | closed with: ${AIService.clip(latestNote.content, 180)}` : ''}`;
+      })
+      .join('\n');
+
+    const recentChatSummary = recentChats
+      .map((c: any) => {
+        const lastMessage = c.messages?.[0];
+        return `- [${AIService.formatTimestamp(c.updatedAt)}] ${c.kb?.title || 'No KB'} | ${c.messages?.length || 0} recent messages${c.assignedAgent?.name ? ` | agent: ${c.assignedAgent.name}` : ''}${lastMessage?.content ? ` | latest: ${AIService.clip(lastMessage.content, 160)}` : ''}`;
+      })
+      .join('\n');
+
+    const kbSummary = kb
+      ? `KB: ${kb.title}${kb.description ? ` — ${AIService.clip(kb.description, 220)}` : ''}\nRecent documents:\n${kbDocs.map((doc: any) => `- [${AIService.formatTimestamp(doc.createdAt)}] ${doc.filename} (${doc.type})`).join('\n') || '- none'}`
+      : 'KB: unavailable';
+
+    return {
+      summary: [
+        `Current timestamp: ${now}`,
+        `Current user message: ${message}`,
+        chat ? `Current chat: ${chat.id}${chat.assignedAgent?.name ? ` | assigned agent: ${chat.assignedAgent.name}` : ''}` : 'Current chat: not yet created',
+        currentTranscript ? `Latest chat transcript:\n${currentTranscript}` : 'Latest chat transcript: none',
+        activeTicketSummary ? `Active tickets for this user:\n${activeTicketSummary}` : 'Active tickets for this user: none',
+        historicalResolvedSummary ? `Historical resolved tickets (do not treat as current unless the latest timestamped evidence matches):\n${historicalResolvedSummary}` : 'Historical resolved tickets: none',
+        recentChatSummary ? `Recent chats:\n${recentChatSummary}` : 'Recent chats: none',
+        kbSummary,
+        'Instruction: prefer the latest unresolved context, not stale solved answers. If older notes conflict with current messages, treat older notes as historical only and ask a clarifying question before assuming the issue is solved.'
+      ].join('\n\n'),
+      chat
+    };
+  }
 
   private static createLLMInstances() {
     const instances: any[] = [];
@@ -133,9 +262,10 @@ export class AIService {
         }));
       }
 
+      const richContext = await AIService.buildSupportContext(session, message, kbId || '', chatId);
       const agentModifier = kbMode 
-        ? `You are a professional customer support agent. Be concise and helpful. Use the search_knowledge_base tool to find relevant information from our documentation.`
-        : `You are a helpful AI customer support assistant. While you don't have access to specific documentation, provide general helpful guidance and suggest contacting a human support agent for detailed questions. Be friendly, professional, and concise.`;
+        ? `You are a professional customer support agent. Be concise, helpful, and context-aware. Use the search_knowledge_base tool to find relevant information from our documentation. Do not repeat historical resolved answers unless the latest timestamped evidence matches.`
+        : `You are a helpful AI customer support assistant. While you don't have access to specific documentation, provide general helpful guidance and suggest contacting a human support agent for detailed questions. Be friendly, professional, concise, and avoid assuming an issue is solved just because older history mentions a similar fix.`;
 
       // 2. Execute Agent with Streaming
       const provider = this.llmInstances[0]; 
@@ -156,10 +286,15 @@ export class AIService {
           take: 10
         });
         messageHistory = previousMessages.map(msg => 
-          msg.role === 'user' ? new HumanMessage(msg.content) : new AIMessage(msg.content)
+          msg.role === 'user'
+            ? new HumanMessage(`[${AIService.formatTimestamp(msg.createdAt)}] ${msg.content}`)
+            : msg.role === 'system'
+              ? new SystemMessage(`[${AIService.formatTimestamp(msg.createdAt)}] ${msg.content}`)
+              : new AIMessage(`[${AIService.formatTimestamp(msg.createdAt)}] ${msg.content}`)
         );
       }
-      messageHistory.push(new HumanMessage(message));
+      messageHistory.unshift(new SystemMessage(richContext.summary));
+      messageHistory.push(new HumanMessage(`[${new Date().toISOString()}] ${message}`));
 
       // Save user message and create chat if needed
       let currentChatId = chatId;

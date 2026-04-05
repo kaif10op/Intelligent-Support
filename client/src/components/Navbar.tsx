@@ -9,6 +9,9 @@ const Navbar = () => {
   const { session } = useClerk();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const role = (user?.role || '').toUpperCase();
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(role);
+  const isSupport = isAdmin || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes(role);
 
   // Handle post-signout cleanup
   const handleSignOut = async () => {
@@ -43,17 +46,30 @@ const Navbar = () => {
 
           {/* Center Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link to="/kb" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Knowledge Base
-            </Link>
-            <Link to="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Tickets
-            </Link>
+            {isAdmin ? (
+              <>
+                <Link to="/admin/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Admin Dashboard</Link>
+                <Link to="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Tickets</Link>
+                <Link to="/chats" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Chats</Link>
+              </>
+            ) : isSupport ? (
+              <>
+                <Link to="/support-queue" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Support Queue</Link>
+                <Link to="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Tickets</Link>
+                <Link to="/chats" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Chats</Link>
+              </>
+            ) : (
+              <>
+                <Link to="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link>
+                <Link to="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">My Tickets</Link>
+                <Link to="/chats" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Recent Chats</Link>
+              </>
+            )}
           </div>
 
           {/* Right Actions */}
           <div className="flex items-center gap-4">
-            {user?.role === 'ADMIN' && (
+            {isAdmin && (
               <Link
                 to="/admin"
                 className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium text-sm"
@@ -94,11 +110,11 @@ const Navbar = () => {
         {mobileMenuOpen && (
           <div className="md:hidden pb-4 border-t border-border/50 space-y-2">
             <Link
-              to="/kb"
+              to={isAdmin ? '/admin/dashboard' : isSupport ? '/support-queue' : '/dashboard'}
               className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card/50 rounded transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Knowledge Base
+              {isAdmin ? 'Admin Dashboard' : isSupport ? 'Support Queue' : 'Dashboard'}
             </Link>
             <Link
               to="/tickets"
@@ -107,7 +123,14 @@ const Navbar = () => {
             >
               Tickets
             </Link>
-            {user?.role === 'ADMIN' && (
+            <Link
+              to="/chats"
+              className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card/50 rounded transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Chats
+            </Link>
+            {isAdmin && (
               <Link
                 to="/admin"
                 className="block px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded transition-colors flex items-center gap-2"

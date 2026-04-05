@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuthStore } from '../store/useAuthStore';
 import { apiUrl, axiosConfig } from '../config/api';
 import { Button, Card, Badge } from '../components/ui';
+import PresenceIndicators from '../components/PresenceIndicators';
 
 interface Ticket {
   id: string;
@@ -55,7 +56,8 @@ const TicketDetails = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const { user } = useAuthStore();
-  const isAgent = user?.role === 'SUPPORT_AGENT' || user?.role === 'ADMIN';
+  const normalizedRole = (user?.role || '').toUpperCase();
+  const isAgent = ['ADMIN', 'SUPER_ADMIN', 'SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes(normalizedRole);
 
   // Data states
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -74,6 +76,14 @@ const TicketDetails = () => {
   const [showTransfer, setShowTransfer] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
   const [kbInteractions, setKbInteractions] = useState<{ kbId: string; title: string; interactions: number; lastUsedAt: string }[]>([]);
+  const [ticketAiMode, setTicketAiMode] = useState('next_steps');
+  const [ticketAiLoading, setTicketAiLoading] = useState(false);
+  const [ticketAiOutput, setTicketAiOutput] = useState('');
+  const [ticketRunbookLoading, setTicketRunbookLoading] = useState(false);
+  const [chatAiMode, setChatAiMode] = useState('customer_reply');
+  const [chatAiLoading, setChatAiLoading] = useState(false);
+  const [chatAiOutput, setChatAiOutput] = useState('');
+  const [chatAiPackLoading, setChatAiPackLoading] = useState(false);
 
   // Fetch ticket and user details
   useEffect(() => {
@@ -100,7 +110,7 @@ const TicketDetails = () => {
       // If support agent, fetch support agents for transfer
       if (isAgent) {
         try {
-          const agentRes = await axios.get(apiUrl('/api/admin/users'), axiosConfig);
+          const agentRes = await axios.get(apiUrl('/api/tickets/agents'), axiosConfig);
           const agentList = (agentRes.data?.data || []).filter((a: any) => a.role === 'SUPPORT_AGENT' || a.role === 'ADMIN');
           setAgents(agentList.filter((a: any) => a.id !== user?.id));
         } catch (err) {
@@ -193,12 +203,129 @@ const TicketDetails = () => {
     }
   };
 
+  const runTicketCopilot = async () => {
+    if (!ticket) return;
+    try {
+      setTicketAiLoading(true);
+      const context = `${ticket.title}\n${ticket.description}`;
+      const res = await axios.post(
+        apiUrl('/api/tickets/ai/copilot'),
+        { flow: 'problem_solving', mode: ticketAiMode, context, ticketId: ticket.id },
+        axiosConfig
+      );
+      setTicketAiOutput(res.data?.suggestion || 'No output generated.');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to run ticket copilot', 'error');
+    } finally {
+      setTicketAiLoading(false);
+    }
+  };
+
+  const runTicketRunbook = async () => {
+    if (!ticket) return;
+    try {
+      setTicketRunbookLoading(true);
+      const packModes = ['summary', 'diagnostic_checklist', 'next_steps', 'qa_validation_plan', 'customer_update'];
+      const context = `Ticket: ${ticket.title}\nDescription: ${ticket.description}\nPriority: ${ticket.priority}\nStatus: ${ticket.status}`;
+      const res = await axios.post(
+        apiUrl('/api/tickets/ai/copilot'),
+        { flow: 'problem_solving', mode: 'summary', modes: packModes, context, ticketId: ticket.id },
+        axiosConfig
+      );
+      const combined = Array.isArray(res.data?.outputs)
+        ? res.data.outputs.map((o: any) => `## ${o.mode}\n${o.suggestion}`).join('\n\n')
+        : res.data?.suggestion || 'No output generated.';
+      setTicketAiOutput(combined);
+      addToast('AI runbook generated', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to generate AI runbook', 'error');
+    } finally {
+      setTicketRunbookLoading(false);
+    }
+  };
+
+  const insertTicketAiToReply = () => {
+    if (!ticketAiOutput) return;
+    setHumanInput(prev => (prev ? `${prev}\n\n${ticketAiOutput}` : ticketAiOutput));
+    addToast('AI output inserted into response box', 'success');
+    setActiveTab('chats');
+  };
+
+  const runChatAiCopilot = async () => {
+    if (!selectedChat) return;
+    try {
+      setChatAiLoading(true);
+      const conversation = chatMessages.slice(-12).map(m => `${m.role}: ${m.content}`).join('\n');
+      const res = await axios.post(
+        apiUrl('/api/tickets/ai/copilot'),
+        { flow: 'problem_solving', mode: chatAiMode, context: conversation, ticketId: ticket?.id },
+        axiosConfig
+      );
+      setChatAiOutput(res.data?.suggestion || 'No output generated.');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to run chat AI copilot', 'error');
+    } finally {
+      setChatAiLoading(false);
+    }
+  };
+
+  const runChatAiPack = async () => {
+    if (!selectedChat) return;
+    try {
+      setChatAiPackLoading(true);
+      const conversation = chatMessages.slice(-12).map(m => `${m.role}: ${m.content}`).join('\n');
+      const modes = ['summary', 'customer_reply', 'next_steps', 'handoff_bundle'];
+      const res = await axios.post(
+        apiUrl('/api/tickets/ai/copilot'),
+        { flow: 'problem_solving', mode: 'summary', modes, context: conversation, ticketId: ticket?.id },
+        axiosConfig
+      );
+      const combined = Array.isArray(res.data?.outputs)
+        ? res.data.outputs.map((o: any) => `## ${o.mode}\n${o.suggestion}`).join('\n\n')
+        : res.data?.suggestion || 'No output generated.';
+      setChatAiOutput(combined);
+      addToast('Chat AI pack completed', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to run chat AI pack', 'error');
+    } finally {
+      setChatAiPackLoading(false);
+    }
+  };
+
+  const insertChatAiToReply = () => {
+    if (!chatAiOutput) return;
+    setHumanInput(prev => (prev ? `${prev}\n\n${chatAiOutput}` : chatAiOutput));
+    addToast('Chat AI output inserted into reply box', 'success');
+  };
+
   const handleOpenRelatedChat = () => {
-    if (ticket?.chatId) {
+    if (!ticket) return;
+    if (ticket.chatId) {
       navigate(`/chat/${ticket.chatId}`);
       return;
     }
-    addToast('No related chat is linked to this ticket yet', 'error');
+
+    if (!isAgent) {
+      addToast('No related chat is linked to this ticket yet', 'error');
+      return;
+    }
+
+    // Staff can bootstrap a chat directly from ticket.
+    (async () => {
+      try {
+        const res = await axios.post(apiUrl(`/api/tickets/${ticket.id}/init-chat`), {}, axiosConfig);
+        const chatId = res.data?.chat?.id;
+        if (chatId) {
+          setTicket(prev => prev ? { ...prev, chatId } : prev);
+          addToast('Support chat started from ticket', 'success');
+          navigate(`/chat/${chatId}`);
+          return;
+        }
+        addToast('Failed to initialize related chat', 'error');
+      } catch (err: any) {
+        addToast(err.response?.data?.error || 'Failed to initialize related chat', 'error');
+      }
+    })();
   };
 
   if (loading) {
@@ -265,6 +392,9 @@ const TicketDetails = () => {
               {ticket.priority}
             </Badge>
           </div>
+        </div>
+        <div className="mt-3">
+          <PresenceIndicators resourceId={ticket.id} resourceType="ticket" />
         </div>
       </div>
 
@@ -387,6 +517,13 @@ const TicketDetails = () => {
                 <Card className="p-8 text-center space-y-3">
                   <p className="font-medium">No chats yet</p>
                   <p className="text-sm text-muted-foreground">This customer has not started a chat yet.</p>
+                  {isAgent && (
+                    <div className="pt-2">
+                      <Button variant="primary" onClick={handleOpenRelatedChat}>
+                        Start First Chat with Customer
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               ) : (
                 userChats.map(chat => (
@@ -443,13 +580,57 @@ const TicketDetails = () => {
                           Transfer
                         </button>
                         <button
-                          onClick={() => addToast('AI Help - Get suggestions', 'info')}
+                          onClick={runChatAiCopilot}
                           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-sm font-medium"
                         >
                           <Zap size={16} />
-                          AI Help
+                          {chatAiLoading ? 'Running AI...' : 'AI Help'}
+                        </button>
+                        <button
+                          onClick={runChatAiPack}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-sm font-medium"
+                        >
+                          <Zap size={16} />
+                          {chatAiPackLoading ? 'Running Pack...' : 'AI Pack'}
                         </button>
                       </div>
+
+                      <div className="flex gap-2 flex-wrap">
+                        {[
+                          ['customer_reply', 'Customer Reply'],
+                          ['summary', 'Summary'],
+                          ['next_steps', 'Next Steps'],
+                          ['escalation_check', 'Escalation']
+                        ].map(([value, label]) => (
+                          <button
+                            key={value}
+                            onClick={() => setChatAiMode(value)}
+                            className={`px-2 py-1 rounded-md text-xs border ${
+                              chatAiMode === value
+                                ? 'bg-amber-500/20 text-amber-600 border-amber-500/40'
+                                : 'bg-card/40 border-border/40 text-muted-foreground'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {chatAiOutput && (
+                        <div className="p-3 rounded-lg border border-border/50 bg-background/70 text-sm whitespace-pre-wrap">
+                          {chatAiOutput}
+                        </div>
+                      )}
+                      {chatAiOutput && (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="secondary" onClick={insertChatAiToReply}>
+                            Use in Reply
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setChatAiOutput('')}>
+                            Clear
+                          </Button>
+                        </div>
+                      )}
 
                       {showTransfer && (
                         <div className="flex gap-2 flex-wrap p-3 bg-card/50 rounded-lg">
@@ -583,18 +764,74 @@ const TicketDetails = () => {
                 <FileText size={16} className="mr-2" />
                 View Other Tickets
               </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={handleOpenRelatedChat}
-              >
-                <MessageSquare size={16} className="mr-2" />
-                Open Related Chat
-              </Button>
-            </div>
-          </Card>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={handleOpenRelatedChat}
+                >
+                  <MessageSquare size={16} className="mr-2" />
+                  Open Related Chat
+                </Button>
+              </div>
+            </Card>
 
-          {ticket.assignedToId && (
+            <Card className="p-4 space-y-3 bg-amber-500/5 border-amber-500/20">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Zap size={18} className="text-amber-500" />
+                AI Problem Solver
+              </h3>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  ['summary', 'Summary'],
+                  ['root_cause', 'Root Cause'],
+                  ['next_steps', 'Next Steps'],
+                  ['resolution_plan', 'Resolution Plan'],
+                  ['customer_reply', 'Customer Reply'],
+                  ['escalation_check', 'Escalation Check'],
+                  ['diagnostic_checklist', 'Diagnostics'],
+                  ['qa_validation_plan', 'QA Plan']
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => setTicketAiMode(value)}
+                    className={`px-2 py-1 rounded-md text-xs border ${
+                      ticketAiMode === value
+                        ? 'bg-amber-500/20 text-amber-600 border-amber-500/40'
+                        : 'bg-card/40 border-border/40 text-muted-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={runTicketCopilot} disabled={ticketAiLoading}>
+                  {ticketAiLoading ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+                  Run AI
+                </Button>
+                <Button size="sm" variant="outline" onClick={runTicketRunbook} disabled={ticketRunbookLoading}>
+                  {ticketRunbookLoading ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+                  Runbook
+                </Button>
+                {ticketAiOutput && (
+                  <Button size="sm" variant="secondary" onClick={insertTicketAiToReply}>
+                    Use in Reply
+                  </Button>
+                )}
+                {ticketAiOutput && (
+                  <Button size="sm" variant="outline" onClick={() => setTicketAiOutput('')}>
+                    Clear
+                  </Button>
+                )}
+              </div>
+              {ticketAiOutput && (
+                <div className="p-3 rounded-lg bg-background/80 border border-border/50 text-sm whitespace-pre-wrap">
+                  {ticketAiOutput}
+                </div>
+              )}
+            </Card>
+
+            {ticket.assignedToId && (
             <Card className="p-4 space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Assigned To</p>
               <p className="font-semibold">{ticket.assignedToId}</p>
