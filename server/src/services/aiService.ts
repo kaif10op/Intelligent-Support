@@ -2,11 +2,7 @@ import { prisma } from '../prisma.js';
 import { generateEmbeddings } from '../utils/jina.js';
 import { ChatGroq } from '@langchain/groq';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import { ChatOpenAI } from '@langchain/openai';
-import { TavilySearch } from '@langchain/tavily';
-import { DynamicTool } from '@langchain/core/tools';
-import { createReactAgent } from '@langchain/langgraph/prebuilt';
-import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { logger } from '../utils/logger.js';
 
 export interface ChatSession {
@@ -44,14 +40,14 @@ export class AIService {
               assignedAgent: { select: { id: true, name: true, email: true, role: true } },
               tickets: {
                 include: {
-                  assignedTo: { select: { id: true, name: true, email: true, role: true } },
-                  notes: { orderBy: { createdAt: 'desc' }, take: 5 }
+                  assignedTo: { select: { id: true, name: true, email: true, role: true } }
                 },
-                orderBy: { updatedAt: 'desc' }
+                orderBy: { updatedAt: 'desc' },
+                take: 1
               },
               messages: {
                 orderBy: { createdAt: 'desc' },
-                take: 12
+                take: 4
               }
             }
           })
@@ -59,39 +55,38 @@ export class AIService {
       prisma.ticket.findMany({
         where: { userId: currentUserId },
         orderBy: { updatedAt: 'desc' },
-        take: 12,
+        take: 2,
         include: {
-          assignedTo: { select: { id: true, name: true, email: true, role: true } },
-          notes: { orderBy: { createdAt: 'desc' }, take: 3 }
+          assignedTo: { select: { id: true, name: true, email: true, role: true } }
         }
       }),
       prisma.chat.findMany({
         where: { userId: currentUserId },
         orderBy: { updatedAt: 'desc' },
-        take: 8,
+        take: 2,
         include: {
           kb: { select: { id: true, title: true } },
           assignedAgent: { select: { id: true, name: true, email: true, role: true } },
-          messages: { orderBy: { createdAt: 'desc' }, take: 4 }
+          messages: { orderBy: { createdAt: 'desc' }, take: 1 }
         }
       }),
       kbId
         ? prisma.knowledgeBase.findFirst({
             where: { id: kbId },
             include: {
-              documents: {
-                orderBy: { createdAt: 'desc' },
-                take: 5,
-                select: { id: true, filename: true, type: true, createdAt: true }
+                documents: {
+                  orderBy: { createdAt: 'desc' },
+                  take: 3,
+                  select: { id: true, filename: true, type: true, createdAt: true }
+                }
               }
-            }
           })
         : Promise.resolve(null),
       kbId
         ? prisma.document.findMany({
             where: { kbId },
             orderBy: { createdAt: 'desc' },
-            take: 5,
+            take: 3,
             select: { id: true, filename: true, type: true, createdAt: true }
           })
         : Promise.resolve([])
@@ -102,36 +97,34 @@ export class AIService {
 
     const currentTranscript = chat
       ? (chat.messages || [])
-          .slice()
+          .slice(0, 4)
           .reverse()
-          .map((m: any) => `[${AIService.formatTimestamp(m.createdAt)}] ${m.senderName || m.role}: ${AIService.clip(m.content, 360)}`)
+          .map((m: any) => `[${AIService.formatTimestamp(m.createdAt)}] ${m.senderName || m.role}: ${AIService.clip(m.content, 120)}`)
           .join('\n')
       : '';
 
     const activeTicketSummary = activeTickets
       .map((ticket: any) => {
-        const latestNote = ticket.notes?.[0];
-        return `- [${AIService.formatTimestamp(ticket.updatedAt)}] ${ticket.title} (${ticket.status}/${ticket.priority})${ticket.assignedTo?.name ? ` assigned to ${ticket.assignedTo.name}` : ''}${latestNote?.content ? ` | latest note: ${AIService.clip(latestNote.content, 180)}` : ''}`;
+        return `- [${AIService.formatTimestamp(ticket.updatedAt)}] ${ticket.title} (${ticket.status}/${ticket.priority})${ticket.assignedTo?.name ? ` assigned to ${ticket.assignedTo.name}` : ''}`;
       })
       .join('\n');
 
     const historicalResolvedSummary = resolvedTickets
-      .slice(0, 6)
+      .slice(0, 2)
       .map((ticket: any) => {
-        const latestNote = ticket.notes?.[0];
-        return `- [${AIService.formatTimestamp(ticket.updatedAt)}] ${ticket.title} (${ticket.status})${latestNote?.content ? ` | closed with: ${AIService.clip(latestNote.content, 180)}` : ''}`;
+        return `- [${AIService.formatTimestamp(ticket.updatedAt)}] ${ticket.title} (${ticket.status})`;
       })
       .join('\n');
 
     const recentChatSummary = recentChats
       .map((c: any) => {
         const lastMessage = c.messages?.[0];
-        return `- [${AIService.formatTimestamp(c.updatedAt)}] ${c.kb?.title || 'No KB'} | ${c.messages?.length || 0} recent messages${c.assignedAgent?.name ? ` | agent: ${c.assignedAgent.name}` : ''}${lastMessage?.content ? ` | latest: ${AIService.clip(lastMessage.content, 160)}` : ''}`;
+        return `- [${AIService.formatTimestamp(c.updatedAt)}] ${c.kb?.title || 'No KB'}${c.assignedAgent?.name ? ` | agent: ${c.assignedAgent.name}` : ''}${lastMessage?.content ? ` | latest: ${AIService.clip(lastMessage.content, 60)}` : ''}`;
       })
       .join('\n');
 
     const kbSummary = kb
-      ? `KB: ${kb.title}${kb.description ? ` — ${AIService.clip(kb.description, 220)}` : ''}\nRecent documents:\n${kbDocs.map((doc: any) => `- [${AIService.formatTimestamp(doc.createdAt)}] ${doc.filename} (${doc.type})`).join('\n') || '- none'}`
+        ? `KB: ${kb.title}${kb.description ? ` — ${AIService.clip(kb.description, 90)}` : ''}\nDocs: ${kbDocs.map((doc: any) => doc.filename).join(', ') || 'none'}`
       : 'KB: unavailable';
 
     return {
@@ -140,14 +133,51 @@ export class AIService {
         `Current user message: ${message}`,
         chat ? `Current chat: ${chat.id}${chat.assignedAgent?.name ? ` | assigned agent: ${chat.assignedAgent.name}` : ''}` : 'Current chat: not yet created',
         currentTranscript ? `Latest chat transcript:\n${currentTranscript}` : 'Latest chat transcript: none',
-        activeTicketSummary ? `Active tickets for this user:\n${activeTicketSummary}` : 'Active tickets for this user: none',
-        historicalResolvedSummary ? `Historical resolved tickets (do not treat as current unless the latest timestamped evidence matches):\n${historicalResolvedSummary}` : 'Historical resolved tickets: none',
+        activeTicketSummary ? `Active tickets:\n${activeTicketSummary}` : 'Active tickets: none',
+        historicalResolvedSummary ? `Recent resolved tickets:\n${historicalResolvedSummary}` : 'Recent resolved tickets: none',
         recentChatSummary ? `Recent chats:\n${recentChatSummary}` : 'Recent chats: none',
         kbSummary,
-        'Instruction: prefer the latest unresolved context, not stale solved answers. If older notes conflict with current messages, treat older notes as historical only and ask a clarifying question before assuming the issue is solved.'
+        'Instruction: answer from the latest unresolved context. Treat older items as historical unless the current thread confirms them.'
       ].join('\n\n'),
       chat
     };
+  }
+
+  private static async buildKnowledgeContext(kbId: string, message: string) {
+    if (!kbId) return '';
+
+    const queryEmbeddings = await generateEmbeddings([message]);
+    const queryVector = queryEmbeddings?.[0];
+    if (!queryVector) return '';
+
+    const topChunks: any[] = await prisma.$queryRaw`
+      SELECT
+        dc.content,
+        d.filename,
+        1 - (dc.embedding::vector <=> ${queryVector}::vector) as similarity
+      FROM "DocumentChunk" dc
+      JOIN "Document" d ON dc."docId" = d.id
+      WHERE d."kbId" = ${kbId}
+      ORDER BY dc.embedding::vector <=> ${queryVector}::vector
+      LIMIT 2
+    `;
+
+    if (!topChunks.length) return '';
+
+    return topChunks
+      .map((chunk: any) => `- ${chunk.filename}: ${AIService.clip(chunk.content, 220)}`)
+      .join('\n');
+  }
+
+  private static extractChunkText(chunk: any) {
+    const content = chunk?.content;
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+      return content
+        .map((part) => (typeof part === 'string' ? part : part?.text || ''))
+        .join('');
+    }
+    return '';
   }
 
   private static createLLMInstances() {
@@ -216,85 +246,13 @@ export class AIService {
         }
       }
 
-      // 1. Tool Definitions
-      const tools: any[] = [];
-      
-      // Only add KB search tool if we have a KB
-      if (kbMode && kbId) {
-        const kbSearchTool = new DynamicTool({
-          name: 'search_knowledge_base',
-          description: 'Searches the user documents for info.',
-          func: async (query: string) => {
-            const queryEmbeddings = await generateEmbeddings([query]);
-            if (!queryEmbeddings || !queryEmbeddings[0]) return 'Failed to generate search embeddings.';
-            const qVec = queryEmbeddings[0];
-
-            // Use PostgreSQL vector similarity search (<=> is cosine distance)
-            const topChunks: any[] = await prisma.$queryRaw`
-              SELECT 
-                dc.content, 
-                d.filename,
-                1 - (dc.embedding::vector <=> ${qVec}::vector) as similarity
-              FROM "DocumentChunk" dc
-              JOIN "Document" d ON dc."docId" = d.id
-              WHERE d."kbId" = ${kbId}
-              ORDER BY dc.embedding::vector <=> ${qVec}::vector
-              LIMIT 5
-            `;
-
-            if (topChunks.length === 0) return 'No relevant info found.';
-            return topChunks.map(c => `File: ${c.filename}\nContent: ${c.content}`).join('\n\n');
-          }
-        });
-        tools.push(kbSearchTool);
-      }
-
-      // Add web search if available
-      if (process.env.TAVILY_API_KEY) {
-        tools.push(new DynamicTool({
-          name: 'web_search',
-          description: 'Searches the internet.',
-          func: async (query: string) => {
-            const search = new TavilySearch({ maxResults: 3 });
-            // @ts-ignore
-            return await search.invoke(query);
-          }
-        }));
-      }
-
       const richContext = await AIService.buildSupportContext(session, message, kbId || '', chatId);
       const agentModifier = kbMode 
-        ? `You are a professional customer support agent. Be concise, helpful, and context-aware. Use the search_knowledge_base tool to find relevant information from our documentation. Do not repeat historical resolved answers unless the latest timestamped evidence matches.`
-        : `You are a helpful AI customer support assistant. While you don't have access to specific documentation, provide general helpful guidance and suggest contacting a human support agent for detailed questions. Be friendly, professional, concise, and avoid assuming an issue is solved just because older history mentions a similar fix.`;
+        ? `You are a professional customer support agent. Be concise, helpful, and context-aware. Do not repeat historical resolved answers unless the latest timestamped evidence matches.`
+        : `You are a helpful AI customer support assistant. Provide general helpful guidance and suggest contacting a human support agent for detailed questions. Be friendly, professional, and concise.`;
 
-      // 2. Execute Agent with Streaming
       const provider = this.llmInstances[0]; 
       if (!provider) throw new Error('No LLM providers configured');
-
-      const agent = createReactAgent({
-        llm: provider as any,
-        tools,
-        messageModifier: agentModifier
-      });
-
-      // Load context memory
-      let messageHistory: any[] = [];
-      if (chatId) {
-        const previousMessages = await prisma.message.findMany({
-          where: { chatId },
-          orderBy: { createdAt: 'asc' },
-          take: 10
-        });
-        messageHistory = previousMessages.map(msg => 
-          msg.role === 'user'
-            ? new HumanMessage(`[${AIService.formatTimestamp(msg.createdAt)}] ${msg.content}`)
-            : msg.role === 'system'
-              ? new SystemMessage(`[${AIService.formatTimestamp(msg.createdAt)}] ${msg.content}`)
-              : new AIMessage(`[${AIService.formatTimestamp(msg.createdAt)}] ${msg.content}`)
-        );
-      }
-      messageHistory.unshift(new SystemMessage(richContext.summary));
-      messageHistory.push(new HumanMessage(`[${new Date().toISOString()}] ${message}`));
 
       // Save user message and create chat if needed
       let currentChatId = chatId;
@@ -310,22 +268,54 @@ export class AIService {
       }
       await prisma.message.create({ data: { role: 'user', content: message, chatId: currentChatId } });
 
-      // Stream responses
-      let fullAnswer = '';
-      const stream = await agent.stream(
-        { messages: messageHistory },
-        { streamMode: 'messages' }
-      );
+      const knowledgeContext = kbMode && kbId
+        ? await AIService.buildKnowledgeContext(kbId, message).catch((error) => {
+            logger.warn('Failed to build knowledge context', { error, userId, chatId: currentChatId, kbId });
+            return '';
+          })
+        : '';
 
-      for await (const [message, metadata] of stream) {
-        // Robust check for AI message content
-        const isAI = message instanceof AIMessage || (message as any)._getType?.() === 'ai';
-        const hasContent = typeof message.content === 'string' && message.content.length > 0;
-        
-        if (isAI && hasContent) {
-          const content = message.content as string;
+      const buildMessages = (includeContext: boolean) => {
+        const systemPrompt = includeContext
+          ? [
+              agentModifier,
+              `Support context: ${AIService.clip(richContext.summary, 650)}`,
+              knowledgeContext ? `Relevant KB evidence:\n${knowledgeContext}` : 'Relevant KB evidence: none'
+            ].join('\n\n')
+          : agentModifier;
+
+        return [
+          new SystemMessage(systemPrompt),
+          new HumanMessage(`[${new Date().toISOString()}] ${AIService.clip(message, 180)}`)
+        ];
+      };
+
+      const runStream = async (includeContext: boolean) => {
+        let fullAnswer = '';
+        const stream = await provider.stream(buildMessages(includeContext) as any);
+
+        for await (const chunk of stream as any) {
+          const content = AIService.extractChunkText(chunk);
+          if (!content) continue;
           fullAnswer += content;
           onToken(content, currentChatId);
+        }
+
+        return fullAnswer;
+      };
+
+      // Stream response with a compact context first, then a bare fallback only on 413.
+      let fullAnswer = '';
+      try {
+        fullAnswer = await runStream(true);
+      } catch (streamError: any) {
+        const status = streamError?.status || streamError?.response?.status;
+        const messageText = String(streamError?.message || '');
+        if (status === 413 || messageText.includes('413') || messageText.toLowerCase().includes('payload too large')) {
+          logger.warn('Retrying AI stream with bare prompt after 413', { userId, chatId: currentChatId, kbId });
+          fullAnswer = await runStream(false);
+        } else {
+          throw streamError;
         }
       }
 

@@ -24,6 +24,7 @@ interface PresenceUser {
   name: string;
   avatar?: string;
   role: string;
+  userId: string;
   socketId: string;
   seenAt: string;
 }
@@ -84,6 +85,7 @@ export const initializeSocket = (httpServer: HTTPServer) => {
         id: user.userId,
         name: user.username,
         role: user.role,
+        userId: user.userId,
         socketId: socket.id,
         seenAt: now
       });
@@ -117,11 +119,15 @@ export const initializeSocket = (httpServer: HTTPServer) => {
         removePresence(resourceType, resourceId);
       }
     };
-    const hasActiveStaffPresence = (resourceType: ResourceType, resourceId: string) => {
+    const hasActiveStaffPresence = (resourceType: ResourceType, resourceId: string, excludeUserId?: string) => {
       const key = presenceKey(resourceType, resourceId);
       const users = presenceRegistry.get(key);
       if (!users || users.size === 0) return false;
-      return Array.from(users.values() as Iterable<PresenceUser>).some((u) => u.socketId !== socket.id && isStaffRole(u.role));
+      return Array.from(users.values() as Iterable<PresenceUser>).some((u) => {
+        if (u.socketId === socket.id) return false;
+        if (excludeUserId && u.userId === excludeUserId) return false;
+        return isStaffRole(u.role);
+      });
     };
 
     logger.info('User connected', { username: user.username, socketId: socket.id });
@@ -221,8 +227,8 @@ export const initializeSocket = (httpServer: HTTPServer) => {
         : null;
 
       const ticketIds = chatRecord?.tickets?.map((ticket) => ticket.id) || [];
-      const humanActive = (chatId && hasActiveStaffPresence('chat', chatId))
-        || ticketIds.some((ticketId) => hasActiveStaffPresence('ticket', ticketId));
+      const humanActive = (chatId && hasActiveStaffPresence('chat', chatId, user.userId))
+        || ticketIds.some((ticketId) => hasActiveStaffPresence('ticket', ticketId, user.userId));
 
       if (humanActive && chatId) {
         socket.emit('ai-paused', {
