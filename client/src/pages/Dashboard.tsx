@@ -199,34 +199,42 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-xs uppercase tracking-wider text-surface-500">Knowledge bases</p>
-              <div className="mt-2 flex items-end justify-between gap-4">
-                <div className="text-3xl font-bold text-surface-900">{kbs.length}</div>
-                <Database className="w-5 h-5 text-primary-500" />
+            <Card elevated className="p-4 bg-gradient-to-br from-primary-500/8 to-primary-500/0">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground font-semibold">Knowledge bases</p>
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <div className="text-3xl font-bold text-foreground tracking-tight">{kbs.length}</div>
+                <div className="h-9 w-9 rounded-xl bg-primary-500/15 text-primary flex items-center justify-center">
+                  <Database className="w-5 h-5" />
+                </div>
               </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-xs uppercase tracking-wider text-surface-500">Recent chats</p>
-              <div className="mt-2 flex items-end justify-between gap-4">
-                <div className="text-3xl font-bold text-surface-900">{recentChats.length}</div>
-                <MessageSquare className="w-5 h-5 text-primary-500" />
+            </Card>
+            <Card elevated className="p-4 bg-gradient-to-br from-sky-500/10 to-sky-500/0">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground font-semibold">Recent chats</p>
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <div className="text-3xl font-bold text-foreground tracking-tight">{recentChats.length}</div>
+                <div className="h-9 w-9 rounded-xl bg-sky-500/15 text-sky-500 flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
               </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-xs uppercase tracking-wider text-surface-500">Open tickets</p>
-              <div className="mt-2 flex items-end justify-between gap-4">
-                <div className="text-3xl font-bold text-surface-900">{ticketStats.open}</div>
-                <AlertCircle className="w-5 h-5 text-amber-500" />
+            </Card>
+            <Card elevated className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/0">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground font-semibold">Open tickets</p>
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <div className="text-3xl font-bold text-foreground tracking-tight">{ticketStats.open}</div>
+                <div className="h-9 w-9 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
               </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-xs uppercase tracking-wider text-surface-500">Workflow status</p>
-              <div className="mt-2 flex items-end justify-between gap-4">
-                <div className="text-lg font-semibold text-surface-900">{refreshing ? 'Updating' : 'Ready'}</div>
-                <Sparkles className="w-5 h-5 text-secondary-500" />
+            </Card>
+            <Card elevated className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-500/0">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground font-semibold">Workflow status</p>
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <div className="text-lg font-semibold text-foreground">{refreshing ? 'Updating' : 'Ready'}</div>
+                <div className="h-9 w-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5" />
+                </div>
               </div>
-            </div>
+            </Card>
           </div>
 
         {/* Tab Navigation */}

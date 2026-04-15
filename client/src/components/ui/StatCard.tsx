@@ -20,16 +20,18 @@ const StatCard = ({
   className = '',
 }: StatCardProps) => {
   return (
-    <Card elevated className={`p-4 ${className}`}>
-      <div className="flex items-start justify-between">
+    <Card elevated className={`p-5 ${className}`}>
+      <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <p className="text-sm text-surface-600 font-medium mb-2">{label}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">{label}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-bold text-surface-900">{value}</p>
+            <p className="text-3xl font-bold text-foreground tracking-tight">{value}</p>
             {trend && (
               <span
-                className={`text-xs font-medium ${
-                  trend.direction === 'up' ? 'text-green-600' : 'text-red-600'
+                className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold ${
+                  trend.direction === 'up'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                    : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'
                 }`}
               >
                 {trend.direction === 'up' ? '↑' : '↓'} {trend.value}%
@@ -38,7 +40,7 @@ const StatCard = ({
           </div>
         </div>
         {icon && (
-          <div className="text-surface-300 flex-shrink-0 ml-4">
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary-500/10 text-primary">
             {icon}
           </div>
         )}

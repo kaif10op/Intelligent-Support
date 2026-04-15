@@ -20,15 +20,21 @@ const NavigationTabs = ({
   className = '',
 }: NavigationTabsProps) => {
   return (
-    <div className={`flex gap-2 border-b border-surface-200 ${className}`}>
+    <div
+      className={`flex gap-2 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 ${className}`}
+      role="tablist"
+      aria-label="Navigation tabs"
+    >
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
-          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors text-sm font-medium ${
+          role="tab"
+          aria-selected={activeTab === tab.id}
+          className={`flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
             activeTab === tab.id
-              ? 'border-primary-500 text-primary-600'
-              : 'border-transparent text-surface-600 hover:text-surface-900'
+              ? 'bg-primary-500 text-white shadow-sm shadow-primary-500/35'
+              : 'text-muted-foreground hover:bg-surface-100 hover:text-foreground'
           }`}
         >
           {tab.icon && <span className="flex-shrink-0">{tab.icon}</span>}

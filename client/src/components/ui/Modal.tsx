@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 
@@ -20,6 +21,17 @@ const Modal = ({
   size = 'md',
   className = '',
 }: ModalProps) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const sizeStyles = {
@@ -29,17 +41,25 @@ const Modal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="presentation"
+    >
       <div
-        className={`bg-card text-foreground border border-border rounded-lg shadow-lg ${sizeStyles[size]} w-full mx-4 overflow-hidden ${className}`}
+        className={`w-full ${sizeStyles[size]} overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-2xl shadow-slate-900/20 ${className}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || 'Dialog'}
+        onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200">
-            <h2 className="text-lg font-semibold text-surface-900">{title}</h2>
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
             <button
               onClick={onClose}
-              className="text-surface-400 hover:text-surface-600 transition-colors"
+              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -48,13 +68,13 @@ const Modal = ({
         )}
 
         {/* Content */}
-        <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+        <div className="max-h-[65vh] overflow-y-auto px-6 py-4">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-surface-200 flex gap-3 justify-end">
+          <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
             {footer}
           </div>
         )}
