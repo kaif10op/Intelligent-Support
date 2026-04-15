@@ -81,7 +81,7 @@ const UserPreferences = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center gap-3">
+      <div className="min-h-screen bg-background flex items-center justify-center gap-3">
         <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
         <p className="text-surface-600">Loading preferences...</p>
       </div>
@@ -89,7 +89,7 @@ const UserPreferences = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-surface-200 bg-surface-50">
         <div className="px-6 py-6">

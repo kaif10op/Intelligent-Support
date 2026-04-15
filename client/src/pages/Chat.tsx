@@ -770,7 +770,7 @@ const Chat = () => {
                       : m.role === 'human'
                       ? 'bg-blue-500/20 border border-blue-500/30 text-foreground'
                       : m.role === 'system'
-                      ? 'bg-gray-600/20 border border-gray-600/30 text-muted-foreground italic'
+                      ? 'bg-surface-200/60 dark:bg-surface-800/70 border border-border/60 text-muted-foreground italic'
                       : 'glass-elevated border border-border/50'
                   }`}
                 >

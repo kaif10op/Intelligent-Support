@@ -29,7 +29,7 @@ const AnalyticsDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
         <p className="text-surface-600">Loading analytics...</p>
       </div>
@@ -38,7 +38,7 @@ const AnalyticsDashboard = () => {
 
   if (!analytics) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-background">
         <div className="px-6 py-6">
           <Card elevated className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
@@ -56,9 +56,9 @@ const AnalyticsDashboard = () => {
     .map(([date, count]) => ({ date, conversations: count }));
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50">
+      <div className="border-b border-border bg-card/60 backdrop-blur">
         <div className="px-6 py-6">
           <h1 className="heading-1">Analytics Dashboard</h1>
           <p className="text-surface-600 mt-1">System performance and user engagement metrics</p>
@@ -118,7 +118,14 @@ const AnalyticsDashboard = () => {
                       <Cell key={`cell-${index}`} fill={color} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--chart-tooltip-bg)',
+                      border: '1px solid var(--chart-tooltip-border)',
+                      borderRadius: '8px',
+                      color: 'var(--chart-tooltip-text)'
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -130,10 +137,17 @@ const AnalyticsDashboard = () => {
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={Object.entries(analytics.priorityDistribution || {}).map(([name, value]) => ({ name, value }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                  <XAxis dataKey="name" stroke="#868e96" />
-                  <YAxis stroke="#868e96" />
-                  <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                  <XAxis dataKey="name" stroke="var(--chart-axis)" />
+                  <YAxis stroke="var(--chart-axis)" />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--chart-tooltip-bg)',
+                      border: '1px solid var(--chart-tooltip-border)',
+                      borderRadius: '8px',
+                      color: 'var(--chart-tooltip-text)'
+                    }}
+                  />
                   <Bar dataKey="value" fill="#3b82f6" name="Count" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -146,10 +160,17 @@ const AnalyticsDashboard = () => {
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                  <XAxis dataKey="date" stroke="#868e96" />
-                  <YAxis stroke="#868e96" />
-                  <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                  <XAxis dataKey="date" stroke="var(--chart-axis)" />
+                  <YAxis stroke="var(--chart-axis)" />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--chart-tooltip-bg)',
+                      border: '1px solid var(--chart-tooltip-border)',
+                      borderRadius: '8px',
+                      color: 'var(--chart-tooltip-text)'
+                    }}
+                  />
                   <Legend />
                   <Line type="monotone" dataKey="conversations" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} name="Messages" />
                 </LineChart>
@@ -179,7 +200,14 @@ const AnalyticsDashboard = () => {
                     <Cell fill="#3b82f6" />
                     <Cell fill="#10b981" />
                   </Pie>
-                  <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--chart-tooltip-bg)',
+                      border: '1px solid var(--chart-tooltip-border)',
+                      borderRadius: '8px',
+                      color: 'var(--chart-tooltip-text)'
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>

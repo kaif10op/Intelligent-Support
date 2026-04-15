@@ -31,7 +31,7 @@ const Modal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div
-        className={`bg-white rounded-lg shadow-lg ${sizeStyles[size]} w-full mx-4 overflow-hidden ${className}`}
+        className={`bg-card text-foreground border border-border rounded-lg shadow-lg ${sizeStyles[size]} w-full mx-4 overflow-hidden ${className}`}
       >
         {/* Header */}
         {title && (

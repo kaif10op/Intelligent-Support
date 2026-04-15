@@ -127,7 +127,7 @@ const RecentChats = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-surface-200 bg-surface-50">
         <div className="px-6 py-6">

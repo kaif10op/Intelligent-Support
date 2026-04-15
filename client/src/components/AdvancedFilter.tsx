@@ -82,10 +82,10 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
       {/* Filter Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-lg hover:bg-primary/15 transition-colors"
       >
         <svg
-          className="w-5 h-5 text-blue-600"
+          className="w-5 h-5 text-primary"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -97,9 +97,9 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
             d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
           />
         </svg>
-        <span className="font-medium text-blue-900">Filters</span>
+        <span className="font-medium text-foreground">Filters</span>
         {activeFilterCount > 0 && (
-          <span className="ml-2 px-2 py-1 bg-blue-600 text-white text-xs rounded-full">
+          <span className="ml-2 px-2 py-1 bg-primary text-white text-xs rounded-full">
             {activeFilterCount}
           </span>
         )}
@@ -110,28 +110,28 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
 
       {/* Filter Panel */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+        <div className="absolute top-full left-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-50">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Advanced Filters</h3>
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="text-lg font-semibold text-foreground">Advanced Filters</h3>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-muted-foreground hover:text-foreground"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Tabs for filter groups */}
-          <div className="flex border-b border-gray-200 overflow-x-auto">
+          <div className="flex border-b border-border overflow-x-auto">
             {filters.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setActiveTab(index)}
                 className={`px-4 py-2 text-sm font-medium ${
                   activeTab === index
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {filters[index].label}
@@ -146,7 +146,7 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
                 {filters[activeTab].options?.map(option => (
                   <label
                     key={option.id}
-                    className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer"
+                    className="flex items-center p-2 hover:bg-surface-100 dark:hover:bg-surface-800 rounded cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -158,12 +158,12 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
                       onChange={() =>
                         handleSelectChange(filters[activeTab].key, option.id)
                       }
-                      className="w-4 h-4 text-blue-600 rounded"
+                      className="w-4 h-4 text-primary rounded"
                     />
                     <div className="ml-3 flex items-center justify-between flex-1">
-                      <span className="text-sm text-gray-700">{option.label}</span>
+                      <span className="text-sm text-foreground">{option.label}</span>
                       {option.count && (
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        <span className="text-xs text-muted-foreground bg-surface-100 dark:bg-surface-800 px-2 py-1 rounded">
                           {option.count}
                         </span>
                       )}
@@ -176,7 +176,7 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
             {filters[activeTab].type === 'date-range' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     From Date
                   </label>
                   <input
@@ -187,11 +187,11 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
                     onChange={e =>
                       handleDateChange(filters[activeTab].key, e.target.value, 'from')
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     To Date
                   </label>
                   <input
@@ -202,7 +202,7 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
                     onChange={e =>
                       handleDateChange(filters[activeTab].key, e.target.value, 'to')
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
                   />
                 </div>
               </div>
@@ -216,22 +216,22 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
                 onChange={e =>
                   handleTextChange(filters[activeTab].key, e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary/40 outline-none"
               />
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 p-4 border-t border-gray-200">
+          <div className="flex gap-2 p-4 border-t border-border">
             <button
               onClick={handleClear}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+              className="flex-1 px-4 py-2 text-foreground bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 rounded-lg font-medium transition-colors"
             >
               Clear
             </button>
             <button
               onClick={handleApply}
-              className="flex-1 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
+              className="flex-1 px-4 py-2 text-white bg-primary hover:bg-primary-700 rounded-lg font-medium transition-colors"
             >
               Apply Filters
             </button>

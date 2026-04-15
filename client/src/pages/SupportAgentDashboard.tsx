@@ -243,7 +243,7 @@ const SupportAgentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <div className="border-b border-surface-200 bg-surface-50 sticky top-0 z-40">
         <div className="px-6 py-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">

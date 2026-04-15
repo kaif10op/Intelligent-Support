@@ -39,105 +39,36 @@ const Breadcrumb = ({ items = [] }: BreadcrumbProps) => {
   if (breadcrumbs.length <= 1) return null;
 
   return (
-    <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-      <ol className="breadcrumb-list">
+    <nav className="mb-2" aria-label="Breadcrumb">
+      <ol className="flex flex-wrap items-center gap-1 text-sm">
         {breadcrumbs.map((crumb, index) => (
-          <li key={index} className="breadcrumb-item">
+          <li key={index} className="flex items-center gap-1">
             {index === 0 ? (
-              <Link to={crumb.path || '/'} className="breadcrumb-link home">
+              <Link
+                to={crumb.path || '/'}
+                className="flex items-center text-accent hover:text-primary transition-colors"
+              >
                 <Home size={16} />
               </Link>
             ) : index === breadcrumbs.length - 1 ? (
-              <span className="breadcrumb-current">{crumb.label}</span>
+              <span className="font-semibold text-foreground">{crumb.label}</span>
             ) : (
               <>
-                <Link to={crumb.path || '/'} className="breadcrumb-link">
+                <Link
+                  to={crumb.path || '/'}
+                  className="text-muted-foreground hover:text-primary transition-colors max-sm:hidden"
+                >
                   {crumb.label}
                 </Link>
-                <ChevronRight size={16} className="breadcrumb-separator" />
+                <ChevronRight size={16} className="text-muted-foreground/60" />
               </>
             )}
             {index < breadcrumbs.length - 1 && index > 0 && (
-              <ChevronRight size={16} className="breadcrumb-separator" />
+              <ChevronRight size={16} className="text-muted-foreground/60" />
             )}
           </li>
         ))}
       </ol>
-
-      <style>{`
-        .breadcrumb-nav {
-          margin-bottom: 24px;
-        }
-
-        .breadcrumb-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          flex-wrap: wrap;
-        }
-
-        .breadcrumb-item {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .breadcrumb-link, .breadcrumb-current {
-          font-size: 0.9rem;
-          transition: 0.2s;
-        }
-
-        .breadcrumb-link {
-          color: var(--text-muted);
-          text-decoration: none;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .breadcrumb-link:hover {
-          color: var(--accent-primary);
-        }
-
-        .breadcrumb-link.home {
-          color: var(--accent-secondary);
-        }
-
-        .breadcrumb-link.home:hover {
-          color: var(--accent-primary);
-        }
-
-        .breadcrumb-current {
-          color: #fff;
-          font-weight: 600;
-        }
-
-        .breadcrumb-separator {
-          color: var(--text-muted);
-          opacity: 0.5;
-        }
-
-        @media (max-width: 640px) {
-          .breadcrumb-link {
-            display: none;
-          }
-
-          .breadcrumb-list {
-            gap: 0;
-          }
-
-          .breadcrumb-item:not(:last-child) {
-            display: none;
-          }
-
-          .breadcrumb-current {
-            font-size: 0.85rem;
-          }
-        }
-      `}</style>
     </nav>
   );
 };

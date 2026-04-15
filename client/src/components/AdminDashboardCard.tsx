@@ -176,7 +176,7 @@ export const AdminDashboard: React.FC = () => {
                         {[...Array(5)].map((_, i) => (
                           <span
                             key={i}
-                            className={`text-lg ${i < Math.round(agent.rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                            className={`text-lg ${i < Math.round(agent.rating) ? 'text-yellow-400' : 'text-surface-400'}`}
                           >
                             ★
                           </span>

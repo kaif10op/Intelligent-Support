@@ -66,19 +66,19 @@ export const PresenceIndicators: React.FC<PresenceIndicatorsProps> = ({
             {activeUsers.slice(0, 3).map(user => (
               <div
                 key={user.id}
-                className="w-6 h-6 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-xs text-white font-semibold"
+                className="w-6 h-6 rounded-full bg-primary border-2 border-card flex items-center justify-center text-xs text-white font-semibold"
                 title={user.name}
               >
                 {user.name.charAt(0).toUpperCase()}
               </div>
             ))}
             {activeUsers.length > 3 && (
-              <div className="w-6 h-6 rounded-full bg-gray-400 border-2 border-white flex items-center justify-center text-xs text-white font-semibold">
+              <div className="w-6 h-6 rounded-full bg-surface-500 border-2 border-card flex items-center justify-center text-xs text-white font-semibold">
                 +{activeUsers.length - 3}
               </div>
             )}
           </div>
-          <span className="text-gray-600">
+          <span className="text-muted-foreground">
             {activeUsers.length} viewing
           </span>
         </div>

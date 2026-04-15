@@ -113,7 +113,7 @@ const KBDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-background">
         <div className="border-b border-surface-200 bg-surface-50">
           <div className="px-6 py-6 space-y-4">
             <div className="h-8 bg-surface-200 rounded w-1/3 animate-pulse"></div>
@@ -155,7 +155,7 @@ const KBDetails = () => {
 
   if (!kb) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Card elevated className="p-8 text-center max-w-md">
           <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
           <p className="text-surface-900 font-semibold">Knowledge Base not found</p>
@@ -168,7 +168,7 @@ const KBDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-surface-200 bg-surface-50">
         <div className="px-6 py-6">

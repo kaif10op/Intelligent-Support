@@ -13,16 +13,29 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   label,
   showPercentage = true
 }) => {
-  const getStatusColor = () => {
+  const getStatusClass = () => {
     switch (status) {
       case 'success':
-        return '#4ade80';
+        return 'bg-accent-500';
       case 'error':
-        return '#ff6464';
+        return 'bg-destructive';
       case 'processing':
-        return '#00d2ff';
+        return 'bg-primary-500';
       default:
-        return '#8a2be2';
+        return 'bg-primary-600';
+    }
+  };
+
+  const getStatusTextClass = () => {
+    switch (status) {
+      case 'success':
+        return 'text-accent-600';
+      case 'error':
+        return 'text-destructive';
+      case 'processing':
+        return 'text-primary-500';
+      default:
+        return 'text-primary-600';
     }
   };
 
@@ -40,78 +53,26 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   };
 
   return (
-    <div className="progress-bar-container">
-      {label && <div className="progress-label">{label}</div>}
-      <div className="progress-bar-wrapper">
-        <div className="progress-bar-background">
+    <div className="flex flex-col gap-2">
+      {label && <div className="text-sm font-medium text-foreground">{label}</div>}
+      <div className="flex items-center gap-3">
+        <div className="h-2 flex-1 overflow-hidden rounded bg-surface-200 dark:bg-surface-800 border border-border/40">
           <div
-            className="progress-bar-fill"
+            className={`h-full rounded transition-all duration-300 ${getStatusClass()}`}
             style={{
               width: `${Math.min(progress, 100)}%`,
-              backgroundColor: getStatusColor(),
-              transition: 'width 0.3s ease'
             }}
           />
         </div>
         {showPercentage && (
-          <div className="progress-text">
+          <div className="min-w-10 text-right text-xs font-medium text-muted-foreground">
             {status === 'error' ? 'Error' : `${Math.round(progress)}%`}
           </div>
         )}
       </div>
-      <div className="progress-status" style={{ color: getStatusColor() }}>
+      <div className={`text-xs font-medium ${getStatusTextClass()}`}>
         {getStatusText()}
       </div>
-
-      <style>{`
-        .progress-bar-container {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .progress-label {
-          font-size: 0.9rem;
-          font-weight: 500;
-          color: #fff;
-        }
-
-        .progress-bar-wrapper {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .progress-bar-background {
-          flex: 1;
-          height: 8px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 4px;
-          overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .progress-bar-fill {
-          height: 100%;
-          border-radius: 4px;
-          transition: width 0.3s ease;
-          box-shadow: 0 0 8px currentColor;
-        }
-
-        .progress-text {
-          min-width: 40px;
-          text-align: right;
-          font-size: 0.85rem;
-          color: var(--text-muted);
-          font-weight: 500;
-        }
-
-        .progress-status {
-          font-size: 0.85rem;
-          font-weight: 500;
-          transition: color 0.3s ease;
-        }
-      `}</style>
     </div>
   );
 };

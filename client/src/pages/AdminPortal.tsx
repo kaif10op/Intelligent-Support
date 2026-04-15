@@ -72,7 +72,7 @@ const AdminPortal = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
         <p className="text-surface-600">Loading Admin Portal...</p>
       </div>
@@ -80,9 +80,9 @@ const AdminPortal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50">
+      <div className="border-b border-border bg-card/60 backdrop-blur">
         <div className="px-6 py-6 flex items-start justify-between">
           <div>
             <h1 className="heading-1">Admin Portal</h1>
@@ -179,10 +179,17 @@ const AdminPortal = () => {
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={stats?.ticketTrends || []}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                      <XAxis dataKey="date" stroke="#868e96" />
-                      <YAxis stroke="#868e96" />
-                      <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                      <XAxis dataKey="date" stroke="var(--chart-axis)" />
+                      <YAxis stroke="var(--chart-axis)" />
+                      <Tooltip
+                        contentStyle={{
+                          background: 'var(--chart-tooltip-bg)',
+                          border: '1px solid var(--chart-tooltip-border)',
+                          borderRadius: '8px',
+                          color: 'var(--chart-tooltip-text)'
+                        }}
+                      />
                       <Line
                         type="monotone"
                         dataKey="created"
@@ -225,9 +232,16 @@ const AdminPortal = () => {
                         <Cell fill="#3b82f6" />
                         <Cell fill="#10b981" />
                         <Cell fill="#f59e0b" />
-                        <Cell fill="#6b7280" />
+                        <Cell fill="#64748b" />
                       </Pie>
-                      <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }} />
+                      <Tooltip
+                        contentStyle={{
+                          background: 'var(--chart-tooltip-bg)',
+                          border: '1px solid var(--chart-tooltip-border)',
+                          borderRadius: '8px',
+                          color: 'var(--chart-tooltip-text)'
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -245,10 +259,17 @@ const AdminPortal = () => {
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats?.confidenceAnalysis || []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                    <XAxis dataKey="range" stroke="#868e96" />
-                    <YAxis stroke="#868e96" />
-                    <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                    <XAxis dataKey="range" stroke="var(--chart-axis)" />
+                    <YAxis stroke="var(--chart-axis)" />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--chart-tooltip-bg)',
+                        border: '1px solid var(--chart-tooltip-border)',
+                        borderRadius: '8px',
+                        color: 'var(--chart-tooltip-text)'
+                      }}
+                    />
                     <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

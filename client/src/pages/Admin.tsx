@@ -357,11 +357,16 @@ const Admin = () => {
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stats?.confidenceDist || []}>
-                      <XAxis dataKey="name" stroke="#868e96" fontSize={12} />
-                      <YAxis stroke="#868e96" fontSize={12} />
+                      <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={12} />
+                      <YAxis stroke="var(--chart-axis)" fontSize={12} />
                       <Tooltip
-                        contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }}
-                        cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+                        contentStyle={{
+                          background: 'var(--chart-tooltip-bg)',
+                          border: '1px solid var(--chart-tooltip-border)',
+                          borderRadius: '8px',
+                          color: 'var(--chart-tooltip-text)'
+                        }}
+                        cursor={{ fill: 'rgba(59, 130, 246, 0.14)' }}
                       />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                         {stats?.confidenceDist?.map((_entry: any, index: number) => (
@@ -392,7 +397,14 @@ const Admin = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e9ecef', borderRadius: '8px' }} />
+                      <Tooltip
+                        contentStyle={{
+                          background: 'var(--chart-tooltip-bg)',
+                          border: '1px solid var(--chart-tooltip-border)',
+                          borderRadius: '8px',
+                          color: 'var(--chart-tooltip-text)'
+                        }}
+                      />
                       <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
                   </ResponsiveContainer>

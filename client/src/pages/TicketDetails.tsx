@@ -353,7 +353,7 @@ const TicketDetails = () => {
     OPEN: 'bg-blue-100 text-blue-800',
     IN_PROGRESS: 'bg-amber-100 text-amber-800',
     RESOLVED: 'bg-green-100 text-green-800',
-    CLOSED: 'bg-gray-100 text-gray-800'
+    CLOSED: 'bg-surface-100 text-surface-700'
   };
 
   const priorityColors: Record<string, string> = {
@@ -556,7 +556,7 @@ const TicketDetails = () => {
                             msg.role === 'user' || msg.role === 'human'
                               ? 'bg-primary text-primary-foreground rounded-br-none'
                               : msg.role === 'system'
-                              ? 'bg-gray-200 text-gray-800 rounded'
+                              ? 'bg-surface-200 text-surface-700 rounded'
                               : 'bg-secondary text-secondary-foreground rounded-bl-none'
                           }`}
                         >

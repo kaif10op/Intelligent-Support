@@ -278,7 +278,7 @@ const Tickets = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
         <p className="text-surface-600">Loading tickets...</p>
       </div>
@@ -286,7 +286,7 @@ const Tickets = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-surface-200 bg-surface-50 sticky top-0 z-40">
         <div className="px-6 py-6 flex items-center justify-between gap-4">
