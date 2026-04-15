@@ -6,6 +6,20 @@
 
 @layer base {
   :root {
+    --color-background: 255 255 255;
+    --color-foreground: 33 37 41;
+    --color-card: 255 255 255;
+    --color-popover: 255 255 255;
+    --color-border: 233 236 239;
+    --color-input: 255 255 255;
+    --color-ring: 59 130 246;
+    --color-muted: 241 243 245;
+    --color-muted-foreground: 108 117 125;
+    --color-secondary: 108 117 125;
+    --color-secondary-foreground: 255 255 255;
+    --color-destructive: 239 68 68;
+    --color-destructive-foreground: 255 255 255;
+
     --accent-primary: #3b82f6;
     --accent-secondary: #10b981;
     --text-muted: #64748b;
@@ -26,6 +40,20 @@
   }
 
   .dark {
+    --color-background: 3 7 18;
+    --color-foreground: 248 250 252;
+    --color-card: 17 24 39;
+    --color-popover: 17 24 39;
+    --color-border: 31 41 55;
+    --color-input: 15 23 42;
+    --color-ring: 96 165 250;
+    --color-muted: 31 41 55;
+    --color-muted-foreground: 148 163 184;
+    --color-secondary: 71 85 105;
+    --color-secondary-foreground: 248 250 252;
+    --color-destructive: 248 113 113;
+    --color-destructive-foreground: 15 23 42;
+
     --text-muted: #94a3b8;
     --bg-card: #111827;
     --glass-border: rgba(51, 65, 85, 0.45);
