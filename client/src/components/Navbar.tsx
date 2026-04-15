@@ -1,17 +1,36 @@
 import { useAuthStore } from '../store/useAuthStore.js';
 import { UserButton, useClerk } from '@clerk/react';
 import { Shield, Menu, X, Sparkles } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 
 const Navbar = () => {
   const { user, logout } = useAuthStore();
   const { session } = useClerk();
+  const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const role = (user?.role || '').toUpperCase();
   const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(role);
   const isSupport = isAdmin || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes(role);
+
+  const primaryLinks = isAdmin
+    ? [
+        { to: '/admin/dashboard', label: 'Admin Dashboard' },
+        { to: '/tickets', label: 'Tickets' },
+        { to: '/chats', label: 'Chats' }
+      ]
+    : isSupport
+    ? [
+        { to: '/support-queue', label: 'Support Queue' },
+        { to: '/tickets', label: 'Tickets' },
+        { to: '/chats', label: 'Chats' }
+      ]
+    : [
+        { to: '/dashboard', label: 'Dashboard' },
+        { to: '/tickets', label: 'My Tickets' },
+        { to: '/chats', label: 'Recent Chats' }
+      ];
 
   // Handle post-signout cleanup
   const handleSignOut = useCallback(async () => {
@@ -32,50 +51,69 @@ const Navbar = () => {
     }
   }, [session, user, handleSignOut]);
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileMenuOpen]);
+
+  const desktopNavClass = ({ isActive }: { isActive: boolean }) =>
+    `rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+      isActive
+        ? 'bg-primary/10 text-primary'
+        : 'text-muted-foreground hover:bg-surface-100 hover:text-foreground'
+    }`;
+
+  const mobileNavClass = ({ isActive }: { isActive: boolean }) =>
+    `block rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+      isActive
+        ? 'bg-primary/10 text-primary'
+        : 'text-muted-foreground hover:bg-surface-100 hover:text-foreground'
+    }`;
+
   return (
-    <nav className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between gap-3">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-sm">
-              <Sparkles className="w-4.5 h-4.5 text-white" />
+          <Link to="/" className="group flex items-center gap-3 transition-opacity hover:opacity-90">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-sm shadow-primary/20">
+              <Sparkles className="h-4.5 w-4.5 text-white" />
             </div>
             <div className="hidden sm:block">
-              <div className="font-semibold text-sm text-foreground leading-none">Intelligent Support</div>
-              <div className="text-[11px] text-muted-foreground mt-1">AI + human support workspace</div>
+              <div className="text-sm font-semibold leading-none text-foreground">Intelligent Support</div>
+              <div className="mt-1 text-[11px] text-muted-foreground">AI + human support workspace</div>
             </div>
           </Link>
 
           {/* Center Navigation */}
-          <div className="hidden md:flex items-center gap-8">
-            {isAdmin ? (
-              <>
-                <Link to="/admin/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Admin Dashboard</Link>
-                <Link to="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Tickets</Link>
-                <Link to="/chats" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Chats</Link>
-              </>
-            ) : isSupport ? (
-              <>
-                <Link to="/support-queue" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Support Queue</Link>
-                <Link to="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Tickets</Link>
-                <Link to="/chats" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Chats</Link>
-              </>
-            ) : (
-              <>
-                <Link to="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link>
-                <Link to="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">My Tickets</Link>
-                <Link to="/chats" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Recent Chats</Link>
-              </>
-            )}
+          <div className="hidden md:block">
+            <div className="flex items-center gap-1 rounded-xl border border-border bg-card/70 p-1">
+              {primaryLinks.map((link) => (
+                <NavLink key={link.to} to={link.to} className={desktopNavClass}>
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {isAdmin && (
               <Link
                 to="/admin"
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium text-sm border border-primary/10"
+                className="hidden sm:flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
               >
                 <Shield className="w-4 h-4" />
                 Admin
@@ -89,7 +127,8 @@ const Navbar = () => {
                   elements: {
                     avatarBox: "w-9 h-9",
                     userButtonPopoverCard: "shadow-xl border border-border/50",
-                    userButtonPopoverActionButton: "hover:bg-primary/10"
+                    userButtonPopoverActionButton: "hover:bg-primary/10",
+                    userButtonTrigger: "focus:shadow-none"
                   }
                 }}
               />
@@ -98,7 +137,8 @@ const Navbar = () => {
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 hover:bg-card/50 rounded-lg transition-colors"
+              className="rounded-lg p-2 transition-colors hover:bg-card/60 md:hidden"
+              aria-label="Toggle mobile navigation"
             >
               {mobileMenuOpen ? (
                 <X className="w-5 h-5" />
@@ -111,32 +151,23 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden pb-4 border-t border-border/50 space-y-2">
-            <Link
-              to={isAdmin ? '/admin/dashboard' : isSupport ? '/support-queue' : '/dashboard'}
-              className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card/50 rounded transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {isAdmin ? 'Admin Dashboard' : isSupport ? 'Support Queue' : 'Dashboard'}
-            </Link>
-            <Link
-              to="/tickets"
-              className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card/50 rounded transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Tickets
-            </Link>
-            <Link
-              to="/chats"
-              className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card/50 rounded transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Chats
-            </Link>
+          <div className="space-y-2 border-t border-border/50 pb-4 pt-3 md:hidden">
+            <div className="rounded-xl border border-border bg-card/80 p-2">
+              {primaryLinks.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  className={mobileNavClass}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
             {isAdmin && (
               <Link
                 to="/admin"
-                className="block px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded transition-colors flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <Shield className="w-4 h-4" />
@@ -144,7 +175,7 @@ const Navbar = () => {
               </Link>
             )}
             {/* Mobile User Button */}
-            <div className="px-4 py-2">
+            <div className="px-2 py-2">
               <UserButton
                 appearance={{
                   elements: {
