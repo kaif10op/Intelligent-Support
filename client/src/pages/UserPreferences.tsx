@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Settings, Bell, Mic, Loader2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { Card, Select, Button, NavigationTabs } from '../components/ui';
+import { applyTheme, getStoredTheme } from '../utils/theme';
 
 interface UserPreferences {
   language: string;
@@ -19,7 +20,7 @@ interface UserPreferences {
 const UserPreferences = () => {
   const [preferences, setPreferences] = useState<UserPreferences>({
     language: 'en',
-    theme: 'dark',
+    theme: getStoredTheme(),
     emailNotifications: true,
     chatNotifications: true,
     ticketNotifications: true,
@@ -39,11 +40,17 @@ const UserPreferences = () => {
     loadPreferences();
   }, []);
 
+  useEffect(() => {
+    applyTheme(preferences.theme);
+  }, [preferences.theme]);
+
   const loadPreferences = async () => {
     try {
       const stored = localStorage.getItem('userPreferences');
       if (stored) {
         setPreferences(JSON.parse(stored));
+      } else {
+        setPreferences((prev) => ({ ...prev, theme: getStoredTheme() }));
       }
       setLoading(false);
     } catch (error) {

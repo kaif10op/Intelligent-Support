@@ -3,20 +3,21 @@ import { useAuthStore } from '../store/useAuthStore.js';
 import { User, Lock, Moon, LayoutGrid, ShieldCheck } from 'lucide-react';
 import { Card } from '../components/ui';
 import { UserButton } from '@clerk/react';
+import { applyTheme, getStoredTheme, type ThemeMode } from '../utils/theme';
 
 const Settings = () => {
   const { user } = useAuthStore();
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState<ThemeMode>(getStoredTheme());
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setDarkMode(savedTheme === 'dark');
-  }, []);
+    applyTheme(darkMode);
+  }, [darkMode]);
 
   const toggleDarkMode = () => {
     const newTheme = darkMode ? 'light' : 'dark';
-    setDarkMode(!darkMode);
+    setDarkMode(newTheme);
     localStorage.setItem('theme', newTheme);
+    applyTheme(newTheme);
   };
 
   return (
@@ -139,17 +140,12 @@ const Settings = () => {
                   <p className="text-xs text-surface-600">Saved locally and applied on refresh</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={darkMode}
-                    onChange={toggleDarkMode}
-                    className="sr-only peer"
-                  />
+                  <input type="checkbox" checked={darkMode === 'dark'} onChange={toggleDarkMode} className="sr-only peer" />
                   <div className={`w-11 h-6 rounded-full transition-all ${
-                    darkMode ? 'bg-primary-500' : 'bg-surface-300'
+                    darkMode === 'dark' ? 'bg-primary-500' : 'bg-surface-300'
                   }`}></div>
                   <span className={`absolute w-5 h-5 bg-white rounded-full transition-all ${
-                    darkMode ? 'translate-x-5' : 'translate-x-0.5'
+                    darkMode === 'dark' ? 'translate-x-5' : 'translate-x-0.5'
                   } top-0.5 left-0.5`}></span>
                 </label>
               </div>

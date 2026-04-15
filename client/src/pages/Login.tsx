@@ -1,7 +1,7 @@
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
 import { useUser } from '@clerk/react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Bot, ShieldCheck, ArrowRight, BadgeCheck, Clock3, Users2 } from 'lucide-react';
 import { API_ENDPOINTS, axiosConfig } from '../config/api';
@@ -167,6 +167,12 @@ const Login = () => {
                   <span className="text-primary font-medium flex items-center gap-1">
                     Create account <ArrowRight className="w-3 h-3" />
                   </span>
+                </div>
+
+                <div className="flex items-center justify-center">
+                  <Link to="/help" className="text-xs font-medium text-primary hover:underline">
+                    New here? Read the quick start guide
+                  </Link>
                 </div>
               </div>
             </div>

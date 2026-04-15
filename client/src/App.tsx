@@ -66,7 +66,7 @@ const RoleBasedHome = () => {
 
 
 function App() {
-  const { checkAuth, initialized } = useAuthStore();
+  const { checkAuth, initialized, user } = useAuthStore();
 
   useEffect(() => {
     if (!initialized) {
@@ -123,11 +123,10 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/help" element={
-              <ProtectedRoute>
-                <Layout><Help /></Layout>
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/help"
+              element={user ? <Layout><Help /></Layout> : <Help />}
+            />
 
             <Route path="/tickets" element={
               <ProtectedRoute>

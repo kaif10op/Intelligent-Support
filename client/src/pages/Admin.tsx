@@ -224,7 +224,7 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-surface-50 flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
         <p className="text-surface-600">Loading admin dashboard...</p>
       </div>
@@ -232,9 +232,9 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-50 to-white">
+    <div className="min-h-screen bg-surface-50">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-white sticky top-0 z-40">
+      <div className="border-b border-surface-200 bg-surface-50/90 backdrop-blur sticky top-0 z-40">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -256,6 +256,20 @@ const Admin = () => {
               Refresh
             </Button>
           </div>
+
+          <Card className="p-4 mb-4 border border-primary-200 bg-primary-50/70">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-surface-900">Role setup</p>
+                <p className="text-sm text-surface-600">
+                  The first signup becomes Admin automatically. Use the Users tab to promote teammates to Support Agent or Admin.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setActiveTab('users')}>
+                Manage users
+              </Button>
+            </div>
+          </Card>
 
           {/* Tabs */}
           <NavigationTabs
