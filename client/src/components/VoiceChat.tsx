@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Volume2, Loader } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Loader, Mic, MicOff, Volume2 } from 'lucide-react';
 import axios from 'axios';
 import { API_ENDPOINTS, axiosConfig } from '../config/api';
 
@@ -12,7 +12,7 @@ interface VoiceChatProps {
 export const VoiceChat: React.FC<VoiceChatProps> = ({
   chatId,
   onTranscriptionComplete,
-  onSynthesisComplete
+  onSynthesisComplete,
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
@@ -20,24 +20,17 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [language, setLanguage] = useState('en');
   const [voice, setVoice] = useState<'male' | 'female'>('female');
+  const [error, setError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    // Load voice settings from API
-    const loadVoiceSettings = async () => {
-      try {
-        // Settings would be stored/retrieved from API
-        // For now, use state defaults
-      } catch (error) {
-        console.error('Failed to load voice settings:', error);
-      }
-    };
-    loadVoiceSettings();
+    void chatId;
   }, [chatId]);
 
   const startListening = async () => {
     try {
+      setError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -55,9 +48,9 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
 
       mediaRecorder.start();
       setIsListening(true);
-    } catch (error) {
-      console.error('Microphone access denied:', error);
-      alert('Microphone access is required for voice input');
+    } catch (err) {
+      console.error('Microphone access denied:', err);
+      setError('Microphone access is required for voice input.');
     }
   };
 
@@ -70,26 +63,28 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
 
   const sendAudioToTranscribe = async (audioBlob: Blob) => {
     try {
+      setError(null);
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.wav');
       formData.append('language', language);
 
       const response = await axios.post(API_ENDPOINTS.VOICE_TRANSCRIBE, formData, {
         ...axiosConfig,
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       const text = response.data.transcription;
       setTranscribedText(text);
       onTranscriptionComplete?.(text);
-    } catch (error) {
-      console.error('Transcription failed:', error);
-      alert('Failed to transcribe audio');
+    } catch (err) {
+      console.error('Transcription failed:', err);
+      setError('Failed to transcribe audio. Please try again.');
     }
   };
 
   const synthesizeResponse = async (text: string) => {
     try {
+      setError(null);
       setIsSynthesizing(true);
 
       const response = await axios.post(
@@ -97,113 +92,108 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
         {
           text,
           voice,
-          language
+          language,
         },
-        axiosConfig
+        axiosConfig,
       );
 
       const audioUrl = response.data.audio_url;
       onSynthesisComplete?.(audioUrl);
 
-      // Play audio if URL is provided
       if (audioUrl) {
-        playAudio(audioUrl);
+        const audio = new Audio(audioUrl);
+        await audio.play();
       }
-    } catch (error) {
-      console.error('Synthesis failed:', error);
-      alert('Failed to synthesize audio');
+    } catch (err) {
+      console.error('Synthesis failed:', err);
+      setError('Failed to synthesize or play audio. Please try again.');
     } finally {
       setIsSynthesizing(false);
     }
   };
 
-  const playAudio = (audioUrl: string) => {
-    const audio = new Audio(audioUrl);
-    audio.play().catch((error) => console.error('Playback failed:', error));
-  };
-
   return (
-    <div className="voice-chat-widget" style={styles.container}>
-      <div style={styles.header}>
-        <h3>Voice Chat</h3>
-        <label style={styles.toggleLabel}>
+    <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">Voice Chat</h3>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
           <input
             type="checkbox"
             checked={voiceEnabled}
             onChange={(e) => setVoiceEnabled(e.target.checked)}
-            style={styles.checkbox}
+            className="accent-primary"
           />
           <span>Enable Voice</span>
         </label>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error}
+        </div>
+      )}
+
       {voiceEnabled && (
-        <div style={styles.content}>
-          {/* Speech-to-Text Section */}
-          <div style={styles.section}>
-            <div style={styles.sectionHeader}>
+        <div className="space-y-3">
+          <div className="rounded-lg border border-border bg-background/60 p-3 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Mic size={18} />
               <span>Listening</span>
             </div>
-            <div style={styles.controls}>
-              <button
-                onClick={isListening ? stopListening : startListening}
-                style={{
-                  ...styles.button,
-                  ...(isListening ? styles.buttonActive : {})}
-                }
-              >
-                {isListening ? <MicOff size={20} /> : <Mic size={20} />}
-                {isListening ? 'Stop' : 'Start'}
-              </button>
-            </div>
+            <button
+              onClick={isListening ? stopListening : startListening}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isListening
+                  ? 'bg-destructive/15 text-destructive border border-destructive/30'
+                  : 'bg-primary text-white hover:bg-primary-600'
+              }`}
+            >
+              {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+              {isListening ? 'Stop' : 'Start'}
+            </button>
+
             {transcribedText && (
-              <div style={styles.result}>
-                <small>Transcribed:</small>
-                <p>{transcribedText}</p>
+              <div className="rounded-md border border-border bg-card px-3 py-2 text-xs">
+                <small className="font-semibold text-muted-foreground">Transcribed:</small>
+                <p className="mt-1 text-foreground">{transcribedText}</p>
               </div>
             )}
           </div>
 
-          {/* Text-to-Speech Section */}
-          <div style={styles.section}>
-            <div style={styles.sectionHeader}>
+          <div className="rounded-lg border border-border bg-background/60 p-3 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Volume2 size={18} />
               <span>Voice Settings</span>
             </div>
-            <div style={styles.settings}>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                style={styles.select}
-              >
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="de">German</option>
-              </select>
 
-              <select
-                value={voice}
-                onChange={(e) => setVoice(e.target.value as any)}
-                style={styles.select}
-              >
-                <option value="female">Female Voice</option>
-                <option value="male">Male Voice</option>
-              </select>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+            </select>
 
-              <button
-                onClick={() => synthesizeResponse('This is a test message')}
-                disabled={isSynthesizing}
-                style={{
-                  ...styles.button,
-                  ...(isSynthesizing ? styles.buttonDisabled : {})
-                }}
-              >
-                {isSynthesizing ? <Loader size={18} /> : <Volume2 size={18} />}
-                {isSynthesizing ? 'Synthesizing...' : 'Test Voice'}
-              </button>
-            </div>
+            <select
+              value={voice}
+              onChange={(e) => setVoice(e.target.value as 'male' | 'female')}
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="female">Female Voice</option>
+              <option value="male">Male Voice</option>
+            </select>
+
+            <button
+              onClick={() => synthesizeResponse('This is a test message')}
+              disabled={isSynthesizing}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-primary text-white hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSynthesizing ? <Loader size={18} className="animate-spin" /> : <Volume2 size={18} />}
+              {isSynthesizing ? 'Synthesizing...' : 'Test Voice'}
+            </button>
           </div>
         </div>
       )}
@@ -211,91 +201,4 @@ export const VoiceChat: React.FC<VoiceChatProps> = ({
   );
 };
 
-const styles = {
-  container: {
-    border: '1px solid rgba(0, 210, 255, 0.3)',
-    borderRadius: '8px',
-    padding: '16px',
-    backgroundColor: 'rgba(0, 210, 255, 0.05)',
-    marginBottom: '16px'
-  } as React.CSSProperties,
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '12px'
-  } as React.CSSProperties,
-  content: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '12px'
-  },
-  section: {
-    padding: '12px',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: '6px'
-  } as React.CSSProperties,
-  sectionHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '12px',
-    fontSize: '14px',
-    fontWeight: '600'
-  } as React.CSSProperties,
-  controls: {
-    display: 'flex',
-    gap: '8px'
-  } as React.CSSProperties,
-  settings: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '8px'
-  },
-  button: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 12px',
-    backgroundColor: '#00d2ff',
-    border: 'none',
-    borderRadius: '4px',
-    color: '#000',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    transition: 'all 0.3s ease'
-  } as React.CSSProperties,
-  buttonActive: {
-    backgroundColor: '#ff0080'
-  } as React.CSSProperties,
-  buttonDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed'
-  } as React.CSSProperties,
-  select: {
-    padding: '8px',
-    borderRadius: '4px',
-    border: '1px solid #00d2ff',
-    backgroundColor: 'rgba(0, 210, 255, 0.1)',
-    color: '#fff',
-    fontSize: '14px'
-  } as React.CSSProperties,
-  result: {
-    marginTop: '12px',
-    padding: '8px',
-    backgroundColor: 'rgba(0, 255, 128, 0.1)',
-    borderRadius: '4px',
-    fontSize: '13px'
-  } as React.CSSProperties,
-  toggleLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '13px',
-    cursor: 'pointer'
-  } as React.CSSProperties,
-  checkbox: {
-    cursor: 'pointer'
-  } as React.CSSProperties
-};
+export default VoiceChat;

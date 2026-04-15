@@ -16,8 +16,8 @@ const Card = ({
   onClick,
 }: CardProps) => {
   const baseStyles = 'rounded-lg border';
-  const defaultStyles = 'bg-surface-100 border-surface-200';
-  const elevatedStyles = elevated ? 'bg-white shadow-sm' : defaultStyles;
+  const defaultStyles = 'bg-card border-border';
+  const elevatedStyles = elevated ? 'bg-card border-border shadow-sm' : defaultStyles;
   const interactiveStyles = interactive ? 'hover:shadow-md hover:border-primary-300 transition-all cursor-pointer' : '';
 
   return (

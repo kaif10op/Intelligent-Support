@@ -224,7 +224,7 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-50 flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
         <p className="text-surface-600">Loading admin dashboard...</p>
       </div>
@@ -232,9 +232,9 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-surface-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50/90 backdrop-blur sticky top-0 z-40">
+      <div className="border-b border-border bg-card/70 backdrop-blur sticky top-0 z-40">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">

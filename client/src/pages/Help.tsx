@@ -59,10 +59,10 @@ const Help = () => {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT';
 
   return (
-    <div className="min-h-screen bg-surface-50">
-      <div className="border-b border-surface-200 bg-surface-50/90 backdrop-blur">
+    <div className="min-h-screen bg-background">
+      <div className="border-b border-border bg-card/70 backdrop-blur">
         <div className="px-6 py-8 space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-surface-500">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-surface-500">
             <HelpCircle className="w-3.5 h-3.5 text-primary-500" />
             Getting started
           </div>
@@ -172,7 +172,7 @@ const Help = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {roleCreationNotes.map((note) => (
-              <div key={note} className="rounded-xl border border-surface-200 bg-white p-4 text-sm text-surface-600">
+              <div key={note} className="rounded-xl border border-border bg-card p-4 text-sm text-surface-600">
                 {note}
               </div>
             ))}
@@ -187,7 +187,7 @@ const Help = () => {
             </div>
             <div className="space-y-3">
               {workflowSteps.map((step, index) => (
-                <div key={step} className="flex items-start gap-3 rounded-xl border border-surface-200 bg-white p-4">
+                <div key={step} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                     {index + 1}
                   </div>

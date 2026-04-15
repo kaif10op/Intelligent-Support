@@ -14,18 +14,18 @@ const Settings = () => {
   }, [darkMode]);
 
   const toggleDarkMode = () => {
-    const newTheme = darkMode ? 'light' : 'dark';
+    const newTheme: ThemeMode = darkMode === 'dark' ? 'light' : 'dark';
     setDarkMode(newTheme);
     localStorage.setItem('theme', newTheme);
     applyTheme(newTheme);
   };
 
   return (
-    <div className="min-h-screen bg-surface-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50/90 backdrop-blur">
+      <div className="border-b border-border bg-card/70 backdrop-blur">
         <div className="px-6 py-6 space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-surface-500">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-surface-500">
             <LayoutGrid className="w-3.5 h-3.5 text-primary-500" />
             Workspace settings
           </div>
@@ -144,7 +144,7 @@ const Settings = () => {
                   <div className={`w-11 h-6 rounded-full transition-all ${
                     darkMode === 'dark' ? 'bg-primary-500' : 'bg-surface-300'
                   }`}></div>
-                  <span className={`absolute w-5 h-5 bg-white rounded-full transition-all ${
+                  <span className={`absolute w-5 h-5 bg-card border border-border rounded-full transition-all ${
                     darkMode === 'dark' ? 'translate-x-5' : 'translate-x-0.5'
                   } top-0.5 left-0.5`}></span>
                 </label>

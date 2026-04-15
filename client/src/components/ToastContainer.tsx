@@ -56,7 +56,7 @@ const ToastContainer = () => {
           `}
         >
           {/* Icon */}
-          <div className={getIconColor(toast.type)} style={{ flexShrink: 0 }}>
+          <div className={`${getIconColor(toast.type)} shrink-0`}>
             {getIcon(toast.type)}
           </div>
 

@@ -110,7 +110,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ticket Trend */}
-        <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm">
+        <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
           <h3 className="text-lg font-semibold text-surface-900 mb-4">Ticket Trend (7 days)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={metrics.ticketTrend}>
@@ -130,7 +130,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Priority Distribution */}
-        <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm">
+        <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
           <h3 className="text-lg font-semibold text-surface-900 mb-4">Priority Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -154,7 +154,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Team Performance */}
-        <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm lg:col-span-2">
+        <div className="bg-card p-6 rounded-lg border border-border shadow-sm lg:col-span-2">
           <h3 className="text-lg font-semibold text-surface-900 mb-4">Team Performance</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -203,7 +203,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Customer Satisfaction */}
-      <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm">
+      <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-surface-900">Customer Satisfaction</h3>
@@ -237,7 +237,7 @@ interface MetricCardProps {
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, trend, trendUp }) => (
-  <div className="bg-white p-6 rounded-lg border border-surface-200 shadow-sm hover:shadow-md transition-shadow">
+  <div className="bg-card p-6 rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow">
     <div className="flex items-start justify-between">
       <div>
         <p className="text-surface-600 text-sm font-medium">{title}</p>

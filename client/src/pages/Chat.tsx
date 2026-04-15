@@ -96,6 +96,7 @@ const Chat = () => {
   const [kbName, setKbName] = useState<string>('');
   const [sendingHuman, setSendingHuman] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [showAiToolbelt, setShowAiToolbelt] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
   const [humanInput, setHumanInput] = useState('');
   const [handoffStatus, setHandoffStatus] = useState<any>(null);
@@ -774,7 +775,7 @@ const Chat = () => {
                       : 'glass-elevated border border-border/50'
                   }`}
                 >
-                  <div className="prose prose-invert max-w-none text-sm">
+                  <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
                     <ReactMarkdown>{m.content}</ReactMarkdown>
                   </div>
                 </div>
@@ -926,6 +927,14 @@ const Chat = () => {
               <Zap size={16} />
               Run AI Tool
             </button>
+            <button
+              onClick={() => setShowAiToolbelt((prev) => !prev)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-card transition-colors text-sm font-medium"
+              title="Show or hide full AI toolbelt"
+            >
+              <Zap size={16} />
+              {showAiToolbelt ? 'Hide Toolbelt' : 'Show Toolbelt'}
+            </button>
           </div>
         )}
 
@@ -996,12 +1005,12 @@ const Chat = () => {
           </div>
         )}
 
-        {/* AI Tools Panel for staff (10+ modes) */}
-        {isAgent && (
+        {/* AI Tools Panel for staff */}
+        {isAgent && showAiToolbelt && (
           <div className="space-y-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-medium uppercase tracking-wide text-amber-500">AI Toolbelt</p>
-              <p className="text-xs text-muted-foreground">40 tools: search, filter, run, reuse</p>
+              <p className="text-xs text-muted-foreground">Compact mode: search, filter, run, reuse</p>
             </div>
             {(!id || id === 'new') && (
               <div className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
@@ -1051,7 +1060,7 @@ const Chat = () => {
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 max-h-52 overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1">
               {filteredTools.map(({ value, label }) => (
                 <div key={value} className="relative">
                   <button
@@ -1124,7 +1133,7 @@ const Chat = () => {
               <button
                 onClick={handleRequestAIAssistance}
                 disabled={aiToolLoading}
-                className="px-3 py-2 rounded-lg bg-amber-500 text-black text-sm font-medium hover:bg-amber-400 disabled:opacity-50"
+                className="px-3 py-2 rounded-lg bg-amber-500 text-surface-900 text-sm font-medium hover:bg-amber-400 disabled:opacity-50"
               >
                 {aiToolLoading ? 'Running...' : 'Run Selected Tool'}
               </button>

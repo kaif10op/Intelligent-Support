@@ -152,7 +152,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-50 flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
         <p className="text-surface-600">Preparing your workspace...</p>
       </div>
@@ -160,13 +160,13 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-surface-50">
+    <div className="min-h-screen bg-background">
       {/* Page Header */}
-      <div className="border-b border-surface-200 bg-surface-50/90 backdrop-blur sticky top-0 z-40">
+      <div className="border-b border-border bg-card/70 backdrop-blur sticky top-0 z-40">
         <div className="px-6 py-6 space-y-6">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-surface-500">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-surface-500">
                 <TrendingUp className="w-3.5 h-3.5 text-primary-500" />
                 Workspace overview
               </div>
@@ -199,28 +199,28 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-surface-200 bg-white p-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
               <p className="text-xs uppercase tracking-wider text-surface-500">Knowledge bases</p>
               <div className="mt-2 flex items-end justify-between gap-4">
                 <div className="text-3xl font-bold text-surface-900">{kbs.length}</div>
                 <Database className="w-5 h-5 text-primary-500" />
               </div>
             </div>
-            <div className="rounded-2xl border border-surface-200 bg-white p-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
               <p className="text-xs uppercase tracking-wider text-surface-500">Recent chats</p>
               <div className="mt-2 flex items-end justify-between gap-4">
                 <div className="text-3xl font-bold text-surface-900">{recentChats.length}</div>
                 <MessageSquare className="w-5 h-5 text-primary-500" />
               </div>
             </div>
-            <div className="rounded-2xl border border-surface-200 bg-white p-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
               <p className="text-xs uppercase tracking-wider text-surface-500">Open tickets</p>
               <div className="mt-2 flex items-end justify-between gap-4">
                 <div className="text-3xl font-bold text-surface-900">{ticketStats.open}</div>
                 <AlertCircle className="w-5 h-5 text-amber-500" />
               </div>
             </div>
-            <div className="rounded-2xl border border-surface-200 bg-white p-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
               <p className="text-xs uppercase tracking-wider text-surface-500">Workflow status</p>
               <div className="mt-2 flex items-end justify-between gap-4">
                 <div className="text-lg font-semibold text-surface-900">{refreshing ? 'Updating' : 'Ready'}</div>
@@ -230,7 +230,7 @@ const Dashboard = () => {
           </div>
 
         {/* Tab Navigation */}
-        <div className="border-t border-surface-200 pt-4">
+        <div className="border-t border-border pt-4">
           <NavigationTabs
             tabs={[
               { id: 'overview', label: 'Overview', icon: <TrendingUp className="w-4 h-4" /> },

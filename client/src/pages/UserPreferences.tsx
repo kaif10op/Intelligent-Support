@@ -91,7 +91,7 @@ const UserPreferences = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50">
+      <div className="border-b border-border bg-card/70 backdrop-blur">
         <div className="px-6 py-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
@@ -186,7 +186,7 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('emailNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-card after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
 
@@ -203,7 +203,7 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('chatNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-card after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
 
@@ -220,7 +220,7 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('ticketNotifications', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-card after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
             </Card>
@@ -255,7 +255,7 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('sttEnabled', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-card after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
 
@@ -272,7 +272,7 @@ const UserPreferences = () => {
                     onChange={(e) => handleChange('ttsEnabled', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
+                  <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-card after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                 </label>
               </div>
 
@@ -290,7 +290,7 @@ const UserPreferences = () => {
                       onChange={(e) => handleChange('autoplay', e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
+                    <div className="w-11 h-6 bg-surface-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-card after:h-5 after:w-5 after:rounded-full after:border after:border-surface-300 after:transition-all peer-checked:bg-primary-500"></div>
                   </label>
                 </div>
               )}

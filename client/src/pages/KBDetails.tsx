@@ -114,7 +114,7 @@ const KBDetails = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="border-b border-surface-200 bg-surface-50">
+        <div className="border-b border-border bg-card/70 backdrop-blur">
           <div className="px-6 py-6 space-y-4">
             <div className="h-8 bg-surface-200 rounded w-1/3 animate-pulse"></div>
             <div className="h-4 bg-surface-200 rounded w-2/3 animate-pulse"></div>
@@ -170,7 +170,7 @@ const KBDetails = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50">
+      <div className="border-b border-border bg-card/70 backdrop-blur">
         <div className="px-6 py-6">
           <Link
             to="/"

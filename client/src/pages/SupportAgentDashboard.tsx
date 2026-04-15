@@ -244,7 +244,7 @@ const SupportAgentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-surface-200 bg-surface-50 sticky top-0 z-40">
+      <div className="border-b border-border bg-card/70 backdrop-blur sticky top-0 z-40">
         <div className="px-6 py-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-primary-100 rounded-lg">
@@ -472,7 +472,7 @@ const SupportAgentDashboard = () => {
                     className={`px-2 py-1 rounded-md text-xs border ${
                       queueAiMode === value
                         ? 'bg-amber-500/20 text-amber-700 border-amber-400'
-                        : 'bg-white text-surface-600 border-surface-200'
+                        : 'bg-card text-surface-600 border-border'
                     }`}
                   >
                     {label}
@@ -491,7 +491,7 @@ const SupportAgentDashboard = () => {
                 </Button>
               </div>
               {queueAiOutput && (
-                <div className="p-3 rounded-lg bg-white border border-surface-200 text-xs text-surface-700 whitespace-pre-wrap">
+                <div className="p-3 rounded-lg bg-card border border-border text-xs text-surface-700 whitespace-pre-wrap">
                   {queueAiOutput}
                 </div>
               )}

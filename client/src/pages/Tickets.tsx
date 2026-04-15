@@ -288,7 +288,7 @@ const Tickets = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50 sticky top-0 z-40">
+      <div className="border-b border-border bg-card/70 backdrop-blur sticky top-0 z-40">
         <div className="px-6 py-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-primary-100 rounded-lg">
@@ -574,7 +574,7 @@ const Tickets = () => {
                   className={`px-2 py-1 rounded-md text-xs border ${
                     ticketAiMode === value
                       ? 'bg-primary/15 text-primary border-primary/30'
-                      : 'bg-white border-surface-200 text-surface-600'
+                      : 'bg-card border-border text-surface-600'
                   }`}
                 >
                   {label}
@@ -595,7 +595,7 @@ const Tickets = () => {
               )}
             </div>
             {ticketAiResult && (
-              <div className="text-xs text-surface-700 p-2 rounded bg-white border border-surface-200 whitespace-pre-wrap">
+              <div className="text-xs text-surface-700 p-2 rounded bg-card border border-border whitespace-pre-wrap">
                 {ticketAiResult}
               </div>
             )}

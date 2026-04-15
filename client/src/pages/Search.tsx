@@ -54,7 +54,7 @@ const Search = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-surface-200 bg-surface-50">
+      <div className="border-b border-border bg-card/70 backdrop-blur">
         <div className="px-6 py-6">
           <h1 className="heading-1">Search Everything</h1>
           <p className="text-surface-600 mt-1">Find chats, knowledge bases, tickets, and documents</p>
