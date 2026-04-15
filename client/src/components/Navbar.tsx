@@ -2,7 +2,7 @@ import { useAuthStore } from '../store/useAuthStore.js';
 import { UserButton, useClerk } from '@clerk/react';
 import { Shield, Menu, X, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const Navbar = () => {
   const { user, logout } = useAuthStore();
@@ -14,7 +14,7 @@ const Navbar = () => {
   const isSupport = isAdmin || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes(role);
 
   // Handle post-signout cleanup
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await logout(); // Call backend logout
       navigate('/login');
@@ -22,7 +22,7 @@ const Navbar = () => {
       console.error('Logout error:', err);
       navigate('/login');
     }
-  };
+  }, [logout, navigate]);
 
   // Monitor Clerk session changes
   useEffect(() => {
@@ -30,7 +30,7 @@ const Navbar = () => {
       // User signed out from Clerk, cleanup backend
       handleSignOut();
     }
-  }, [session, user]);
+  }, [session, user, handleSignOut]);
 
   return (
     <nav className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">

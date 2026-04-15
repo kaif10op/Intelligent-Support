@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2, Send, MessageCircle, User as UserIcon, FileText, Clock, AlertCircle, CheckCircle, MessageSquare, Zap, ArrowRightLeft, Calendar, Mail } from 'lucide-react';
 import axios from 'axios';
@@ -86,13 +86,7 @@ const TicketDetails = () => {
   const [chatAiPackLoading, setChatAiPackLoading] = useState(false);
 
   // Fetch ticket and user details
-  useEffect(() => {
-    if (id) {
-      fetchTicketDetails();
-    }
-  }, [id]);
-
-  const fetchTicketDetails = async () => {
+  const fetchTicketDetails = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -123,7 +117,13 @@ const TicketDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, isAgent, user?.id, addToast]);
+
+  useEffect(() => {
+    if (id) {
+      fetchTicketDetails();
+    }
+  }, [id, fetchTicketDetails]);
 
   const loadUserChats = async () => {
     // already loaded from context endpoint

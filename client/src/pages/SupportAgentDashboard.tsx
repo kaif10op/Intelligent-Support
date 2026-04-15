@@ -37,6 +37,8 @@ interface TicketData {
   user?: { id: string; name: string; email: string };
 }
 
+const priorityWeight: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
 const SupportAgentDashboard = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -109,8 +111,6 @@ const SupportAgentDashboard = () => {
       default: return 'default';
     }
   };
-
-  const priorityWeight: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
   const stats = {
     total: tickets.length,

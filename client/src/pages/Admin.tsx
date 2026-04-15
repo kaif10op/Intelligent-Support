@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Users, Database, Shield, Zap, BarChart as BarIcon, Activity, Loader2, MessageSquare, Edit2, User, TrendingUp, ArrowUpRight, Filter, Download, RefreshCw, Lock, Plus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
@@ -32,7 +32,7 @@ const Admin = () => {
   const [rebalancing, setRebalancing] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
 
-  const fetchAdminData = async (isInitial = false) => {
+  const fetchAdminData = useCallback(async (isInitial = false) => {
     try {
       if (isInitial) setLoading(true);
       setRefreshing(true);
@@ -71,19 +71,13 @@ const Admin = () => {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [addToast]);
 
   useEffect(() => {
     fetchAdminData(true);
-  }, []);
+  }, [fetchAdminData]);
 
   // Load assignment metrics when tab is active
-  useEffect(() => {
-    if (activeTab === 'assignment') {
-      fetchAssignmentMetrics();
-    }
-  }, [activeTab]);
-
   const handleChangeRole = async () => {
     if (!selectedUser) return;
     try {
@@ -118,7 +112,7 @@ const Admin = () => {
   };
 
   // Fetch assignment metrics
-  const fetchAssignmentMetrics = async () => {
+  const fetchAssignmentMetrics = useCallback(async () => {
     try {
       setAssignmentLoading(true);
       const response = await axiosInstance.get(
@@ -131,7 +125,13 @@ const Admin = () => {
     } finally {
       setAssignmentLoading(false);
     }
-  };
+  }, [addToast]);
+
+  useEffect(() => {
+    if (activeTab === 'assignment') {
+      fetchAssignmentMetrics();
+    }
+  }, [activeTab, fetchAssignmentMetrics]);
 
   // Auto-assign tickets
   const handleAutoAssign = async () => {

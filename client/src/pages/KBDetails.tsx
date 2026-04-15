@@ -19,7 +19,7 @@ const KBDetails = () => {
   const [uploadFileName, setUploadFileName] = useState('');
   const [error, setError] = useState('');
 
-  const fetchDetails = async () => {
+  const fetchDetails = useCallback(async () => {
     try {
       const res = await axios.get(API_ENDPOINTS.KB_DETAIL(id!), axiosConfig);
       setKb(res.data);
@@ -29,11 +29,11 @@ const KBDetails = () => {
       addToast(errorMsg, 'error');
       setLoading(false);
     }
-  };
+  }, [id, addToast]);
 
   useEffect(() => {
     fetchDetails();
-  }, [id]);
+  }, [fetchDetails]);
 
   const handleDeleteDocument = async (docId: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
@@ -97,7 +97,7 @@ const KBDetails = () => {
       setUploadProgress(0);
       setUploadFileName('');
     }
-  }, [id, addToast]);
+  }, [id, addToast, fetchDetails]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

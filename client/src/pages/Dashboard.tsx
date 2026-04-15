@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   Database,
@@ -41,7 +41,7 @@ const Dashboard = () => {
   });
   const didInitialFetch = useRef(false);
 
-  const fetchData = async (isInitial = false) => {
+  const fetchData = useCallback(async (isInitial = false) => {
     try {
       if (isInitial) setLoading(true);
       setRefreshing(true);
@@ -97,13 +97,13 @@ const Dashboard = () => {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [addToast]);
 
   useEffect(() => {
     if (didInitialFetch.current) return;
     didInitialFetch.current = true;
     fetchData(true);
-  }, []);
+  }, [fetchData]);
 
   const handleCreate = async () => {
     if (!newTitle.trim()) {
@@ -135,7 +135,7 @@ const Dashboard = () => {
   };
 
   const getSortedKbs = () => {
-    let sorted = [...kbs];
+    const sorted = [...kbs];
     if (sortBy === 'name') {
       sorted.sort((a, b) => a.title.localeCompare(b.title));
     } else if (sortBy === 'docs') {

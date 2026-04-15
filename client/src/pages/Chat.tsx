@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Send, Bot, ChevronLeft, Loader2, Info, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, AlertTriangle, Paperclip, File, X, Copy, Trash2, Check, Zap, ArrowRightLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -236,7 +236,7 @@ const Chat = () => {
         unsubscribeFrom('chat', id);
       }
     };
-  }, [id, kbId, subscribeTo, unsubscribeFrom, onChatMessage, navigate]);
+  }, [id, kbId, subscribeTo, unsubscribeFrom, onChatMessage, navigate, addToast]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -330,7 +330,7 @@ const Chat = () => {
       setCopiedMessageId(messageId || 'temp');
       addToast('Copied to clipboard!', 'success');
       setTimeout(() => setCopiedMessageId(null), 2000);
-    } catch (err) {
+    } catch (_err) {
       addToast('Failed to copy', 'error');
     }
   };
@@ -342,12 +342,12 @@ const Chat = () => {
       setMessages([]);
       setShowConfirmClear(false);
       addToast('Chat cleared successfully', 'success');
-    } catch (err: any) {
+    } catch (_err: any) {
       addToast('Failed to clear chat', 'error');
     }
   };
 
-  const getSuggestions = async (messageIndex: number) => {
+  const getSuggestions = useCallback(async (messageIndex: number) => {
     if (!id || id === 'new') return;
     try {
       const res = await axios.get(apiUrl(`/api/chat/${id}/suggestions`), axiosConfig);
@@ -358,9 +358,9 @@ const Chat = () => {
     } catch (err) {
       console.error('Suggestions error:', err);
     }
-  };
+  }, [id]);
 
-  const loadHandoffStatus = async () => {
+  const loadHandoffStatus = useCallback(async () => {
     if (!id || id === 'new') return;
     try {
       const res = await axios.get(API_ENDPOINTS.CHAT_HUMAN_STATUS(id), axiosConfig);
@@ -368,7 +368,7 @@ const Chat = () => {
     } catch {
       // keep quiet to avoid noisy UI if feature unavailable
     }
-  };
+  }, [id]);
 
   const requestHumanHandoff = async () => {
     if (!id || id === 'new') return;
@@ -422,7 +422,7 @@ const Chat = () => {
     }
   };
 
-  const runAiTool = async (mode: string, writeResult = true) => {
+  const runAiTool = useCallback(async (mode: string, writeResult = true) => {
     if (!id || id === 'new') {
       addToast('Open a specific chat to run AI tools', 'info');
       return '';
@@ -457,11 +457,11 @@ const Chat = () => {
     } finally {
       setAiToolLoading(false);
     }
-  };
+  }, [id, messages, addToast]);
 
-  const handleRequestAIAssistance = async () => {
+  const handleRequestAIAssistance = useCallback(async () => {
     await runAiTool(aiToolMode, true);
-  };
+  }, [aiToolMode, runAiTool]);
 
   const handleInsertAiIntoReply = () => {
     if (!aiToolResult) return;
@@ -592,7 +592,7 @@ const Chat = () => {
   // Fetch available agents for transfer
   useEffect(() => {
     loadHandoffStatus();
-  }, [id]);
+  }, [loadHandoffStatus]);
 
   useEffect(() => {
     if (isAgent && showTransfer) {
@@ -633,7 +633,7 @@ const Chat = () => {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isAgent, id, filteredTools]);
+  }, [isAgent, id, filteredTools, addToast, handleRequestAIAssistance]);
 
   // Auto-fetch suggestions when streaming completes
   useEffect(() => {
@@ -645,7 +645,7 @@ const Chat = () => {
         getSuggestions(messages.length - 1);
       }
     }
-  }, [streaming, messages, id]);
+  }, [streaming, messages, id, getSuggestions]);
 
   return (
     <div className="flex flex-col w-full h-screen bg-background overflow-hidden">

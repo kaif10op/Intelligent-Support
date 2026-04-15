@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { API_ENDPOINTS } from '../config/api';
 import axiosInstance from '../config/api';
 import { Shield, User, Users, Mail, Edit2, Search, RefreshCw, CheckSquare, Square } from 'lucide-react';
@@ -38,10 +38,6 @@ const UserManagement = () => {
   const [bulkRole, setBulkRole] = useState<Role>('USER');
   const [bulkSaving, setBulkSaving] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const normalizeUsersPayload = (payload: any): UserData[] => {
     if (Array.isArray(payload)) return payload;
     if (Array.isArray(payload?.users)) return payload.users;
@@ -49,7 +45,7 @@ const UserManagement = () => {
     return [];
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(API_ENDPOINTS.ADMIN_USERS);
@@ -61,7 +57,11 @@ const UserManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const setTemporarySuccess = (message: string) => {
     setSuccess(message);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Ticket, Plus, Clock, AlertCircle, CheckCircle, User, Loader2, RotateCcw, Zap, Users } from 'lucide-react';
@@ -37,14 +37,7 @@ const Tickets = () => {
   const [startingChatTicketId, setStartingChatTicketId] = useState<string | null>(null);
   const isSupportStaff = user?.role === 'ADMIN' || user?.role === 'SUPPORT_AGENT';
 
-  useEffect(() => {
-    fetchTickets();
-    if (user?.role === 'ADMIN') {
-      fetchSupportAgents();
-    }
-  }, [user]);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
       setRefreshing(true);
       // Use /api/tickets/all only for admins, else use /api/tickets
@@ -61,7 +54,7 @@ const Tickets = () => {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [user?.role, addToast]);
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,7 +141,7 @@ const Tickets = () => {
     }
   };
 
-  const fetchSupportAgents = async () => {
+  const fetchSupportAgents = useCallback(async () => {
     try {
       const res = await axios.get(API_ENDPOINTS.TICKET_AGENTS, axiosConfig);
       const users = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data?.users) ? res.data.users : []);
@@ -158,7 +151,14 @@ const Tickets = () => {
       const errorMsg = err.response?.data?.error || 'Failed to load support agents';
       addToast(errorMsg, 'error');
     }
-  };
+  }, [addToast]);
+
+  useEffect(() => {
+    fetchTickets();
+    if (user?.role === 'ADMIN') {
+      fetchSupportAgents();
+    }
+  }, [user?.role, fetchTickets, fetchSupportAgents]);
 
   const handleAssignTicket = async () => {
     if (!selectedTicketForAssign || !selectedAgent) {

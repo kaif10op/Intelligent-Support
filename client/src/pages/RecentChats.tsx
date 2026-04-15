@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { MessageSquare, Calendar, Database, ArrowRight, Search, SlidersHorizontal, Trash2, CheckSquare, Square, AlertCircle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -22,7 +22,7 @@ const RecentChats = () => {
   const [deletingChat, setDeletingChat] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
-  const fetchChats = async () => {
+  const fetchChats = useCallback(async () => {
     try {
       const res = await axios.get(API_ENDPOINTS.CHAT_LIST, axiosConfig);
       const data = res.data?.data || res.data?.chats || (Array.isArray(res.data) ? res.data : []);
@@ -34,7 +34,7 @@ const RecentChats = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]);
 
   const handleDeleteChat = async (chatId: string) => {
     try {
@@ -67,7 +67,7 @@ const RecentChats = () => {
       setSelectedChats(new Set());
       setBulkMode(false);
       addToast(`Successfully deleted ${selectedChats.size} chat(s)`, 'success');
-    } catch (err: any) {
+    } catch (_err: any) {
       addToast('Failed to delete some chats', 'error');
     } finally {
       setLoading(false);
@@ -124,7 +124,7 @@ const RecentChats = () => {
 
   useEffect(() => {
     fetchChats();
-  }, []);
+  }, [fetchChats]);
 
   return (
     <div className="min-h-screen bg-background">
