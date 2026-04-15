@@ -18,6 +18,11 @@
     --chart-tooltip-bg: #ffffff;
     --chart-tooltip-border: #e2e8f0;
     --chart-tooltip-text: #0f172a;
+    --chart-color-1: #3b82f6;
+    --chart-color-2: #10b981;
+    --chart-color-3: #f59e0b;
+    --chart-color-4: #ef4444;
+    --chart-color-5: #64748b;
   }
 
   .dark {
@@ -31,6 +36,11 @@
     --chart-tooltip-bg: #0f172a;
     --chart-tooltip-border: #334155;
     --chart-tooltip-text: #f8fafc;
+    --chart-color-1: #60a5fa;
+    --chart-color-2: #34d399;
+    --chart-color-3: #fbbf24;
+    --chart-color-4: #f87171;
+    --chart-color-5: #94a3b8;
   }
 
   body {

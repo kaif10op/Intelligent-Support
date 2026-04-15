@@ -193,14 +193,14 @@ const AdminPortal = () => {
                       <Line
                         type="monotone"
                         dataKey="created"
-                        stroke="#10b981"
+                        stroke="var(--chart-color-2)"
                         name="Created"
                         strokeWidth={2}
                       />
                       <Line
                         type="monotone"
                         dataKey="resolved"
-                        stroke="#3b82f6"
+                        stroke="var(--chart-color-1)"
                         name="Resolved"
                         strokeWidth={2}
                       />
@@ -229,10 +229,10 @@ const AdminPortal = () => {
                         paddingAngle={2}
                         dataKey="value"
                       >
-                        <Cell fill="#3b82f6" />
-                        <Cell fill="#10b981" />
-                        <Cell fill="#f59e0b" />
-                        <Cell fill="#64748b" />
+                        <Cell fill="var(--chart-color-1)" />
+                        <Cell fill="var(--chart-color-2)" />
+                        <Cell fill="var(--chart-color-3)" />
+                        <Cell fill="var(--chart-color-5)" />
                       </Pie>
                       <Tooltip
                         contentStyle={{
@@ -270,7 +270,7 @@ const AdminPortal = () => {
                         color: 'var(--chart-tooltip-text)'
                       }}
                     />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="count" fill="var(--chart-color-1)" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -283,35 +283,35 @@ const AdminPortal = () => {
               {/* Database Connection */}
               <Card elevated className="p-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="font-medium text-surface-900">Database</span>
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  <span className="font-medium text-foreground">Database</span>
                 </div>
-                <p className="text-2xl font-bold text-green-600">Healthy</p>
+                <p className="text-2xl font-bold text-emerald-500">Healthy</p>
               </Card>
 
               {/* Redis Cache */}
               <Card elevated className="p-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="font-medium text-surface-900">Redis Cache</span>
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  <span className="font-medium text-foreground">Redis Cache</span>
                 </div>
-                <p className="text-2xl font-bold text-green-600">Connected</p>
+                <p className="text-2xl font-bold text-emerald-500">Connected</p>
               </Card>
 
               {/* Socket.IO */}
               <Card elevated className="p-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="font-medium text-surface-900">Socket.IO</span>
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  <span className="font-medium text-foreground">Socket.IO</span>
                 </div>
-                <p className="text-2xl font-bold text-green-600">Active</p>
+                <p className="text-2xl font-bold text-emerald-500">Active</p>
               </Card>
 
               {/* API Response Time */}
               <Card elevated className="p-6 space-y-4">
                 <div className="flex items-center gap-2">
                   <Zap className="w-5 h-5 text-primary-600" />
-                  <span className="font-medium text-surface-900">API Response</span>
+                  <span className="font-medium text-foreground">API Response</span>
                 </div>
                 <p className="text-2xl font-bold text-primary-600">142ms avg</p>
               </Card>
@@ -319,10 +319,10 @@ const AdminPortal = () => {
               {/* System Uptime */}
               <Card elevated className="p-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                  <span className="font-medium text-surface-900">Uptime</span>
+                  <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  <span className="font-medium text-foreground">Uptime</span>
                 </div>
-                <p className="text-2xl font-bold text-green-600">99.8%</p>
+                <p className="text-2xl font-bold text-emerald-500">99.8%</p>
               </Card>
             </div>
           )}

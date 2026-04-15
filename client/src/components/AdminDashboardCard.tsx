@@ -64,7 +64,7 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  const priorityColors = ['#3b82f6', '#f59e0b', '#ef4444', '#dc2626'];
+  const priorityColors = ['var(--chart-color-1)', 'var(--chart-color-3)', 'var(--chart-color-4)', 'var(--chart-color-5)'];
 
   return (
     <div className="space-y-6">
@@ -121,9 +121,9 @@ export const AdminDashboard: React.FC = () => {
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="#3b82f6"
+                stroke="var(--chart-color-1)"
                 strokeWidth={2}
-                dot={{ fill: '#3b82f6' }}
+                dot={{ fill: 'var(--chart-color-1)' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -141,7 +141,7 @@ export const AdminDashboard: React.FC = () => {
                 labelLine={false}
                 label={({ name, value }) => `${name}: ${value}`}
                 outerRadius={100}
-                fill="#8884d8"
+                fill="var(--chart-color-1)"
                 dataKey="value"
               >
                 {metrics.priorityDistribution.map((_, index) => (
@@ -186,10 +186,10 @@ export const AdminDashboard: React.FC = () => {
                     <td className="py-3 px-4 text-center">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         agent.rating >= 4.5
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
                           : agent.rating >= 3.5
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                          : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'
                       }`}>
                         {agent.rating >= 4.5 ? 'Excellent' : agent.rating >= 3.5 ? 'Good' : 'Needs Help'}
                       </span>

@@ -49,7 +49,12 @@ const AnalyticsDashboard = () => {
     );
   }
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+  const COLORS = [
+    'var(--chart-color-1)',
+    'var(--chart-color-2)',
+    'var(--chart-color-3)',
+    'var(--chart-color-4)'
+  ];
 
   const chartData = Object.entries(analytics.conversationsByDate || {})
     .slice(-30)
@@ -111,7 +116,7 @@ const AnalyticsDashboard = () => {
                     labelLine={false}
                     label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={80}
-                    fill="#8884d8"
+                    fill="var(--chart-color-1)"
                     dataKey="value"
                   >
                     {COLORS.map((color, index) => (
@@ -148,7 +153,7 @@ const AnalyticsDashboard = () => {
                       color: 'var(--chart-tooltip-text)'
                     }}
                   />
-                  <Bar dataKey="value" fill="#3b82f6" name="Count" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="value" fill="var(--chart-color-1)" name="Count" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -172,7 +177,7 @@ const AnalyticsDashboard = () => {
                     }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="conversations" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} name="Messages" />
+                  <Line type="monotone" dataKey="conversations" stroke="var(--chart-color-1)" strokeWidth={2} dot={{ fill: 'var(--chart-color-1)', r: 4 }} name="Messages" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -194,11 +199,11 @@ const AnalyticsDashboard = () => {
                     labelLine={false}
                     label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={80}
-                    fill="#8884d8"
+                    fill="var(--chart-color-1)"
                     dataKey="value"
                   >
-                    <Cell fill="#3b82f6" />
-                    <Cell fill="#10b981" />
+                    <Cell fill="var(--chart-color-1)" />
+                    <Cell fill="var(--chart-color-2)" />
                   </Pie>
                   <Tooltip
                     contentStyle={{
@@ -221,7 +226,7 @@ const AnalyticsDashboard = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2 mb-3">
                 <AlertCircle className="w-5 h-5 text-red-600" />
-                <span className="text-sm font-medium text-surface-900">Overdue Tickets</span>
+                <span className="text-sm font-medium text-foreground">Overdue Tickets</span>
               </div>
               <p className="text-3xl font-bold text-red-600">{analytics.overdueStats?.count || 0}</p>
               <p className="text-xs text-surface-600">Avg {analytics.overdueStats?.avgDaysOverdue || 0}d overdue</p>
@@ -233,7 +238,7 @@ const AnalyticsDashboard = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-medium text-surface-900">On-Time Tickets</span>
+                <span className="text-sm font-medium text-foreground">On-Time Tickets</span>
               </div>
               <p className="text-3xl font-bold text-green-600">{(analytics.ticketStats?.total || 0) - (analytics.overdueStats?.count || 0)}</p>
               <p className="text-xs text-surface-600">

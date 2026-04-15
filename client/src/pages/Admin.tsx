@@ -190,7 +190,13 @@ const Admin = () => {
     }
   };
 
-  const COLORS = ['#3b82f6', '#f59e0b', '#06b6d4', '#ef4444', '#10b981'];
+  const COLORS = [
+    'var(--chart-color-1)',
+    'var(--chart-color-3)',
+    'var(--chart-color-2)',
+    'var(--chart-color-4)',
+    'var(--chart-color-5)'
+  ];
 
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
