@@ -30,17 +30,14 @@ if [ "$NODE_ENV" != "production" ]; then
   echo "ℹ️  Non-production mode - DATABASE_URL cleared"
 fi
 
-# Push schema to database (creates tables if they don't exist)
+# Create database tables if they don't exist (using raw SQL, not Prisma CLI)
 if [ -n "$DATABASE_URL" ]; then
-  echo "📦 Syncing database schema with prisma db push..."
-  # Supabase pooler port 6543 (transaction mode) doesn't support DDL.
-  # Use port 5432 (session mode) for schema push instead.
-  MIGRATION_URL=$(echo "$DATABASE_URL" | sed 's/:6543/:5432/g')
-  DATABASE_URL="$MIGRATION_URL" npx prisma db push --skip-generate 2>&1 || {
-    echo "⚠️  prisma db push failed, but continuing server startup..."
+  echo "📦 Running database migration..."
+  node scripts/migrate.mjs 2>&1 || {
+    echo "⚠️  Migration script failed, but continuing server startup..."
   }
 else
-  echo "⚠️  DATABASE_URL not set - skipping schema sync"
+  echo "⚠️  DATABASE_URL not set - skipping database migration"
 fi
 
 echo "✅ Starting Node.js server..."
