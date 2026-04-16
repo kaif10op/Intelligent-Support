@@ -33,7 +33,7 @@ fi
 # Push schema to database (creates tables if they don't exist)
 if [ -n "$DATABASE_URL" ]; then
   echo "📦 Syncing database schema with prisma db push..."
-  npx prisma db push --schema=prisma/schema.prisma --skip-generate --accept-data-loss 2>&1 || {
+  npx prisma db push --skip-generate 2>&1 || {
     echo "⚠️  prisma db push failed, but continuing server startup..."
   }
 else
