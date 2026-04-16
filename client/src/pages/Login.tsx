@@ -208,7 +208,7 @@ const Login = () => {
               <Bot className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-lg font-bold font-heading text-foreground tracking-tight">Intelligent Support</span>
+              <span className="text-lg font-bold font-heading text-foreground tracking-tight">SupportIQ</span>
               <span className="hidden sm:inline-block ml-2 text-[10px] font-bold uppercase tracking-[0.15em] text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full">Beta</span>
             </div>
           </div>
@@ -449,7 +449,7 @@ const Login = () => {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-surface-400">
             <Bot className="w-4 h-4" />
-            <span className="text-xs font-medium">© 2026 Intelligent Support. All rights reserved.</span>
+            <span className="text-xs font-medium">© 2026 SupportIQ. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">
             <Link to="/help" className="text-xs font-medium text-surface-400 hover:text-primary-500 transition-colors flex items-center gap-1">

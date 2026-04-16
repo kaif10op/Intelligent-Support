@@ -115,7 +115,7 @@ const Help = () => {
                  <h2 className="heading-4">Core Purpose</h2>
                </div>
                <p className="text-[13px] text-surface-600 leading-relaxed font-medium">
-                 Intelligent Support unifies AI conversational copilots, human handover, ticket queues, knowledge bases, and admin monitoring within a strictly protected workspace environment.
+                 SupportIQ unifies AI conversational copilots, human handover, ticket queues, knowledge bases, and admin monitoring within a strictly protected workspace environment.
                </p>
              </Card>
 
@@ -270,7 +270,7 @@ const Help = () => {
                  
                  <div className="mt-8 pt-8 border-t border-surface-200 px-2">
                     <p className="text-[11px] uppercase tracking-widest font-bold text-surface-500 mb-2">Platform Version</p>
-                    <p className="text-sm font-medium text-foreground">Intelligent Support v.2.0 (Premium Layout)</p>
+                    <p className="text-sm font-medium text-foreground">SupportIQ v2.0 (Premium)</p>
                  </div>
               </Card>
            </div>

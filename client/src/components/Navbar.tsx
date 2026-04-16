@@ -103,7 +103,7 @@ const Navbar = () => {
             </div>
             <div className="hidden sm:block">
               <div className="text-sm font-semibold leading-none text-foreground font-heading tracking-tight">
-                Intelligent Support
+                SupportIQ
               </div>
               <div className="mt-1 text-[11px] text-surface-500">
                 AI-powered workspace
