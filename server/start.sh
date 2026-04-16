@@ -33,7 +33,10 @@ fi
 # Push schema to database (creates tables if they don't exist)
 if [ -n "$DATABASE_URL" ]; then
   echo "📦 Syncing database schema with prisma db push..."
-  npx prisma db push --skip-generate 2>&1 || {
+  # Supabase pooler port 6543 (transaction mode) doesn't support DDL.
+  # Use port 5432 (session mode) for schema push instead.
+  MIGRATION_URL=$(echo "$DATABASE_URL" | sed 's/:6543/:5432/g')
+  DATABASE_URL="$MIGRATION_URL" npx prisma db push --skip-generate 2>&1 || {
     echo "⚠️  prisma db push failed, but continuing server startup..."
   }
 else
