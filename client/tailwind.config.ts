@@ -10,42 +10,42 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Neutral surface colors
+        // Refined surface palette
         surface: {
-          50: '#ffffff',
-          100: '#f8f9fa',
-          200: '#f1f3f5',
-          300: '#e9ecef',
-          400: '#dee2e6',
-          500: '#ced4da',
-          600: '#868e96',
-          700: '#495057',
-          800: '#343a40',
-          900: '#212529',
+          50: '#fafbff',
+          100: '#f1f3f9',
+          200: '#e4e7f1',
+          300: '#d1d5e4',
+          400: '#a3aac4',
+          500: '#7c84a3',
+          600: '#5c6484',
+          700: '#3d4462',
+          800: '#252a40',
+          900: '#131625',
         },
-        // Professional blue primary
+        // Indigo primary
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          300: '#a5b4fc',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#312e81',
         },
-        // Accent green
+        // Violet accent
         accent: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          DEFAULT: '#10b981',
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          DEFAULT: '#8b5cf6',
         },
         // Backward compatibility
         border: 'rgb(var(--color-border) / <alpha-value>)',
@@ -70,9 +70,63 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        heading: ['Outfit', 'Inter', ...defaultTheme.fontFamily.sans],
+        mono: ['JetBrains Mono', ...defaultTheme.fontFamily.mono],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-down': 'slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        'fade-in': 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+        'fade-in-up': 'fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+        'shimmer': 'shimmer 2s linear infinite',
+        'scale-in': 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        'spin-slow': 'spin 3s linear infinite',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        glow: {
+          '0%': { opacity: '0.4' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(16px) scale(0.98)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        slideDown: {
+          '0%': { opacity: '0', transform: 'translateY(-8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        scaleIn: {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+      },
+      boxShadow: {
+        'glow-sm': '0 0 15px -3px rgba(99, 102, 241, 0.3)',
+        'glow': '0 0 25px -5px rgba(99, 102, 241, 0.4)',
+        'glow-lg': '0 0 40px -8px rgba(99, 102, 241, 0.5)',
+        'glow-accent': '0 0 25px -5px rgba(139, 92, 246, 0.4)',
+      },
+      backdropBlur: {
+        xs: '2px',
       },
     },
   },

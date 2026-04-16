@@ -1,16 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon, ChevronRight, BarChart3, Users } from 'lucide-react';
+import { Home, MessageSquare, Database, Settings, HelpCircle, Clock, Ticket, Search as SearchIcon, ChevronRight, BarChart3, Users, ChevronLeft } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS, axiosConfig } from '../config/api';
 import { useAuthStore } from '../store/useAuthStore';
+
 interface RecentChat {
   id: string;
   kbId?: string;
   title?: string;
 }
 
-const Sidebar = () => {
+interface SidebarProps {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
+
+const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
   const { user } = useAuthStore();
   const [recentChats, setRecentChats] = useState<RecentChat[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
@@ -61,94 +67,136 @@ const Sidebar = () => {
         { to: '/knowledge-bases', label: 'Knowledge Bases', icon: Database }
       ];
 
-  const roleBadge = isAdmin ? 'Admin workspace' : isSupport ? 'Support workspace' : 'Customer workspace';
+  const roleBadge = isAdmin ? 'Admin' : isSupport ? 'Support' : 'Customer';
+  const roleColor = isAdmin ? 'text-primary-400' : isSupport ? 'text-amber-400' : 'text-emerald-400';
+  const roleBg = isAdmin ? 'bg-primary-500/10' : isSupport ? 'bg-amber-500/10' : 'bg-emerald-500/10';
 
   const navItemClass = ({ isActive }: { isActive: boolean }) =>
-    `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
+    `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
       isActive
-        ? 'border border-primary/20 bg-primary/10 text-primary shadow-sm shadow-primary/10'
-        : 'border border-transparent text-muted-foreground hover:border-border hover:bg-card/70 hover:text-foreground'
-    }`;
+        ? 'sidebar-active-indicator bg-primary-500/10 text-primary-500'
+        : 'text-surface-500 hover:bg-surface-100 hover:text-surface-800'
+    } ${collapsed ? 'justify-center px-2' : ''}`;
 
   return (
-    <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-72 overflow-y-auto border-r border-border/60 bg-background/65 backdrop-blur-md lg:flex lg:flex-col">
-      {/* Main Navigation */}
-      <nav className="flex-1 space-y-6 p-4">
-        <div className="rounded-2xl border border-border bg-card/70 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Workspace</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">Navigation</p>
-          <p className="mt-1 text-xs text-muted-foreground">{roleBadge}</p>
-        </div>
+    <aside
+      className={`sticky top-16 hidden h-[calc(100vh-4rem)] overflow-y-auto border-r bg-background/60 backdrop-blur-xl transition-all duration-300 lg:flex lg:flex-col ${
+        collapsed ? 'w-[72px]' : 'w-[260px]'
+      }`}
+      style={{ borderColor: 'var(--glass-border)' }}
+    >
+      {/* Toggle Button */}
+      {onToggle && (
+        <button
+          onClick={onToggle}
+          className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border bg-card text-surface-400 shadow-sm transition-all duration-200 hover:text-primary-500 hover:border-primary-500/30"
+          style={{ borderColor: 'var(--glass-border)' }}
+        >
+          {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+        </button>
+      )}
 
-        <div className="space-y-1">
+      {/* Main Navigation */}
+      <nav className="flex-1 space-y-5 p-3">
+        {/* Workspace Badge */}
+        {!collapsed && (
+          <div className="rounded-xl p-3" style={{ background: 'var(--gradient-subtle)' }}>
+            <div className="flex items-center gap-2">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${roleBg}`}>
+                <span className={`text-xs font-bold ${roleColor}`}>
+                  {roleBadge.charAt(0)}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-foreground">{user?.name || 'User'}</p>
+                <p className={`text-[10px] font-medium ${roleColor}`}>{roleBadge} workspace</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Nav Items */}
+        <div className="space-y-0.5">
+          {!collapsed && (
+            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-surface-400">
+              Navigation
+            </p>
+          )}
           {mainLinks.map((item) => {
             const Icon = item.icon;
             return (
-              <NavLink key={item.to} to={item.to} className={navItemClass}>
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-100 text-muted-foreground transition-colors group-hover:text-foreground">
-                  <Icon className="h-4.5 w-4.5" />
+              <NavLink key={item.to} to={item.to} className={navItemClass} title={collapsed ? item.label : undefined}>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors">
+                  <Icon className="h-[18px] w-[18px]" />
                 </div>
-                <span className="truncate">{item.label}</span>
+                {!collapsed && <span className="truncate">{item.label}</span>}
               </NavLink>
             );
           })}
         </div>
 
-        <div className="rounded-2xl border border-border bg-card/70 p-3">
-          <h3 className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            Recent activity
-          </h3>
+        {/* Recent Activity */}
+        {!collapsed && (
+          <div className="rounded-xl border p-3" style={{ borderColor: 'var(--glass-border)' }}>
+            <h3 className="mb-2.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-surface-400">
+              <Clock className="h-3 w-3" />
+              Recent Activity
+            </h3>
 
-          {recentLoading ? (
-            <div className="space-y-2 px-1 py-1">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-8 animate-pulse rounded-lg bg-surface-100" />
-              ))}
-            </div>
-          ) : recentChats.length === 0 ? (
-            <p className="px-1 py-2 text-xs text-muted-foreground">No recent chats yet.</p>
-          ) : (
-            <div className="space-y-1">
-              {recentChats.slice(0, 4).map((chat) => (
-                <NavLink
-                  key={chat.id}
-                  to={`/chat/${chat.id}${chat.kbId ? `?kbId=${chat.kbId}` : ''}`}
-                  className={({ isActive }) =>
-                    `group flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors ${
-                      isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-surface-100 hover:text-foreground'
-                    }`
-                  }
-                  title={chat.title || 'Untitled Chat'}
-                >
-                  <div className="h-2 w-2 flex-shrink-0 rounded-full bg-primary"></div>
-                  <span className="truncate">{chat.title || 'Untitled Chat'}</span>
-                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
-                </NavLink>
-              ))}
-            </div>
-          )}
-        </div>
+            {recentLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="h-8 animate-pulse rounded-lg bg-surface-100" />
+                ))}
+              </div>
+            ) : recentChats.length === 0 ? (
+              <p className="py-2 text-xs text-surface-400">No recent chats yet.</p>
+            ) : (
+              <div className="space-y-0.5">
+                {recentChats.slice(0, 4).map((chat) => (
+                  <NavLink
+                    key={chat.id}
+                    to={`/chat/${chat.id}${chat.kbId ? `?kbId=${chat.kbId}` : ''}`}
+                    className={({ isActive }) =>
+                      `group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-200 ${
+                        isActive
+                          ? 'bg-primary-500/10 text-primary-500'
+                          : 'text-surface-500 hover:bg-surface-100 hover:text-surface-800'
+                      }`
+                    }
+                    title={chat.title || 'Untitled Chat'}
+                  >
+                    <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary-400"></div>
+                    <span className="truncate text-xs">{chat.title || 'Untitled Chat'}</span>
+                    <ChevronRight className="ml-auto h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" />
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Footer Navigation */}
-      <div className="space-y-1 border-t border-border/50 p-4">
-        <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Workspace tools</h3>
+      <div className="space-y-0.5 border-t p-3" style={{ borderColor: 'var(--glass-border)' }}>
+        {!collapsed && (
+          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-surface-400">
+            Tools
+          </p>
+        )}
 
-        <NavLink to="/settings" className={navItemClass}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-100 text-muted-foreground transition-colors group-hover:text-foreground">
-            <Settings className="h-4.5 w-4.5" />
+        <NavLink to="/settings" className={navItemClass} title={collapsed ? 'Settings' : undefined}>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors">
+            <Settings className="h-[18px] w-[18px]" />
           </div>
-          <span>Settings</span>
+          {!collapsed && <span>Settings</span>}
         </NavLink>
 
-        <NavLink to="/help" className={navItemClass}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-100 text-muted-foreground transition-colors group-hover:text-foreground">
-            <HelpCircle className="h-4.5 w-4.5" />
+        <NavLink to="/help" className={navItemClass} title={collapsed ? 'Help & Support' : undefined}>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors">
+            <HelpCircle className="h-[18px] w-[18px]" />
           </div>
-          <span>Help & Support</span>
+          {!collapsed && <span>Help & Support</span>}
         </NavLink>
       </div>
     </aside>

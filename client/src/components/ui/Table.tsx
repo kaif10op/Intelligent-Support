@@ -5,6 +5,7 @@ interface TableColumn {
   label: string;
   align?: 'left' | 'right' | 'center';
   render?: (value: any, row: any) => ReactNode;
+  width?: string;
 }
 
 interface TableProps {
@@ -13,6 +14,7 @@ interface TableProps {
   hoverable?: boolean;
   striped?: boolean;
   className?: string;
+  onRowClick?: (row: any) => void;
 }
 
 const Table = ({
@@ -21,6 +23,7 @@ const Table = ({
   hoverable = true,
   striped = false,
   className = '',
+  onRowClick,
 }: TableProps) => {
   const alignClass = (align: string | undefined) => {
     switch (align) {
@@ -34,48 +37,57 @@ const Table = ({
   };
 
   return (
-    <div className={`border border-surface-200 rounded-lg overflow-hidden ${className}`}>
-      <table className="w-full">
-        <thead className="bg-surface-50 border-b border-surface-200">
-          <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                className={`px-6 py-3 text-xs font-semibold text-surface-600 uppercase tracking-wide ${alignClass(column.align)}`}
-              >
-                {column.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-6 py-8 text-center text-surface-500">
-                No data available
-              </td>
+    <div className={`border overflow-hidden bg-card glass-lg ${className}`} style={{ borderColor: 'var(--glass-border)' }}>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b bg-surface-50/50" style={{ borderColor: 'var(--glass-border)' }}>
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className={`px-5 py-3.5 text-xs font-bold text-surface-500 uppercase tracking-[0.08em] ${alignClass(column.align)}`}
+                  style={{ width: column.width }}
+                >
+                  {column.label}
+                </th>
+              ))}
             </tr>
-          ) : (
-            data.map((row, rowIndex) => (
-              <tr
-                key={rowIndex}
-                className={`border-b border-surface-100 ${
-                  hoverable ? 'hover:bg-surface-50 transition-colors' : ''
-                } ${striped && rowIndex % 2 === 0 ? 'bg-surface-50' : ''}`}
-              >
-                {columns.map((column) => (
-                  <td
-                    key={`${rowIndex}-${column.key}`}
-                    className={`px-6 py-4 text-sm text-surface-700 ${alignClass(column.align)}`}
-                  >
-                    {column.render ? column.render(row[column.key], row) : row[column.key]}
-                  </td>
-                ))}
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-6 py-12 text-center text-surface-500">
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="text-sm font-medium">No results found</p>
+                  </div>
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              data.map((row, rowIndex) => (
+                <tr
+                  key={rowIndex}
+                  onClick={() => onRowClick && onRowClick(row)}
+                  className={`border-b border-border/40 group transition-colors duration-200 ${
+                    hoverable ? 'hover:bg-primary-500/5' : ''
+                  } ${striped && rowIndex % 2 === 0 ? 'bg-surface-50/30' : ''} ${
+                    onRowClick ? 'cursor-pointer' : ''
+                  }`}
+                  style={rowIndex === data.length - 1 ? { borderBottom: 'none' } : {}}
+                >
+                  {columns.map((column) => (
+                    <td
+                      key={`${rowIndex}-${column.key}`}
+                      className={`px-5 py-4 text-sm text-surface-700 dark:text-surface-100 ${alignClass(column.align)}`}
+                    >
+                      {column.render ? column.render(row[column.key], row) : row[column.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

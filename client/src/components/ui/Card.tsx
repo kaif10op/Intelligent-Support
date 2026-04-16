@@ -5,6 +5,7 @@ interface CardProps {
   className?: string;
   elevated?: boolean;
   interactive?: boolean;
+  gradient?: boolean;
   onClick?: () => void;
 }
 
@@ -13,12 +14,22 @@ const Card = ({
   className = '',
   elevated = false,
   interactive = false,
+  gradient = false,
   onClick,
 }: CardProps) => {
-  const baseStyles = 'rounded-2xl border border-border bg-card text-foreground';
-  const elevatedStyles = elevated ? 'shadow-sm shadow-slate-900/5 dark:shadow-black/20' : '';
+  // Using the new design system classes defined in index.css
+  let baseStyles = 'glass overflow-hidden relative text-foreground transition-all duration-300';
+  
+  if (elevated) {
+    baseStyles = 'glass-elevated overflow-hidden relative text-foreground transition-all duration-300';
+  }
+  
+  if (gradient) {
+    baseStyles = 'rounded-2xl border text-white overflow-hidden relative transition-all duration-300 bg-gradient-to-br from-primary-600 to-accent-600 border-white/20 shadow-[0_8px_30px_rgba(99,102,241,0.25)]';
+  }
+
   const interactiveStyles = interactive
-    ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/10 dark:hover:shadow-black/30 hover:border-primary-300/60 transition-all duration-200'
+    ? `${gradient ? 'hover:shadow-[0_12px_40px_rgba(99,102,241,0.4)]' : 'card-interactive'} cursor-pointer`
     : '';
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -31,13 +42,22 @@ const Card = ({
 
   return (
     <div
-      className={`${baseStyles} ${elevatedStyles} ${interactiveStyles} ${className}`}
+      className={`${baseStyles} ${interactiveStyles} ${className}`}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
     >
-      {children}
+      {/* Subtle decorative mesh for gradient cards */}
+      {gradient && (
+        <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-overlay" 
+             style={{ backgroundImage: 'radial-gradient(circle at 100% 0%, white 0%, transparent 50%), radial-gradient(circle at 0% 100%, white 0%, transparent 50%)' }} />
+      )}
+      
+      {/* Content wrapper */}
+      <div className="relative z-10">
+        {children}
+      </div>
     </div>
   );
 };

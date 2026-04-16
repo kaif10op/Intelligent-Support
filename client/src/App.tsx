@@ -33,9 +33,14 @@ const isSupportStaffRole = (role?: string) =>
   isAdminRole(role) || ['SUPPORT_AGENT', 'SUPPORT', 'AGENT'].includes((role || '').toUpperCase());
 
 const LoadingScreen = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-muted-foreground">
-    <Loader2 className="w-10 h-10 animate-spin text-primary" />
-    <div className="text-sm font-medium">Loading workspace...</div>
+  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background page-enter">
+     <div className="relative">
+       <div className="absolute inset-0 rounded-full bg-primary-500/20 animate-ping blur-sm"></div>
+       <div className="relative bg-card p-4 rounded-full shadow-lg border border-primary-500/20">
+          <Loader2 size={32} className="animate-spin text-primary-500" />
+       </div>
+     </div>
+     <p className="text-[12px] text-surface-500 font-bold uppercase tracking-widest animate-pulse mt-2">Initializing Platform</p>
   </div>
 );
 

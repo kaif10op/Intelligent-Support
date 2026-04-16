@@ -6,14 +6,13 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Plus,
   RotateCcw,
   Loader2,
   Search,
   Zap,
-  ArrowRight,
   User,
-  MessageSquare
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Card, Input, StatCard, NavigationTabs, Badge, Select } from '../components/ui';
@@ -65,7 +64,6 @@ const SupportAgentDashboard = () => {
       if (isInitial) setLoading(true);
       setRefreshing(true);
 
-      // Load from cache first for initial load
       if (isInitial) {
         const cached = cacheService.get(CACHE_KEYS.TICKETS_LIST);
         if (cached && Array.isArray(cached)) {
@@ -74,7 +72,6 @@ const SupportAgentDashboard = () => {
       }
 
       const response = await axiosInstance.get(API_ENDPOINTS.TICKETS_LIST);
-      // Handle both response formats: { data, pagination } and direct array
       const allTickets = response.data?.data || response.data?.tickets || response.data || [];
       const ticketArray = Array.isArray(allTickets) ? allTickets : [];
       setTickets(ticketArray);
@@ -90,15 +87,11 @@ const SupportAgentDashboard = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'OPEN':
-        return <AlertCircle className="w-4 h-4" />;
-      case 'IN_PROGRESS':
-        return <Clock className="w-4 h-4" />;
+      case 'OPEN': return <AlertCircle className="w-3.5 h-3.5" />;
+      case 'IN_PROGRESS': return <Clock className="w-3.5 h-3.5" />;
       case 'RESOLVED':
-      case 'CLOSED':
-        return <CheckCircle className="w-4 h-4" />;
-      default:
-        return <Ticket className="w-4 h-4" />;
+      case 'CLOSED': return <CheckCircle className="w-3.5 h-3.5" />;
+      default: return <Ticket className="w-3.5 h-3.5" />;
     }
   };
 
@@ -177,7 +170,7 @@ const SupportAgentDashboard = () => {
       setQueueAiOutput(res.data?.suggestion || 'No AI output generated.');
     } catch (err: any) {
       setQueueAiOutput('');
-      setError(err.response?.data?.error || 'Failed to run queue AI copilot');
+      setError(err.response?.data?.error || 'Failed to run queue Copilot');
     } finally {
       setQueueAiLoading(false);
     }
@@ -235,287 +228,330 @@ const SupportAgentDashboard = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 min-h-screen flex flex-col items-center justify-center gap-4 py-12">
-        <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
-        <p className="text-surface-600">Loading support queue...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-transparent page-enter gap-4">
+         <div className="relative">
+           <div className="absolute inset-0 rounded-full bg-primary-500/20 animate-ping blur-sm"></div>
+           <div className="relative bg-card p-4 rounded-full shadow-lg border border-primary-500/20">
+              <Loader2 size={32} className="animate-spin text-primary-500" />
+           </div>
+         </div>
+         <p className="text-[12px] text-surface-500 font-bold uppercase tracking-widest animate-pulse mt-2">Loading Support Index</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card/70 backdrop-blur sticky top-0 z-40">
-        <div className="px-6 py-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary-100 rounded-lg">
-              <Ticket className="w-6 h-6 text-primary-500" />
-            </div>
-            <div>
-              <h1 className="heading-1">Support Queue</h1>
-              <p className="text-surface-600 mt-1">Workflow-first queue for faster resolution</p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              size="md"
-              icon={<RotateCcw className="w-4 h-4" />}
-              onClick={() => fetchTickets(false)}
-              loading={refreshing}
-              disabled={refreshing}
-            >
-              Refresh
-            </Button>
-            <Link to="/tickets">
-              <Button
-                variant="primary"
-                size="md"
-                icon={<Plus className="w-5 h-5" />}
-              >
-                Open Full Ticket Center
-              </Button>
-            </Link>
-          </div>
-        </div>
+    <div className="min-h-full bg-transparent flex flex-col page-enter">
+      
+      {/* Decorative Atmosphere */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+         <div className="absolute top-0 right-0 w-[40%] h-[500px] bg-gradient-to-b from-indigo-500/5 to-transparent blur-[100px] rounded-bl-full"></div>
+         <div className="absolute bottom-0 left-0 w-[50%] h-[300px] bg-gradient-to-t from-sky-500/5 to-transparent blur-[100px] rounded-tr-full"></div>
+      </div>
 
-        <div className="px-6 border-t border-surface-200">
-          <NavigationTabs
-            tabs={[
-              { id: 'all', label: 'All', icon: <Ticket className="w-4 h-4" /> },
-              { id: 'open', label: 'Open', icon: <AlertCircle className="w-4 h-4" /> },
-              { id: 'in-progress', label: 'In Progress', icon: <Clock className="w-4 h-4" /> },
-              { id: 'resolved', label: 'Resolved', icon: <CheckCircle className="w-4 h-4" /> }
-            ]}
-            activeTab={activeTab}
-            onTabChange={(tab) => setActiveTab(tab as any)}
-          />
+      {/* Glass Header */}
+      <div className="bg-background/80 backdrop-blur-xl border-b border-surface-200/50 sticky top-0 z-40 transition-all">
+        <div className="px-6 py-6 md:py-8 max-w-[1400px] mx-auto space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-sky-500/10 border border-indigo-500/20 flex items-center justify-center shadow-sm">
+                  <Ticket className="w-6 h-6 text-indigo-500 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+               </div>
+               <div>
+                 <h1 className="heading-1 tracking-tight pr-4">Copilot Dispatch</h1>
+                 <p className="text-sm text-surface-500 font-medium">Algorithmic workflow queue for optimal SLA delivery</p>
+               </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="glass"
+                size="md"
+                icon={<RotateCcw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
+                onClick={() => fetchTickets(false)}
+                loading={refreshing}
+                disabled={refreshing}
+                className="shadow-sm"
+              >
+                Sync
+              </Button>
+              <Link to="/tickets">
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={<Zap className="w-4 h-4" />}
+                  className="shadow-md shadow-primary-500/20 bg-primary-600 hover:bg-primary-700 transition-all"
+                >
+                  Full Action Center
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="-mb-6 md:-mb-8 relative z-10 pt-2">
+            <NavigationTabs
+              tabs={[
+                { id: 'all', label: 'Global Array', icon: <Ticket className="w-4 h-4" /> },
+                { id: 'open', label: 'Awaiting Action', icon: <AlertCircle className="w-4 h-4" /> },
+                { id: 'in-progress', label: 'In Progress', icon: <Clock className="w-4 h-4" /> },
+                { id: 'resolved', label: 'Safely Closed', icon: <CheckCircle className="w-4 h-4" /> }
+              ]}
+              activeTab={activeTab}
+              onTabChange={(tab) => setActiveTab(tab as any)}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <StatCard label="Total" value={stats.total} icon={<Ticket className="w-6 h-6" />} />
-          <StatCard label="Open" value={stats.open} icon={<AlertCircle className="w-6 h-6" />} />
-          <StatCard label="In Progress" value={stats.inProgress} icon={<Clock className="w-6 h-6" />} />
-          <StatCard label="Resolved" value={stats.resolved} icon={<CheckCircle className="w-6 h-6" />} />
-          <StatCard label="Urgent" value={stats.urgent} icon={<Zap className="w-6 h-6" />} />
-          <StatCard label="Unassigned" value={stats.unassigned} icon={<User className="w-6 h-6" />} />
-        </div>
-
-        <Card elevated className="p-4 space-y-3">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            <Input
-              type="text"
-              placeholder="Search by ticket, customer, title..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<Search className="w-4 h-4" />}
-            />
-            <Select
-              value={queueMode}
-              onChange={(e) => setQueueMode(e.target.value as QueueMode)}
-              options={[
-                { value: 'my', label: 'My queue (assigned + unassigned)' },
-                { value: 'unassigned', label: 'Unassigned only' },
-                { value: 'urgent', label: 'Urgent + high priority' },
-                { value: 'all', label: 'All visible tickets' }
-              ]}
-            />
-            <Select
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value as SortMode)}
-              options={[
-                { value: 'priority', label: 'Sort by priority + age' },
-                { value: 'newest', label: 'Newest first' },
-                { value: 'oldest', label: 'Oldest first' }
-              ]}
-            />
+      <div className="flex-1 px-6 py-10 overflow-y-auto w-full relative z-10">
+        <div className="max-w-[1400px] mx-auto pb-12 animate-fade-in-up">
+          
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+            <StatCard label="Total Threads" value={stats.total} icon={<Ticket className="w-5 h-5 text-surface-500" />} />
+            <StatCard label="Awaiting" value={stats.open} icon={<AlertCircle className="w-5 h-5 text-indigo-500" />} />
+            <StatCard label="Active" value={stats.inProgress} icon={<Clock className="w-5 h-5 text-blue-500" />} />
+            <StatCard label="Resolved" value={stats.resolved} icon={<CheckCircle className="w-5 h-5 text-emerald-500" />} />
+            <StatCard label="Critical" value={stats.urgent} icon={<Zap className="w-5 h-5 text-rose-500" />} />
+            <StatCard label="Orphaned" value={stats.unassigned} icon={<User className="w-5 h-5 text-amber-500" />} />
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { key: 'my', label: `My Queue (${stats.myAssigned + stats.unassigned})` },
-              { key: 'unassigned', label: `Unassigned (${stats.unassigned})` },
-              { key: 'urgent', label: `Urgent (${stats.urgent})` },
-              { key: 'all', label: `All (${stats.total})` }
-            ].map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setQueueMode(item.key as QueueMode)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
-                  queueMode === item.key
-                    ? 'bg-primary/10 text-primary border-primary/30'
-                    : 'bg-surface-50 text-surface-600 border-surface-200'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </Card>
 
-        {error && (
-          <Card className="p-4 border-red-200 bg-red-50">
-            <p className="text-sm text-red-700">{error}</p>
+          <Card elevated className="p-0 overflow-hidden border-surface-200 mb-8 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-surface-200 bg-surface-50/50">
+             <div className="p-4 flex-1">
+               <Input
+                 type="text"
+                 placeholder="Search identifiers, customer metadata, context..."
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 icon={<Search className="w-4 h-4 text-surface-400" />}
+                 className="border-none shadow-none focus:ring-0 bg-transparent text-[13px] w-full"
+               />
+             </div>
+             <div className="p-3 shrink-0 flex items-center gap-3">
+               <Select
+                 value={queueMode}
+                 onChange={(e) => setQueueMode(e.target.value as QueueMode)}
+                 options={[
+                   { value: 'my', label: 'Target: My active queue' },
+                   { value: 'unassigned', label: 'Target: Unclaimed flow' },
+                   { value: 'urgent', label: 'Target: Critical bypass' },
+                   { value: 'all', label: 'Target: Global view' }
+                 ]}
+                 className="w-48 text-[12px] bg-white dark:bg-card border-none shadow-sm"
+               />
+               <Select
+                 value={sortMode}
+                 onChange={(e) => setSortMode(e.target.value as SortMode)}
+                 options={[
+                   { value: 'priority', label: 'Sort: Urgency decay' },
+                   { value: 'newest', label: 'Sort: Chronological' },
+                   { value: 'oldest', label: 'Sort: Oldest hold' }
+                 ]}
+                 className="w-40 text-[12px] bg-white dark:bg-card border-none shadow-sm"
+               />
+             </div>
           </Card>
-        )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-4">
-            <Card elevated className="p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold text-surface-900">Priority focus queue</h2>
-                <p className="text-xs text-surface-500">{filteredTickets.length} ticket(s) in current view</p>
-              </div>
-              <p className="text-sm text-surface-600 mt-1">
-                Work top-to-bottom for fastest SLA-safe handling.
-              </p>
-            </Card>
-
-            {filteredTickets.length === 0 ? (
-              <Card elevated className="p-12 text-center">
-                <Ticket className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-                <p className="text-surface-600 font-medium">
-                  {searchTerm ? 'No tickets match your search' : `No ${activeTab === 'all' ? '' : activeTab} tickets`}
-                </p>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {filteredTickets.map((ticket, index) => (
-                  <Card key={ticket.id} elevated className="p-4 hover:shadow-md transition-all">
-                    <div className="flex flex-col lg:flex-row gap-4 lg:items-start lg:justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          {index < 3 && <Badge variant="warning">Top {index + 1}</Badge>}
-                          <Badge variant={getPriorityVariant(ticket.priority)}>{ticket.priority}</Badge>
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-100 text-xs font-medium text-surface-700">
-                            {getStatusIcon(ticket.status)}
-                            <span>{ticket.status}</span>
-                          </div>
-                          <div className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                            {ticket.assignedToId === user?.id ? 'Assigned to me' : ticket.assignedToId ? 'Assigned' : 'Unassigned'}
-                          </div>
-                        </div>
-
-                        <h3 className="text-base font-semibold text-surface-900">{ticket.title}</h3>
-                        <p className="text-sm text-surface-600 mt-1 line-clamp-2">{ticket.description}</p>
-
-                        <div className="text-xs text-surface-500 mt-2 flex gap-3 flex-wrap">
-                          <span>ID: {ticket.id.slice(0, 8)}...</span>
-                          <span>•</span>
-                          <span>{new Date(ticket.createdAt).toLocaleString()}</span>
-                          {ticket.user && (
-                            <>
-                              <span>•</span>
-                              <span>{ticket.user.name}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 flex-wrap lg:flex-col lg:items-stretch">
-                        <Button size="sm" variant="primary" onClick={() => navigate(`/ticket/${ticket.id}`)}>
-                          Open Ticket
-                        </Button>
-                        <Button size="sm" variant="outline" icon={<MessageSquare className="w-4 h-4" />} onClick={() => navigate(`/ticket/${ticket.id}`)}>
-                          Chat & Context
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          icon={<Zap className="w-4 h-4" />}
-                          loading={startingChatTicketId === ticket.id}
-                          onClick={() => handleStartChat(ticket)}
-                        >
-                          Start Chat
-                        </Button>
-                        <Button size="sm" variant="ghost" icon={<ArrowRight className="w-4 h-4" />} onClick={() => navigate(`/tickets?id=${ticket.id}`)}>
-                          Full Workflow
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <Card elevated className="p-4">
-              <h3 className="text-sm font-semibold text-surface-900">Workflow quick actions</h3>
-              <div className="mt-3 space-y-2">
-                <Button className="w-full justify-start" variant="outline" onClick={() => setQueueMode('unassigned')}>
-                  Pick unassigned tickets
-                </Button>
-                <Button className="w-full justify-start" variant="outline" onClick={() => setQueueMode('urgent')}>
-                  Focus urgent/high first
-                </Button>
-                <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/tickets')}>
-                  Open ticket center
-                </Button>
-              </div>
-            </Card>
-
-            <Card elevated className="p-4 space-y-3 bg-amber-50/40 border-amber-200">
-              <h3 className="text-sm font-semibold text-surface-900">AI Queue Copilot</h3>
-              <div className="flex gap-2 flex-wrap">
-                {[
-                  ['next_steps', 'Next steps'],
-                  ['priority_recommendation', 'Priority advice'],
-                  ['risk_check', 'Risk check'],
-                  ['status_update', 'Status draft'],
-                  ['diagnostic_checklist', 'Diagnostics'],
-                  ['timeline_update', 'Timeline update']
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    onClick={() => setQueueAiMode(value)}
-                    className={`px-2 py-1 rounded-md text-xs border ${
-                      queueAiMode === value
-                        ? 'bg-amber-500/20 text-amber-700 border-amber-400'
-                        : 'bg-card text-surface-600 border-border'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <Button variant="outline" className="w-full" onClick={runQueueCopilot} loading={queueAiLoading}>
-                Analyze current queue
-              </Button>
-              <div className="grid grid-cols-1 gap-2">
-                <Button variant="outline" className="w-full" onClick={() => runQueueAiPack('triage-pack')} loading={runningAiPack === 'triage-pack'}>
-                  Run Triage Pack
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => runQueueAiPack('handoff-pack')} loading={runningAiPack === 'handoff-pack'}>
-                  Run Handoff Pack
-                </Button>
-              </div>
-              {queueAiOutput && (
-                <div className="p-3 rounded-lg bg-card border border-border text-xs text-surface-700 whitespace-pre-wrap">
-                  {queueAiOutput}
+          {error && (
+             <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-3 animate-fade-in mb-8">
+                <AlertCircle size={18} className="text-rose-500 mt-0.5" />
+                <div>
+                   <p className="font-bold text-[13px] text-rose-700">Dispatch Failure</p>
+                   <p className="text-[12px] text-rose-600/80">{error}</p>
                 </div>
-              )}
-            </Card>
+             </div>
+          )}
 
-            <Card elevated className="p-4">
-              <h3 className="text-sm font-semibold text-surface-900">Immediate focus (top 5)</h3>
-              {topFocus.length === 0 ? (
-                <p className="text-sm text-surface-500 mt-2">No tickets in current view.</p>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            
+            {/* Thread Flow */}
+            <div className="xl:col-span-2 space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                 <h2 className="heading-4 text-surface-900 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-indigo-500" /> Dispatch Stream
+                 </h2>
+                 <p className="text-[11px] font-bold uppercase tracking-widest text-surface-400 bg-surface-100 px-3 py-1 rounded-full">
+                    {filteredTickets.length} Items Loaded
+                 </p>
+              </div>
+
+              {filteredTickets.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-surface-200 rounded-3xl bg-surface-50/50">
+                  <div className="w-16 h-16 rounded-full bg-surface-100 flex items-center justify-center mb-4">
+                     <CheckCircle size={24} className="text-surface-400" />
+                  </div>
+                  <p className="font-bold text-foreground text-[15px] mb-1">Queue is fully optimized</p>
+                  <p className="text-[13px] text-surface-500 text-center max-w-sm">
+                    {searchTerm ? 'No threads match the current parameters.' : `No threads currently found in ${activeTab} view. Subsystems clear.`}
+                  </p>
+                </div>
               ) : (
-                <div className="mt-3 space-y-2">
-                  {topFocus.map((t) => (
-                    <button
-                      key={`focus-${t.id}`}
-                      onClick={() => navigate(`/ticket/${t.id}`)}
-                      className="w-full text-left p-2 rounded-lg border border-surface-200 hover:border-primary-300 hover:bg-primary-50/40"
-                    >
-                      <p className="text-xs font-semibold text-surface-900 truncate">{t.title}</p>
-                      <p className="text-[11px] text-surface-500 mt-1">{t.priority} • {t.status}</p>
-                    </button>
+                <div className="space-y-4">
+                  {filteredTickets.map((ticket, index) => (
+                    <Card key={ticket.id} elevated className={`p-0 overflow-hidden transition-all duration-300 hover:shadow-lg border-l-4 ${index < 3 && queueMode === 'urgent' ? 'border-l-rose-500' : 'border-l-transparent'} hover:border-l-primary-500 group`}>
+                      <div className="p-5 flex flex-col lg:flex-row gap-5 lg:items-center justify-between">
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            {index < 3 && (
+                               <Badge variant="error" size="sm" className="shadow-sm">
+                                  <Sparkles size={10} className="mr-1" /> SLA P{index + 1}
+                               </Badge>
+                            )}
+                            <Badge variant={getPriorityVariant(ticket.priority)} size="sm" className="shadow-sm">{ticket.priority}</Badge>
+                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border ${
+                                ticket.status === 'OPEN' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                                ticket.status === 'IN_PROGRESS' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}>
+                              {getStatusIcon(ticket.status)}
+                              <span>{ticket.status}</span>
+                            </div>
+                            <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                                ticket.assignedToId === user?.id ? 'bg-primary-50 text-primary-700 border-primary-200' :
+                                ticket.assignedToId ? 'bg-surface-50 text-surface-600 border-surface-200' :
+                                'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}>
+                              {ticket.assignedToId === user?.id ? 'Assigned: You' : ticket.assignedToId ? 'Claimed' : 'Orphaned'}
+                            </div>
+                          </div>
+
+                          <h3 className="text-base font-bold text-foreground mb-1 group-hover:text-primary-600 transition-colors">{ticket.title}</h3>
+                          <p className="text-[13px] text-surface-600 line-clamp-2 leading-relaxed">{ticket.description}</p>
+
+                          <div className="text-[11px] font-bold tracking-wide text-surface-400 mt-3 flex items-center gap-3 flex-wrap">
+                            <span className="font-mono bg-surface-100 px-2 py-0.5 rounded text-surface-500">#{ticket.id.slice(0, 8)}</span>
+                            <span>•</span>
+                            <span>{new Date(ticket.createdAt).toLocaleString()}</span>
+                            {ticket.user && (
+                              <>
+                                <span>•</span>
+                                <span className="flex items-center gap-1 text-primary-600"><User size={12}/> {ticket.user.name}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap lg:flex-col lg:items-stretch lg:w-40 shrink-0 border-t lg:border-t-0 lg:border-l border-surface-100 pt-4 lg:pt-0 lg:pl-5">
+                          <Button size="sm" variant="primary" onClick={() => navigate(`/ticket/${ticket.id}`)} className="justify-center shadow-md shadow-primary-500/20">
+                            Deep Dive
+                          </Button>
+                          <Button size="sm" variant="glass" icon={<MessageSquare className="w-3.5 h-3.5" />} onClick={() => navigate(`/ticket/${ticket.id}`)} className="justify-center text-[12px] bg-white dark:bg-card">
+                            Review Context
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="glass"
+                            icon={<Zap className="w-3.5 h-3.5" />}
+                            loading={startingChatTicketId === ticket.id}
+                            onClick={() => handleStartChat(ticket)}
+                            className="justify-center text-[12px] bg-white dark:bg-card"
+                          >
+                            Init Live Link
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
                   ))}
                 </div>
               )}
-            </Card>
+            </div>
+
+            {/* Side Tools */}
+            <div className="space-y-6">
+              
+              {/* Copilot Engine */}
+              <Card elevated className="p-0 overflow-hidden border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 relative group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-colors pointer-events-none"></div>
+                <div className="p-5 border-b border-indigo-500/10">
+                   <div className="flex items-center gap-2">
+                      <Sparkles size={18} className="text-indigo-500" />
+                      <h3 className="heading-4 text-indigo-900 dark:text-indigo-100">Copilot Subroutine</h3>
+                   </div>
+                   <p className="text-[12px] text-surface-500 font-medium mt-1">Run algorithmic analysis on current queue buffer.</p>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      ['next_steps', 'Projection'],
+                      ['priority_recommendation', 'Urgency Audit'],
+                      ['risk_check', 'Risk Scan'],
+                      ['diagnostic_checklist', 'Diagnostics']
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        onClick={() => setQueueAiMode(value)}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${
+                          queueAiMode === value
+                            ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
+                            : 'bg-white dark:bg-card text-surface-600 border border-surface-200 hover:border-indigo-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <Button variant="primary" fullWidth onClick={runQueueCopilot} loading={queueAiLoading} className="bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20">
+                    <Zap size={16} className="mr-2" /> Execute Routine
+                  </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                       <div className="w-full border-t border-indigo-500/10" />
+                    </div>
+                    <div className="relative flex justify-center text-xs font-medium">
+                       <span className="bg-transparent px-2 text-surface-400">BATCH MACROS</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button variant="glass" className="text-[12px] px-0 bg-white dark:bg-card border-indigo-500/20 text-indigo-700 hover:bg-indigo-50" onClick={() => runQueueAiPack('triage-pack')} loading={runningAiPack === 'triage-pack'}>
+                      Auto-Triage Pack
+                    </Button>
+                    <Button variant="glass" className="text-[12px] px-0 bg-white dark:bg-card border-indigo-500/20 text-indigo-700 hover:bg-indigo-50" onClick={() => runQueueAiPack('handoff-pack')} loading={runningAiPack === 'handoff-pack'}>
+                      Sync Handoff Pack
+                    </Button>
+                  </div>
+                </div>
+
+                {queueAiOutput && (
+                  <div className="p-5 bg-black/5 dark:bg-black/20 border-t border-indigo-500/10">
+                    <div className="p-3 rounded-xl bg-white/50 dark:bg-black/50 border border-white/20 dark:border-white/5 text-[12px] text-surface-700 dark:text-surface-300 whitespace-pre-wrap leading-relaxed shadow-inner backdrop-blur-md">
+                       <div className="flex items-center gap-2 mb-2 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider text-[10px]">
+                          <Zap size={10} /> Copilot Output Stream
+                       </div>
+                       {queueAiOutput}
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* Fast Priority Stack */}
+              <Card elevated className="p-0 overflow-hidden border-surface-200">
+                <div className="px-5 py-4 border-b border-surface-200/50 bg-surface-50/50">
+                   <h3 className="text-[13px] font-bold text-foreground">Immediate Override Stack</h3>
+                </div>
+                <div className="p-2 space-y-1">
+                  {topFocus.length === 0 ? (
+                    <div className="py-6 text-center text-[12px] text-surface-400 font-medium">
+                       Stack completely cleared.
+                    </div>
+                  ) : (
+                    topFocus.map((t) => (
+                      <button
+                        key={`focus-${t.id}`}
+                        onClick={() => navigate(`/ticket/${t.id}`)}
+                        className="w-full text-left p-3 rounded-xl hover:bg-primary-50/50 hover:scale-[1.02] transition-all group border border-transparent hover:border-primary-200"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${t.priority === 'URGENT' ? 'bg-rose-500' : t.priority === 'HIGH' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+                          <p className="text-[13px] font-bold text-surface-900 truncate group-hover:text-primary-700">{t.title}</p>
+                        </div>
+                        <p className="text-[11px] font-medium text-surface-500 ml-3.5">{t.priority} Queue • {t.status}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+            </div>
           </div>
         </div>
       </div>

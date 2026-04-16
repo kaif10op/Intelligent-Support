@@ -18,11 +18,11 @@ const Skeleton: React.FC<SkeletonProps> = ({
 
   return (
     <div
-      className={`bg-gradient-to-r from-border/30 via-border/50 to-border/30 animate-pulse rounded ${className}`}
+      className={`shimmer bg-surface-100 dark:bg-surface-200/50 ${className}`}
       style={{
         width: widthStyle,
         height: heightStyle,
-        borderRadius: variant === 'circle' ? '50%' : '0.5rem'
+        borderRadius: variant === 'circle' ? '50%' : '0.75rem'
       }}
     />
   );
@@ -32,9 +32,9 @@ export default Skeleton;
 
 // Specialized skeleton components for common use cases
 export const SkeletonText = ({ lines = 1, ...props }: SkeletonProps & { lines?: number }) => (
-  <div className="flex flex-col gap-2">
+  <div className="flex flex-col gap-2.5 w-full">
     {Array.from({ length: lines }).map((_, i) => (
-      <Skeleton key={i} variant="text" height="16px" {...props} />
+      <Skeleton key={i} variant="text" height="16px" width={i === lines - 1 && lines > 1 ? '70%' : '100%'} {...props} />
     ))}
   </div>
 );
@@ -44,12 +44,11 @@ export const SkeletonAvatar = (props: SkeletonProps) => (
 );
 
 export const SkeletonCard = (props: SkeletonProps) => (
-  <div className="flex flex-col gap-3 p-4">
+  <div className="flex flex-col gap-4 p-5 glass border border-border/50">
     <Skeleton height="24px" width="60%" {...props} />
-    <Skeleton height="16px" width="100%" {...props} />
-    <Skeleton height="16px" width="90%" {...props} />
-    <div className="mt-3">
-      <Skeleton height="40px" width="100%" {...props} />
+    <SkeletonText lines={2} {...props} />
+    <div className="mt-4 pt-4 border-t border-border/30">
+      <Skeleton height="44px" width="100%" className="rounded-xl" {...props} />
     </div>
   </div>
 );

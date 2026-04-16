@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Ticket, Plus, Clock, AlertCircle, CheckCircle, User, Loader2, RotateCcw, Zap, Users } from 'lucide-react';
+import { Ticket, Plus, Clock, AlertCircle, CheckCircle, Search, Columns, LayoutGrid, Play, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { useToast } from '../contexts/ToastContext';
 import { API_ENDPOINTS, apiUrl, axiosConfig } from '../config/api';
-import { Button, Card, Input, Select, Badge, Modal, StatCard, NavigationTabs } from '../components/ui';
+import { Button, Card, Input, NavigationTabs, Badge, Select, Modal } from '../components/ui';
 
 type TicketTab = 'all' | 'open' | 'in-progress' | 'resolved';
 
@@ -15,18 +15,16 @@ const Tickets = () => {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [ticketAiResult, setTicketAiResult] = useState('');
+  const [ticketAiPackLoading, setTicketAiPackLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TicketTab>('all');
   const [newTicket, setNewTicket] = useState({ title: '', description: '', priority: 'MEDIUM' });
-  const [ticketAiMode, setTicketAiMode] = useState('draft_ticket');
-  const [ticketAiLoading, setTicketAiLoading] = useState(false);
-  const [ticketAiResult, setTicketAiResult] = useState('');
-  const [ticketAiPackLoading, setTicketAiPackLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState('ALL');
-  const [sortBy, setSortBy] = useState<'recent' | 'urgent' | 'oldest'>('recent');
+  const [sortBy] = useState<'recent' | 'urgent' | 'oldest'>('recent');
+  const [viewMode, setViewMode] = useState<'grid' | 'kanban'>('grid');
 
   // Admin assignment state
   const [supportAgents, setSupportAgents] = useState<any[]>([]);
@@ -39,10 +37,8 @@ const Tickets = () => {
 
   const fetchTickets = useCallback(async () => {
     try {
-      setRefreshing(true);
-      // Use /api/tickets/all only for admins, else use /api/tickets
       const endpoint = user?.role === 'ADMIN' ? apiUrl('/api/tickets/all') : apiUrl('/api/tickets');
-      const res = await axios.get(`${endpoint}?limit=30`, axiosConfig);
+      const res = await axios.get(`${endpoint}?limit=50`, axiosConfig);
       const data = Array.isArray(res.data) ? res.data : res.data?.data || res.data?.tickets || [];
       setTickets(Array.isArray(data) ? data : []);
       setLoading(false);
@@ -51,8 +47,6 @@ const Tickets = () => {
       addToast(errorMsg, 'error');
       setTickets([]);
       setLoading(false);
-    } finally {
-      setRefreshing(false);
     }
   }, [user?.role, addToast]);
 
@@ -70,34 +64,7 @@ const Tickets = () => {
     }
   };
 
-  const handleGenerateTicketWithAI = async () => {
-    try {
-      setTicketAiLoading(true);
-      const context = `${newTicket.title}\n${newTicket.description}`.trim();
-      const res = await axios.post(
-        API_ENDPOINTS.TICKET_AI_COPILOT,
-        { flow: 'ticket_creation', mode: ticketAiMode, context },
-        axiosConfig
-      );
-      const suggestion = res.data?.suggestion || '';
-      const draft = res.data?.draft;
 
-      if (draft) {
-        setNewTicket((prev) => ({
-          ...prev,
-          title: draft.title || prev.title,
-          description: draft.description || prev.description,
-          priority: draft.priority || prev.priority
-        }));
-      }
-      setTicketAiResult(suggestion || 'Draft generated.');
-      addToast('AI ticket draft generated', 'success');
-    } catch (err: any) {
-      addToast(err.response?.data?.error || 'Failed to generate ticket draft', 'error');
-    } finally {
-      setTicketAiLoading(false);
-    }
-  };
 
   const handleRunTicketAIPack = async () => {
     try {
@@ -120,11 +87,11 @@ const Tickets = () => {
       }
       const combined = Array.isArray(res.data?.outputs)
         ? res.data.outputs.map((o: any) => `## ${o.mode}\n${o.suggestion}`).join('\n\n')
-        : res.data?.suggestion || 'Draft generated.';
+        : res.data?.suggestion || 'Analysis complete.';
       setTicketAiResult(combined);
-      addToast('AI ticket pack completed', 'success');
+      addToast('Smart optimization applied', 'success');
     } catch (err: any) {
-      addToast(err.response?.data?.error || 'Failed to run AI ticket pack', 'error');
+      addToast(err.response?.data?.error || 'Optimization failed', 'error');
     } finally {
       setTicketAiPackLoading(false);
     }
@@ -133,11 +100,10 @@ const Tickets = () => {
   const handleUpdateStatus = async (ticketId: string, status: string) => {
     try {
       await axios.put(API_ENDPOINTS.TICKET_UPDATE(ticketId), { status }, axiosConfig);
-      addToast(`Ticket status updated to ${status}`, 'success');
+      addToast(`Ticket marked as ${status.replace('_', ' ').toLowerCase()}`, 'success');
       fetchTickets();
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'Failed to update ticket status';
-      addToast(errorMsg, 'error');
+      addToast(err.response?.data?.error || 'Failed to update ticket status', 'error');
     }
   };
 
@@ -148,10 +114,9 @@ const Tickets = () => {
       const agents = users.filter((u: any) => u.role === 'SUPPORT_AGENT' || u.role === 'ADMIN');
       setSupportAgents(agents);
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'Failed to load support agents';
-      addToast(errorMsg, 'error');
+       console.error('Failed to load agents');
     }
-  }, [addToast]);
+  }, []);
 
   useEffect(() => {
     fetchTickets();
@@ -172,14 +137,13 @@ const Tickets = () => {
         { assignedToId: selectedAgent, status: 'IN_PROGRESS' },
         axiosConfig
       );
-      addToast('Ticket assigned successfully!', 'success');
+      addToast('Ticket assigned successfully', 'success');
       setShowAssignModal(false);
       setSelectedAgent('');
       setSelectedTicketForAssign(null);
       fetchTickets();
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'Failed to assign ticket';
-      addToast(errorMsg, 'error');
+      addToast(err.response?.data?.error || 'Failed to assign ticket', 'error');
     }
   };
 
@@ -187,11 +151,10 @@ const Tickets = () => {
     try {
       setAutoAssigning(true);
       const res = await axios.post(apiUrl('/api/tickets/admin/auto-assign'), {}, axiosConfig);
-      addToast(res.data.message || 'Auto-assignment completed!', 'success');
+      addToast(res.data.message || 'Auto-assignment completed', 'success');
       fetchTickets();
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'Failed to auto-assign tickets';
-      addToast(errorMsg, 'error');
+      addToast(err.response?.data?.error || 'Failed to auto-assign tickets', 'error');
     } finally {
       setAutoAssigning(false);
     }
@@ -203,27 +166,19 @@ const Tickets = () => {
       const res = await axios.post(apiUrl(`/api/tickets/${ticket.id}/init-chat`), {}, axiosConfig);
       const chatId = res.data?.chat?.id;
       if (chatId) {
-        addToast('Support chat started successfully', 'success');
+        addToast('Support session initialized', 'success');
         navigate(`/chat/${chatId}`);
         return;
       }
-      addToast('Failed to start chat for this ticket', 'error');
+      addToast('Failed to initialize session', 'error');
     } catch (err: any) {
-      addToast(err.response?.data?.error || 'Failed to start chat for this ticket', 'error');
+      addToast(err.response?.data?.error || 'Failed to initialize session', 'error');
     } finally {
       setStartingChatTicketId(null);
     }
   };
 
 
-  // Calculate stats
-  const ticketStats = {
-    total: tickets.length,
-    open: tickets.filter(t => t.status === 'OPEN').length,
-    inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
-    resolved: tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
-    urgent: tickets.filter(t => t.priority === 'URGENT').length,
-  };
 
   const getSortedAndFilteredTickets = () => {
     let filtered = tickets.filter(t => {
@@ -236,12 +191,10 @@ const Tickets = () => {
       return statusMatch && priorityMatch && searchMatch;
     });
 
-    // Apply tab filter
     if (activeTab === 'open') filtered = filtered.filter(t => t.status === 'OPEN');
     else if (activeTab === 'in-progress') filtered = filtered.filter(t => t.status === 'IN_PROGRESS');
     else if (activeTab === 'resolved') filtered = filtered.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
 
-    // Apply sorting
     const sorted = [...filtered];
     if (sortBy === 'urgent') {
       const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
@@ -267,267 +220,245 @@ const Tickets = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'OPEN': return <AlertCircle className="w-4 h-4" />;
-      case 'IN_PROGRESS': return <Clock className="w-4 h-4" />;
-      case 'RESOLVED': return <CheckCircle className="w-4 h-4" />;
-      default: return null;
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
-        <p className="text-surface-600">Loading tickets...</p>
+      <div className="h-full w-full flex flex-col items-center justify-center gap-4">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-primary-500/20 animate-ping blur-sm"></div>
+          <div className="relative bg-card border border-primary-500/30 p-4 rounded-2xl shadow-xl shadow-primary-500/10">
+            <Ticket className="w-8 h-8 text-primary-500 animate-pulse" />
+          </div>
+        </div>
+        <p className="text-sm font-medium text-surface-500 animate-pulse mt-2 tracking-wide uppercase">Loading tickets</p>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card/70 backdrop-blur sticky top-0 z-40">
-        <div className="px-6 py-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary-100 rounded-lg">
-              <Ticket className="w-6 h-6 text-primary-500" />
-            </div>
-            <div>
-              <h1 className="heading-1">Support Tickets</h1>
-              <p className="text-surface-600 mt-1">Manage {ticketStats.total} ticket{ticketStats.total !== 1 ? 's' : ''}</p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            {user?.role === 'ADMIN' && (
-              <Button
-                variant="outline"
-                size="md"
-                icon={<Zap className="w-4 h-4" />}
-                onClick={handleAutoAssign}
-                loading={autoAssigning}
-                disabled={autoAssigning}
-              >
-                Auto-Assign
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="md"
-              icon={<RotateCcw className="w-4 h-4" />}
-              onClick={fetchTickets}
-              loading={refreshing}
-              disabled={refreshing}
-            >
-              Refresh
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              icon={<Plus className="w-5 h-5" />}
-              onClick={() => setShowCreateModal(true)}
-            >
-              New Ticket
-            </Button>
-          </div>
+  // Define Kanban Columns
+  const columns = [
+    { id: 'OPEN', title: 'Open', color: 'rose', tickets: filteredTickets.filter(t => t.status === 'OPEN') },
+    { id: 'IN_PROGRESS', title: 'In Progress', color: 'amber', tickets: filteredTickets.filter(t => t.status === 'IN_PROGRESS') },
+    { id: 'RESOLVED', title: 'Resolved', color: 'emerald', tickets: filteredTickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED') }
+  ];
+
+  const TicketCardComponent = ({ ticket }: { ticket: any }) => (
+    <Card
+      className={`p-5 flex flex-col transition-all duration-300 group hover:-translate-y-1 hover:shadow-xl ${isSupportStaff ? 'cursor-pointer' : ''}`}
+      onClick={isSupportStaff ? () => navigate(`/ticket/${ticket.id}`) : undefined}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <Badge variant={getPriorityVariant(ticket.priority)}>
+          {ticket.priority}
+        </Badge>
+        <div className={`w-2.5 h-2.5 rounded-full ${ticket.status === 'OPEN' ? 'bg-rose-500' : ticket.status === 'IN_PROGRESS' ? 'bg-amber-500' : 'bg-emerald-500'} shadow-[0_0_8px_currentColor]`} />
+      </div>
+
+      <h3 className="font-semibold text-foreground mb-3 line-clamp-2 leading-snug group-hover:text-primary-500 transition-colors">
+        {ticket.title}
+      </h3>
+      <p className="text-[13px] text-surface-500 mb-5 line-clamp-3 leading-relaxed">
+        {ticket.description}
+      </p>
+
+      <div className="mt-auto space-y-4">
+        <div className="flex items-center gap-4 text-xs font-medium text-surface-500 border-t border-surface-200/50 pt-4">
+           {ticket.assignedTo ? (
+             <div className="flex items-center gap-1.5" title={`Assigned to ${ticket.assignedTo.name}`}>
+               <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-[9px] uppercase">
+                 {ticket.assignedTo.name?.charAt(0) || 'A'}
+               </div>
+               <span className="truncate max-w-[80px]">{ticket.assignedTo.name}</span>
+             </div>
+           ) : (
+             <span className="italic text-surface-400">Unassigned</span>
+           )}
+           <div className="ml-auto text-[10px] tracking-wide uppercase">
+             {new Date(ticket.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric'})}
+           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="px-6 border-t border-surface-200">
-          <NavigationTabs
-            tabs={[
-              { id: 'all', label: 'All', icon: <Ticket className="w-4 h-4" /> },
-              { id: 'open', label: 'Open', icon: <AlertCircle className="w-4 h-4" /> },
-              { id: 'in-progress', label: 'In Progress', icon: <Clock className="w-4 h-4" /> },
-              { id: 'resolved', label: 'Resolved', icon: <CheckCircle className="w-4 h-4" /> }
-            ]}
-            activeTab={activeTab}
-            onTabChange={(tab) => setActiveTab(tab as any)}
-          />
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            {user?.role === 'ADMIN' && !ticket.assignedTo && ticket.status === 'OPEN' && (
+              <Button variant="secondary" size="sm" fullWidth onClick={(e: any) => { e.stopPropagation(); setSelectedTicketForAssign(ticket); setShowAssignModal(true);}}>
+                Suggest Agent
+              </Button>
+            )}
+            {isSupportStaff && ticket.status === 'OPEN' && (
+              <Button variant="primary" size="sm" fullWidth onClick={(e: any) => { e.stopPropagation(); handleUpdateStatus(ticket.id, 'IN_PROGRESS'); }}>
+                Take Over
+              </Button>
+            )}
+            {isSupportStaff && ticket.status === 'IN_PROGRESS' && (
+              <Button variant="outline" size="sm" fullWidth className="border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10" onClick={(e: any) => { e.stopPropagation(); handleUpdateStatus(ticket.id, 'RESOLVED'); }}>
+                Mark Resolved
+              </Button>
+            )}
+          </div>
+          {isSupportStaff && (
+            <Button variant="glass" size="sm" fullWidth loading={startingChatTicketId === ticket.id} onClick={(e: any) => { e.stopPropagation(); handleStartChat(ticket);}}>
+              Live Chat Session
+            </Button>
+          )}
+          {!isSupportStaff && (
+             <div className="text-[11px] font-medium text-surface-500 bg-surface-50 p-2 rounded-lg border border-surface-200">
+               Under review by support.
+             </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+
+  return (
+    <div className="min-h-full bg-transparent flex flex-col page-enter">
+      {/* Page Header (Sticky) */}
+      <div className="border-b bg-background/80 backdrop-blur-xl sticky top-0 z-30" style={{ borderColor: 'var(--glass-border)' }}>
+        <div className="px-6 py-8 md:py-10">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between max-w-[1600px] mx-auto">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary-500/20 bg-primary-500/10 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-primary-600 dark:text-primary-400">
+                <Ticket className="w-3.5 h-3.5" />
+                Support Queue
+              </div>
+              <h1 className="heading-1">Ticket Management</h1>
+              <p className="text-surface-500 max-w-2xl text-[15px] leading-relaxed">
+                Track, assign, and resolve customer support requests efficiently.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-1 bg-surface-50 border border-surface-200 rounded-xl p-1 mr-2 hidden sm:flex">
+                 <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary-500' : 'text-surface-400 hover:text-surface-900'}`} title="Grid View">
+                   <LayoutGrid className="w-4 h-4" />
+                 </button>
+                 <button onClick={() => setViewMode('kanban')} className={`p-1.5 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-primary-500' : 'text-surface-400 hover:text-surface-900'}`} title="Board View">
+                   <Columns className="w-4 h-4" />
+                 </button>
+              </div>
+
+              {user?.role === 'ADMIN' && (
+                <Button variant="secondary" size="md" icon={<Zap className="w-4 h-4" />} onClick={handleAutoAssign} loading={autoAssigning} disabled={autoAssigning}>
+                  Auto-Rout
+                </Button>
+              )}
+              <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreateModal(true)}>
+                New Request
+              </Button>
+            </div>
+          </div>
+          
+          <div className="max-w-[1600px] mx-auto mt-8">
+            <NavigationTabs
+              tabs={[
+                { id: 'all', label: 'All Requests', icon: <Ticket className="w-4 h-4" /> },
+                { id: 'open', label: 'Action Needed', icon: <AlertCircle className="w-4 h-4" /> },
+                { id: 'in-progress', label: 'In Progress', icon: <Clock className="w-4 h-4" /> },
+                { id: 'resolved', label: 'Completed', icon: <CheckCircle className="w-4 h-4" /> }
+              ]}
+              activeTab={activeTab}
+              onTabChange={(tab) => setActiveTab(tab as any)}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-6 py-6 space-y-6">
+      {/* Page Content */}
+      <div className="flex-1 px-6 py-8 overflow-y-auto w-full">
+        <div className="max-w-[1600px] mx-auto pb-12 w-full space-y-8 animate-fade-in-up">
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <StatCard label="Total" value={ticketStats.total} icon={<Ticket className="w-6 h-6" />} />
-          <StatCard label="Open" value={ticketStats.open} icon={<AlertCircle className="w-6 h-6" />} />
-          <StatCard label="In Progress" value={ticketStats.inProgress} icon={<Clock className="w-6 h-6" />} />
-          <StatCard label="Resolved" value={ticketStats.resolved} icon={<CheckCircle className="w-6 h-6" />} />
-          <StatCard label="Urgent" value={ticketStats.urgent} icon={<AlertCircle className="w-6 h-6" />} />
-        </div>
-
-        {/* Filters */}
-        <Card elevated className="p-4 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <Input
-              type="text"
-              placeholder="Search tickets..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<Ticket className="w-4 h-4" />}
-            />
-            <Select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              options={[
-                { value: 'ALL', label: 'All Statuses' },
-                { value: 'OPEN', label: 'Open' },
-                { value: 'IN_PROGRESS', label: 'In Progress' },
-                { value: 'RESOLVED', label: 'Resolved' },
-                { value: 'CLOSED', label: 'Closed' },
-              ]}
-            />
-            <Select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              options={[
-                { value: 'ALL', label: 'All Priorities' },
-                { value: 'LOW', label: 'Low' },
-                { value: 'MEDIUM', label: 'Medium' },
-                { value: 'HIGH', label: 'High' },
-                { value: 'URGENT', label: 'Urgent' },
-              ]}
-            />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-2 border border-surface-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
-            >
-              <option value="recent">Sort: Recent</option>
-              <option value="urgent">Sort: Urgent</option>
-              <option value="oldest">Sort: Oldest</option>
-            </select>
+          {/* Filters Bar */}
+          <div className="glass-lg p-2 rounded-2xl flex flex-col md:flex-row gap-4">
+             <div className="flex-1 relative">
+                <Input
+                  type="text"
+                  placeholder="Search by title, ID, or description..."
+                  value={searchTerm}
+                  onChange={(e: any) => setSearchTerm(e.target.value)}
+                  icon={<Search className="w-4 h-4" />}
+                  className="border-none bg-transparent shadow-none"
+                />
+             </div>
+             <div className="flex flex-col md:flex-row gap-2">
+                <div className="h-full w-px bg-surface-200/50 hidden md:block my-2"></div>
+                <Select
+                  value={filterStatus}
+                  onChange={(e: any) => setFilterStatus(e.target.value)}
+                  className="border-none bg-transparent shadow-none w-full md:w-[150px] text-sm font-medium"
+                  options={[
+                    { value: 'ALL', label: 'All Statuses' },
+                    { value: 'OPEN', label: 'Open' },
+                    { value: 'IN_PROGRESS', label: 'In Progress' },
+                    { value: 'RESOLVED', label: 'Resolved' },
+                  ]}
+                />
+                <div className="h-full w-px bg-surface-200/50 hidden md:block my-2"></div>
+                <Select
+                  value={filterPriority}
+                  onChange={(e: any) => setFilterPriority(e.target.value)}
+                  className="border-none bg-transparent shadow-none w-full md:w-[150px] text-sm font-medium"
+                  options={[
+                    { value: 'ALL', label: 'All Priorities' },
+                    { value: 'LOW', label: 'Low' },
+                    { value: 'MEDIUM', label: 'Medium' },
+                    { value: 'HIGH', label: 'High' },
+                    { value: 'URGENT', label: 'Urgent' },
+                  ]}
+                />
+             </div>
           </div>
-        </Card>
 
-        {/* Tickets Grid */}
-        {filteredTickets.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTickets.map(ticket => (
-              <Card
-                elevated
-                className={`p-6 flex flex-col transition-shadow ${isSupportStaff ? 'hover:shadow-md cursor-pointer' : ''}`}
-                key={ticket.id}
-                onClick={isSupportStaff ? () => navigate(`/ticket/${ticket.id}`) : undefined}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <Badge variant={getPriorityVariant(ticket.priority)}>
-                    {ticket.priority}
-                  </Badge>
-                  <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface-100">
-                    {getStatusIcon(ticket.status)}
-                    <span className="text-xs font-medium text-surface-900">{ticket.status}</span>
-                  </div>
+          {filteredTickets.length > 0 ? (
+             viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {filteredTickets.map(ticket => (
+                     <TicketCardComponent key={ticket.id} ticket={ticket} />
+                  ))}
                 </div>
-
-                {/* Title */}
-                <h3 className="font-semibold text-surface-900 mb-2 line-clamp-2">{ticket.title}</h3>
-
-                {/* Description */}
-                <p className="text-sm text-surface-600 mb-4 line-clamp-3 flex-1">
-                  {ticket.description}
+             ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full items-start">
+                   {columns.map(col => (
+                     <div key={col.id} className="glass rounded-[2rem] p-4 border border-surface-200 bg-surface-50/50 min-h-[500px]">
+                        <div className="flex items-center justify-between px-2 mb-4">
+                           <div className="flex items-center gap-2">
+                             <div className={`w-2.5 h-2.5 rounded-full bg-${col.color}-500 shadow-[0_0_8px_currentColor]`} />
+                             <h3 className="font-bold uppercase tracking-wider text-surface-600 text-[11px]">{col.title}</h3>
+                           </div>
+                           <Badge variant="glass" className="font-mono text-[10px]">{col.tickets.length}</Badge>
+                        </div>
+                        <div className="space-y-4">
+                           {col.tickets.map(ticket => (
+                              <TicketCardComponent key={ticket.id} ticket={ticket} />
+                           ))}
+                           {col.tickets.length === 0 && (
+                              <div className="p-8 text-center text-surface-400 border border-dashed border-surface-300 rounded-xl">
+                                <p className="text-[11px] font-medium uppercase tracking-widest">Empty</p>
+                              </div>
+                           )}
+                        </div>
+                     </div>
+                   ))}
+                </div>
+             )
+          ) : (
+             <div className="flex flex-col items-center justify-center p-16 glass-elevated border border-dashed border-surface-300 rounded-3xl text-center max-w-2xl mx-auto mt-12">
+                <div className="w-20 h-20 bg-surface-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                  <Ticket className="w-10 h-10 text-surface-400" />
+                </div>
+                <h3 className="heading-3 mb-2 text-foreground">No tickets found</h3>
+                <p className="text-surface-500 mb-8 max-w-md">
+                   {searchTerm || filterStatus !== 'ALL' || filterPriority !== 'ALL'
+                    ? 'Adjust your filters to see more results.'
+                    : 'Your queue is empty. You\'re all caught up!'}
                 </p>
-
-                {/* Footer */}
-                <div className="space-y-3 border-t border-surface-200 pt-4">
-                  {/* Meta Info */}
-                  <div className="flex items-center justify-between text-xs text-surface-600">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    {ticket.assignedTo && (
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5" />
-                        <span className="truncate">{ticket.assignedTo.name}</span>
-                      </div>
-                    )}
-                    {ticket.user && (
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5" />
-                        <span className="truncate max-w-[100px]">{ticket.user.name}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      {user?.role === 'ADMIN' && !ticket.assignedTo && ticket.status === 'OPEN' && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={<Users className="w-3.5 h-3.5" />}
-                          fullWidth
-                          onClick={() => {
-                            setSelectedTicketForAssign(ticket);
-                            setShowAssignModal(true);
-                          }}
-                        >
-                          Assign Agent
-                        </Button>
-                      )}
-                      {isSupportStaff && ticket.status === 'OPEN' && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={<Clock className="w-3.5 h-3.5" />}
-                          fullWidth
-                          onClick={() => handleUpdateStatus(ticket.id, 'IN_PROGRESS')}
-                        >
-                          Handle
-                        </Button>
-                      )}
-                      {isSupportStaff && ticket.status === 'IN_PROGRESS' && (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          icon={<CheckCircle className="w-3.5 h-3.5" />}
-                          fullWidth
-                          onClick={() => handleUpdateStatus(ticket.id, 'RESOLVED')}
-                        >
-                          Resolve
-                        </Button>
-                      )}
-                    </div>
-                    {isSupportStaff && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={<Zap className="w-3.5 h-3.5" />}
-                        fullWidth
-                        loading={startingChatTicketId === ticket.id}
-                        onClick={() => handleStartChat(ticket)}
-                        >
-                          Start Chat
-                        </Button>
-                    )}
-                  </div>
-                  {!isSupportStaff && (
-                    <div className="rounded-lg bg-surface-100 border border-surface-200 px-3 py-2 text-xs text-surface-600">
-                      Ticket submitted successfully. A support agent will review the full details and respond here.
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card elevated className="py-16 text-center">
-            <AlertCircle className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-            <p className="text-surface-600 mb-2">No tickets found</p>
-            <p className="text-sm text-surface-500">
-              {searchTerm || filterStatus !== 'ALL' || filterPriority !== 'ALL'
-                ? 'Try adjusting your filters'
-                : 'Create a new ticket to get started'}
-            </p>
-          </Card>
-        )}
+                {!searchTerm && filterStatus === 'ALL' && filterPriority === 'ALL' && (
+                  <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreateModal(true)}>
+                    Submit New Request
+                  </Button>
+                )}
+             </div>
+          )}
+        </div>
       </div>
 
       {/* Create Ticket Modal */}
@@ -535,103 +466,74 @@ const Tickets = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title="Create Ticket"
-        size="md"
+        size="lg"
         footer={
           <>
-            <Button
-              variant="secondary"
-              onClick={() => setShowCreateModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleCreateTicket}
-            >
-              Submit
-            </Button>
+            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+            <Button variant="primary" icon={<Play className="w-4 h-4" />} onClick={handleCreateTicket}>Submit Request</Button>
           </>
         }
       >
-        <div className="space-y-4">
-          <p className="text-surface-600 text-sm">Submit a new support request</p>
-          <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">AI Ticket Copilot</p>
-              <p className="text-xs text-surface-600">Draft better tickets automatically</p>
+        <div className="space-y-6 pt-2">
+          {/* AI Copilot Banner */}
+          <div className="rounded-2xl border bg-gradient-to-br from-indigo-500/10 to-purple-500/5 p-5 border-indigo-500/20 backdrop-blur-sm relative overflow-hidden group">
+            <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-[40px] pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-700"></div>
+            
+            <div className="flex items-center gap-3 mb-4 relative z-10">
+              <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+                <Zap className="w-5 h-5 fill-indigo-500/20" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold tracking-tight text-foreground">Ticket Copilot</h3>
+                <p className="text-[11px] text-surface-500 font-medium">Let AI draft and format your request</p>
+              </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                ['draft_ticket', 'Full Draft'],
-                ['title_improver', 'Better Title'],
-                ['description_improver', 'Better Description'],
-                ['priority_recommendation', 'Priority Advice']
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setTicketAiMode(value)}
-                  className={`px-2 py-1 rounded-md text-xs border ${
-                    ticketAiMode === value
-                      ? 'bg-primary/15 text-primary border-primary/30'
-                      : 'bg-card border-border text-surface-600'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={handleGenerateTicketWithAI} loading={ticketAiLoading}>
-                Generate with AI
+
+            <div className="flex flex-wrap gap-2 relative z-10">
+              <Button type="button" variant="secondary" size="sm" onClick={handleRunTicketAIPack} loading={ticketAiPackLoading} className="shadow-none border-indigo-500/20 hover:border-indigo-500/40">
+                Smart Optimize
               </Button>
-              <Button type="button" variant="outline" onClick={handleRunTicketAIPack} loading={ticketAiPackLoading}>
-                Run Full AI Pack
-              </Button>
-              {ticketAiResult && (
-                <Button type="button" variant="secondary" onClick={() => setTicketAiResult('')}>
-                  Clear
-                </Button>
-              )}
             </div>
+
             {ticketAiResult && (
-              <div className="text-xs text-surface-700 p-2 rounded bg-card border border-border whitespace-pre-wrap">
+              <div className="mt-4 p-4 rounded-xl glass text-[13px] font-mono text-surface-700 dark:text-surface-300 leading-relaxed max-h-40 overflow-y-auto relative z-10 border border-white/20">
                 {ticketAiResult}
               </div>
             )}
           </div>
-          <form onSubmit={handleCreateTicket} className="space-y-4">
+
+          <form onSubmit={handleCreateTicket} className="space-y-5">
             <Input
-              label="Ticket Title"
+              label="Subject"
               type="text"
               value={newTicket.title}
-              onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
-              placeholder="Summarize your issue"
+              onChange={(e: any) => setNewTicket({ ...newTicket, title: e.target.value })}
+              placeholder="Brief summary of your issue"
               required
             />
-
-            <div className="space-y-2">
-              <label className="label">Description</label>
+            <div className="space-y-1.5">
+              <label className="label text-surface-600">Detailed Description</label>
               <textarea
-                value={newTicket.description}
-                onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-                placeholder="Describe the problem or question in detail"
-                className="input w-full resize-none min-h-24"
-                required
+                 className="w-full bg-card rounded-xl border border-surface-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 p-4 min-h-[160px] text-sm resize-y outline-none transition-all shadow-sm group"
+                 placeholder="Please describe the issue in detail. The AI Copilot can help format this if you provide raw notes."
+                 value={newTicket.description}
+                 onChange={(e: any) => setNewTicket({ ...newTicket, description: e.target.value })}
+                 required
               />
             </div>
-
-            <Select
-              label="Priority"
-              value={newTicket.priority}
-              onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
-              options={[
-                { value: 'LOW', label: 'Low' },
-                { value: 'MEDIUM', label: 'Medium' },
-                { value: 'HIGH', label: 'High' },
-                { value: 'URGENT', label: 'Urgent' },
-              ]}
-            />
+            <div className="w-1/2">
+              <Select
+                label="Priority Level"
+                value={newTicket.priority}
+                onChange={(e: any) => setNewTicket({ ...newTicket, priority: e.target.value })}
+                options={[
+                  { value: 'LOW', label: 'Low - No rush' },
+                  { value: 'MEDIUM', label: 'Medium - Needs attention' },
+                  { value: 'HIGH', label: 'High - Blocking work' },
+                  { value: 'URGENT', label: 'Urgent - System down' },
+                ]}
+              />
+            </div>
           </form>
         </div>
       </Modal>
@@ -644,43 +546,28 @@ const Tickets = () => {
           setSelectedAgent('');
           setSelectedTicketForAssign(null);
         }}
-        title="Assign Ticket"
-        size="md"
+        title="Escalate to Agent"
+        size="sm"
         footer={
           <>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowAssignModal(false);
-                setSelectedAgent('');
-                setSelectedTicketForAssign(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleAssignTicket}
-            >
-              Assign
-            </Button>
+            <Button variant="ghost" onClick={() => {setShowAssignModal(false); setSelectedAgent('');}}>Cancel</Button>
+            <Button variant="primary" onClick={handleAssignTicket}>Route Request</Button>
           </>
         }
       >
-        <div className="space-y-4">
-          <p className="text-surface-600 text-sm">Select a support agent to assign this ticket</p>
+        <div className="space-y-5 pt-2">
           {selectedTicketForAssign && (
-            <div className="p-3 bg-surface-50 rounded-lg border border-surface-200">
-              <p className="text-xs text-surface-600 font-medium uppercase tracking-wide mb-1">Ticket</p>
-              <p className="font-semibold text-surface-900">{selectedTicketForAssign.title}</p>
+            <div className="p-4 bg-surface-50 rounded-xl border border-surface-200/60">
+              <p className="text-[10px] text-surface-500 font-bold uppercase tracking-wider mb-1">Target Ticket</p>
+              <p className="font-semibold text-foreground">{selectedTicketForAssign.title}</p>
             </div>
           )}
           <Select
-            label="Support Agent"
+            label="Select Responder"
             value={selectedAgent}
-            onChange={(e) => setSelectedAgent(e.target.value)}
+            onChange={(e: any) => setSelectedAgent(e.target.value)}
             options={[
-              { value: '', label: 'Select an agent...' },
+              { value: '', label: 'Choose an available agent...' },
               ...supportAgents.map((agent) => ({
                 value: agent.id,
                 label: agent.name || agent.email

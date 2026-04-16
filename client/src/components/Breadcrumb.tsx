@@ -46,30 +46,34 @@ const Breadcrumb = ({ items = [] }: BreadcrumbProps) => {
   if (breadcrumbs.length <= 1) return null;
 
   return (
-    <nav className="mb-2" aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-1 text-sm">
-        {breadcrumbs.map((crumb, index) => (
-          <li key={index} className="flex items-center gap-1.5">
-            {index > 0 && <ChevronRight size={16} className="text-muted-foreground/60" />}
-            {index === 0 ? (
-              <Link
-                to={crumb.path || '/'}
-                className="flex items-center text-accent hover:text-primary transition-colors"
-              >
-                <Home size={16} />
-              </Link>
-            ) : index === breadcrumbs.length - 1 ? (
-              <span className="font-semibold text-foreground">{crumb.label}</span>
-            ) : (
-              <Link
-                to={crumb.path || '/'}
-                className="text-muted-foreground hover:text-primary transition-colors max-sm:hidden"
-              >
-                {crumb.label}
-              </Link>
-            )}
-          </li>
-        ))}
+    <nav aria-label="Breadcrumb" className="inline-flex">
+      <ol className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-card/60 backdrop-blur-sm shadow-sm" style={{ borderColor: 'var(--glass-border)' }}>
+        {breadcrumbs.map((crumb, index) => {
+          const isLast = index === breadcrumbs.length - 1;
+          const isFirst = index === 0;
+          return (
+            <li key={index} className="flex items-center gap-1.5 text-[13px]">
+              {!isFirst && <ChevronRight size={14} className="text-surface-400 flex-shrink-0" />}
+              {isFirst ? (
+                <Link
+                  to={crumb.path || '/'}
+                  className="flex items-center justify-center p-1 rounded-md text-surface-500 hover:text-primary-500 hover:bg-primary-500/10 transition-colors"
+                >
+                  <Home size={14} />
+                </Link>
+              ) : isLast ? (
+                <span className="font-semibold text-foreground px-1">{crumb.label}</span>
+              ) : (
+                <Link
+                  to={crumb.path || '/'}
+                  className="text-surface-500 hover:text-primary-500 transition-colors px-1 max-sm:hidden"
+                >
+                  {crumb.label}
+                </Link>
+              )}
+            </li>
+          );
+        })}
       </ol>
     </nav>
   );
