@@ -44,9 +44,9 @@ services:
       - key: GITHUB_CLIENT_SECRET
         sync: false
       - key: OAUTH_REDIRECT_BASE
-        value: "https://customer-support-server-thdn.onrender.com"
+        value: "https://customer-support-server-9219.onrender.com"
       - key: FRONTEND_URL
-        value: "https://customer-support-client.onrender.com"
+        value: "https://customer-support-client-8eae.onrender.com"
 
       # AI Providers
       - key: GROQ_API_KEY
@@ -60,7 +60,7 @@ services:
 
       # CORS
       - key: CORS_ORIGIN
-        value: "https://customer-support-client.onrender.com,https://customer-support-server-thdn.onrender.com,http://localhost:3000,http://localhost:5173"
+        value: "https://customer-support-client-8eae.onrender.com,https://customer-support-server-9219.onrender.com,http://localhost:3000,http://localhost:5173,https://customer-support-server-9219.onrender.com"
 
     healthCheckPath: /healthz
     # Force rebuild by invalidating cache
@@ -76,9 +76,9 @@ services:
     staticPublishPath: client/dist
     envVars:
       - key: VITE_API_URL
-        value: "https://customer-support-server-thdn.onrender.com"
+        value: "https://customer-support-server-9219.onrender.com"
       - key: VITE_SOCKET_URL
-        value: "https://customer-support-server-thdn.onrender.com"
+        value: "https://customer-support-server-9219.onrender.com"
       - key: VITE_GOOGLE_CLIENT_ID
         sync: false
       - key: VITE_CLERK_PUBLISHABLE_KEY
