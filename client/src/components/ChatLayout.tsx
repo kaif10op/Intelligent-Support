@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Navbar from './Navbar.tsx';
-import Sidebar from './Sidebar.tsx';
 
 const ChatLayout = ({ children }: { children: React.ReactNode }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
   return (
     <div className="flex flex-col min-h-screen bg-background relative overflow-hidden page-enter">
       {/* Absolute floating background gradients reduced for chat focus */}
@@ -13,16 +10,10 @@ const ChatLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Top Navigation */}
       <Navbar />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar Navigation */}
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
-
-        {/* Page Content - Full height for chat */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-background relative">
-          {children}
-        </main>
-      </div>
+      {/* Page Content — Full height for chat, no sidebar */}
+      <main className="flex-1 flex flex-col overflow-hidden bg-background relative">
+        {children}
+      </main>
     </div>
   );
 };
