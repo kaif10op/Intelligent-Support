@@ -30,8 +30,16 @@ if [ "$NODE_ENV" != "production" ]; then
   echo "ℹ️  Non-production mode - DATABASE_URL cleared"
 fi
 
-# On Render, never attempt auto-migration to avoid hangs
-# User must manually run: npx prisma db push after setting DATABASE_URL
+# Push schema to database (creates tables if they don't exist)
+if [ -n "$DATABASE_URL" ]; then
+  echo "📦 Syncing database schema with prisma db push..."
+  npx prisma db push --schema=prisma/schema.prisma --skip-generate --accept-data-loss 2>&1 || {
+    echo "⚠️  prisma db push failed, but continuing server startup..."
+  }
+else
+  echo "⚠️  DATABASE_URL not set - skipping schema sync"
+fi
+
 echo "✅ Starting Node.js server..."
 echo "   Running: node dist/index.js"
 
